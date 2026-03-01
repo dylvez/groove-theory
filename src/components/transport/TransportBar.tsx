@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useTransportStore } from '../../store/useTransportStore';
 import { useSequencerStore } from '../../store/useSequencerStore';
-import { useUIStore } from '../../store/useUIStore';
 import { useSongStore } from '../../store/useSongStore';
 import { useAudioInit } from '../../audio/useAudioInit';
 import type { TimeSignature } from '../../types';
@@ -10,8 +9,6 @@ import { PATTERN_COLORS } from '../../constants/patterns';
 export function TransportBar() {
   const { bpm, swing, state, loop, setBpm, setSwing, play, stop, toggleLoop } = useTransportStore();
   const { ready, init } = useAudioInit();
-  const trackHeaderWidth = useUIStore(s => s.trackHeaderWidth);
-
   const patterns = useSequencerStore(s => s.patterns);
   const activePatternId = useSequencerStore(s => s.activePatternId);
   const setActivePattern = useSequencerStore(s => s.setActivePattern);
@@ -68,7 +65,7 @@ export function TransportBar() {
   return (
     <div className="flex items-center gap-3 px-4 sm:px-6 py-2 bg-bg-tertiary border-b-2 border-border shrink-0">
       {/* Left section — aligned with track headers */}
-      <div className="flex items-center gap-3 shrink-0 bg-accent-purple/10 rounded-lg px-3 py-1 border border-accent-purple/20" style={{ width: trackHeaderWidth + 4 }}>
+      <div className="flex items-center gap-3 shrink-0 bg-accent-purple/10 rounded-lg px-3 py-1 border border-accent-purple/20">
         <span className="text-xs text-text-secondary uppercase tracking-wider">Pattern</span>
         <div className="flex gap-1">
           {patterns.map(p => {
