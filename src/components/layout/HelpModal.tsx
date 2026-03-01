@@ -402,15 +402,38 @@ export function HelpModal({ onClose }: HelpModalProps) {
       icon: '\u{2709}',
       content: (
         <>
-          <p>Have a question, feature request, or found a bug? Send us an email:</p>
-          <p className="mt-2">
-            <a
-              href="mailto:groovetheoryapp@gmail.com"
-              className="text-accent-cyan hover:underline"
-            >
-              groovetheoryapp@gmail.com
-            </a>
-          </p>
+          <p>Have a question, feature request, or found a bug?</p>
+          <ul className="list-disc pl-4 space-y-1 mt-2">
+            <li>Email: <a href="mailto:groovetheoryapp@gmail.com" className="text-accent-cyan hover:underline">groovetheoryapp@gmail.com</a></li>
+            <li>GitHub: <a href="https://github.com/dylvez/groove-theory/issues" target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:underline">Open an issue</a></li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      id: 'about',
+      title: 'About & License',
+      icon: '\u{2696}',
+      content: (
+        <>
+          <p>Groove Theory is a free, open-source music workstation that runs entirely in your browser.</p>
+          <Sub title="Open Source">
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Source code: <a href="https://github.com/dylvez/groove-theory" target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:underline">github.com/dylvez/groove-theory</a></li>
+              <li>Licensed under the <strong>MIT License</strong> — you are free to use, copy, modify, and distribute this software.</li>
+              <li>Contributions, forks, and pull requests are welcome.</li>
+            </ul>
+          </Sub>
+          <Sub title="Privacy & Data">
+            <ul className="list-disc pl-4 space-y-1">
+              <li>All your data stays in your browser's local storage. Nothing is sent to a server.</li>
+              <li>No accounts, no tracking, no analytics, no cookies.</li>
+              <li>Exported files (MIDI, WAV, MP3) are generated locally and downloaded directly to your device.</li>
+            </ul>
+          </Sub>
+          <Sub title="Copyright">
+            <p>&copy; 2026 Groove Theory. All rights reserved under the terms of the MIT License.</p>
+          </Sub>
         </>
       ),
     },
