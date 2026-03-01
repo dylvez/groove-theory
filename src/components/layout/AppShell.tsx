@@ -6,7 +6,6 @@ import { SongArrangement } from '../song/SongArrangement';
 import { TheoryTabs } from '../theory/TheoryTabs';
 import { useSequencerPlayback } from '../../hooks/useSequencerPlayback';
 import { useSongPlayback } from '../../hooks/useSongPlayback';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const MIN_PANEL_WIDTH = 280;
 const MAX_PANEL_WIDTH = 700;
@@ -16,10 +15,7 @@ const MIN_SONG_HEIGHT = 60;
 const MAX_SONG_HEIGHT = 400;
 const DEFAULT_SONG_HEIGHT = 180;
 
-type MobileView = 'sequencer' | 'theory';
-
-/** Desktop: side-by-side with resizable theory panel */
-function DesktopStudioView() {
+function StudioView() {
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH);
   const [songHeight, setSongHeight] = useState(DEFAULT_SONG_HEIGHT);
   const dragging = useRef(false);
@@ -119,108 +115,14 @@ function DesktopStudioView() {
   );
 }
 
-/** Mobile/tablet: full-width tabbed layout switching between sequencer and theory */
-function MobileStudioView() {
-  const [activeView, setActiveView] = useState<MobileView>('sequencer');
-  const [songHeight, setSongHeight] = useState(DEFAULT_SONG_HEIGHT);
-  const songDragging = useRef(false);
-  const seqColRef = useRef<HTMLDivElement>(null);
-
-  const handleSongMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    songDragging.current = true;
-    document.body.style.cursor = 'row-resize';
-    document.body.style.userSelect = 'none';
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (songDragging.current && seqColRef.current) {
-        const colRect = seqColRef.current.getBoundingClientRect();
-        const newHeight = colRect.bottom - e.clientY;
-        setSongHeight(Math.max(MIN_SONG_HEIGHT, Math.min(MAX_SONG_HEIGHT, newHeight)));
-      }
-    };
-
-    const handleMouseUp = () => {
-      if (songDragging.current) {
-        songDragging.current = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, []);
-
-  return (
-    <div className="flex flex-col flex-1 overflow-hidden">
-      {/* View switcher */}
-      <div className="flex border-b border-border shrink-0 bg-bg-tertiary">
-        <button
-          onClick={() => setActiveView('sequencer')}
-          className={`flex-1 px-3 py-2 text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer ${
-            activeView === 'sequencer'
-              ? 'text-accent-orange border-b-2 border-accent-orange'
-              : 'text-text-muted hover:text-text-secondary'
-          }`}
-        >
-          Sequencer
-        </button>
-        <button
-          onClick={() => setActiveView('theory')}
-          className={`flex-1 px-3 py-2 text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer ${
-            activeView === 'theory'
-              ? 'text-accent-orange border-b-2 border-accent-orange'
-              : 'text-text-muted hover:text-text-secondary'
-          }`}
-        >
-          Theory
-        </button>
-      </div>
-
-      {/* Active view */}
-      {activeView === 'sequencer' ? (
-        <div ref={seqColRef} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <TransportBar />
-          <SequencerGrid />
-
-          {/* Song resize handle */}
-          <div
-            onMouseDown={handleSongMouseDown}
-            className="h-1.5 shrink-0 cursor-row-resize bg-accent-purple hover:bg-accent-purple/80 active:bg-accent-purple/60 transition-colors relative group"
-            title="Drag to resize song section"
-          >
-            <div className="absolute -top-1 -bottom-1 inset-x-0" />
-          </div>
-
-          <div className="shrink-0 overflow-hidden" style={{ height: songHeight }}>
-            <SongArrangement />
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-bg-secondary">
-          <TheoryTabs showPiano pianoOctaves={2} pianoStartOctave={4} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function AppShell() {
   useSequencerPlayback();
   useSongPlayback();
-  const isNarrow = useMediaQuery('(max-width: 768px)');
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">
       <Header />
-      {isNarrow ? <MobileStudioView /> : <DesktopStudioView />}
+      <StudioView />
     </div>
   );
 }
