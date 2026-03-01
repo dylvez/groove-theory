@@ -302,6 +302,14 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li>Click Loop to clear the range.</li>
             </ul>
           </Sub>
+          <Sub title="Open Song">
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Click <strong>Open Song</strong> to browse preset songs and beat presets.</li>
+              <li><strong>Preset songs</strong> — full arrangements with drums, bass, and melodies (e.g. Midnight in Tokyo, Solar Flare, Carnival de Luna, Neon Dystopia).</li>
+              <li><strong>Beat presets</strong> — drum-only patterns to use as starting points (e.g. Classic Rock, Boom-Bap, Dance Floor).</li>
+              <li>You can also import a <code className="text-accent-cyan">.song</code> file from disk.</li>
+            </ul>
+          </Sub>
           <Sub title="Song Playback">
             <ul className="list-disc pl-4 space-y-1">
               <li>The song transport has its own Play/Stop, BPM, and Swing controls.</li>
@@ -318,12 +326,27 @@ export function HelpModal({ onClose }: HelpModalProps) {
       icon: '\u{1F4BE}',
       content: (
         <>
-          <ul className="list-disc pl-4 space-y-1">
-            <li><Kbd>Save</Kbd> — save the groove to your browser's local storage, or download as a <code className="text-accent-cyan">.groove</code> file to share.</li>
-            <li><Kbd>Open</Kbd> — load a previously saved groove from storage, or import a <code className="text-accent-cyan">.groove</code> file.</li>
-            <li><Kbd>New</Kbd> — start fresh with a blank project (clears all patterns and song blocks).</li>
-            <li>Saved grooves include all patterns, tracks, settings, song arrangement, BPM, and swing.</li>
-          </ul>
+          <Sub title="Header Controls">
+            <ul className="list-disc pl-4 space-y-1">
+              <li><Kbd>Save</Kbd> — save the groove to your browser's local storage, or download as a <code className="text-accent-cyan">.groove</code> file to share.</li>
+              <li><Kbd>Open</Kbd> — load a previously saved groove from storage, browse preset songs and beat presets, or import a file.</li>
+              <li><Kbd>New</Kbd> — start fresh with a blank project (clears all patterns and song blocks).</li>
+            </ul>
+          </Sub>
+          <Sub title="Presets">
+            <ul className="list-disc pl-4 space-y-1">
+              <li><strong>Preset songs</strong> — complete arrangements with drums, bass, melodies, and song structure. Available from both the header <Kbd>Open</Kbd> menu and the song area's <strong>Open Song</strong> button.</li>
+              <li><strong>Beat presets</strong> — drum-only grooves to jumpstart a new project.</li>
+              <li>Loading a preset replaces all current patterns, tracks, and song arrangement.</li>
+            </ul>
+          </Sub>
+          <Sub title="File Formats">
+            <ul className="list-disc pl-4 space-y-1">
+              <li><code className="text-accent-cyan">.groove</code> — full project: all patterns, tracks, sound settings, song arrangement, BPM, and swing.</li>
+              <li><code className="text-accent-cyan">.patterns</code> — pattern bank only (drums + synths, no song arrangement).</li>
+              <li><code className="text-accent-cyan">.song</code> — song arrangement and structure.</li>
+            </ul>
+          </Sub>
         </>
       ),
     },
@@ -370,6 +393,24 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <Kbd>Space</Kbd> <span>Play / Stop playback</span>
             <Kbd>Escape</Kbd> <span>Close this help modal</span>
           </div>
+        </>
+      ),
+    },
+    {
+      id: 'contact',
+      title: 'Questions & Feedback',
+      icon: '\u{2709}',
+      content: (
+        <>
+          <p>Have a question, feature request, or found a bug? Send us an email:</p>
+          <p className="mt-2">
+            <a
+              href="mailto:groovetheoryapp@gmail.com"
+              className="text-accent-cyan hover:underline"
+            >
+              groovetheoryapp@gmail.com
+            </a>
+          </p>
         </>
       ),
     },
