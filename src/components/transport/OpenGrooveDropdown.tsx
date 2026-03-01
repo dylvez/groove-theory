@@ -9,6 +9,7 @@ import {
   applyPatternBank,
   applySongArrangement,
 } from '../../utils/grooveStorage';
+import { PRESET_GROOVES } from '../../constants/presetGrooves';
 import type { GrooveSlotEntry } from '../../types';
 
 function timeAgo(iso: string): string {
@@ -43,6 +44,13 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
     deleteGroove(id);
     setSaves(listGrooves());
   }, []);
+
+  const handleLoadPreset = useCallback((presetId: string) => {
+    const preset = PRESET_GROOVES.find(p => p.id === presetId);
+    if (!preset) return;
+    applyGroove(structuredClone(preset.groove));
+    onClose();
+  }, [onClose]);
 
   const handleImportFile = useCallback(async () => {
     try {
@@ -113,6 +121,27 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
           </p>
         </div>
       )}
+
+      {/* Preset songs */}
+      <div className="border-t border-border">
+        <div className="px-3 pt-2.5 pb-1">
+          <span className="text-[10px] text-text-secondary uppercase tracking-wider">Preset songs</span>
+        </div>
+        {PRESET_GROOVES.map(preset => (
+          <button
+            key={preset.id}
+            onClick={() => handleLoadPreset(preset.id)}
+            className="flex items-center justify-between w-full px-3 py-2 text-left text-xs
+              hover:bg-bg-cell transition-colors cursor-pointer"
+          >
+            <div className="flex flex-col min-w-0">
+              <span className="text-text-primary truncate">{preset.name}</span>
+              <span className="text-[10px] text-text-muted">{preset.genre} · {preset.bpm} BPM</span>
+            </div>
+            <span className="text-[10px] text-accent-orange shrink-0 ml-2">PRESET</span>
+          </button>
+        ))}
+      </div>
 
       {/* Import from file */}
       <div className="px-3 py-2 border-t border-border">

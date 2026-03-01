@@ -9,9 +9,8 @@ import { PATTERN_IDS, PATTERN_COLORS } from '../../constants/patterns';
 import {
   buildSongSnapshot,
   exportSongToFile,
-  importSongFromFile,
-  applySongArrangement,
 } from '../../utils/grooveStorage';
+import { OpenSongDropdown } from './OpenSongDropdown';
 import type { Pattern } from '../../types/sequencer';
 
 const PX_PER_BAR = 40;
@@ -62,6 +61,10 @@ export function SongArrangement() {
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
+
+  // Open song dropdown state
+  const [showOpenSong, setShowOpenSong] = useState(false);
+  const openSongBtnRef = useRef<HTMLButtonElement>(null);
 
   // Precompute pattern lookups and block widths
   const blockData = useMemo(() => {
@@ -159,14 +162,8 @@ export function SongArrangement() {
     exportSongToFile(snapshot);
   }, []);
 
-  const handleOpenSong = useCallback(async () => {
-    try {
-      const data = await importSongFromFile();
-      applySongArrangement(data);
-    } catch (err) {
-      const msg = (err as Error).message;
-      if (msg !== 'No file selected') alert(msg);
-    }
+  const handleToggleOpenSong = useCallback(() => {
+    setShowOpenSong(prev => !prev);
   }, []);
 
   const hasBlocks = blocks.length > 0;
@@ -342,17 +339,26 @@ export function SongArrangement() {
             </svg>
             Save Song
           </button>
-          <button
-            onClick={handleOpenSong}
-            title="Open song arrangement from file"
-            className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border transition-colors
-              bg-accent-blue/15 text-accent-blue border-accent-blue/25 hover:bg-accent-blue/25 cursor-pointer"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-2.5 h-2.5">
-              <path d="M1.75 2A1.75 1.75 0 0 0 0 3.75v.5A1.75 1.75 0 0 0 1.02 5.89l.857 6A1.75 1.75 0 0 0 3.607 13.5h8.786a1.75 1.75 0 0 0 1.731-1.61l.857-6A1.75 1.75 0 0 0 16 4.25v-.5A1.75 1.75 0 0 0 14.25 2H9.236a.75.75 0 0 1-.447-.148L7.078.578A2.25 2.25 0 0 0 5.736 0H1.75Z" />
-            </svg>
-            Open Song
-          </button>
+          <div className="relative">
+            <button
+              ref={openSongBtnRef}
+              onClick={handleToggleOpenSong}
+              title="Open song — presets or import file"
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border transition-colors
+                bg-accent-blue/15 text-accent-blue border-accent-blue/25 hover:bg-accent-blue/25 cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-2.5 h-2.5">
+                <path d="M1.75 2A1.75 1.75 0 0 0 0 3.75v.5A1.75 1.75 0 0 0 1.02 5.89l.857 6A1.75 1.75 0 0 0 3.607 13.5h8.786a1.75 1.75 0 0 0 1.731-1.61l.857-6A1.75 1.75 0 0 0 16 4.25v-.5A1.75 1.75 0 0 0 14.25 2H9.236a.75.75 0 0 1-.447-.148L7.078.578A2.25 2.25 0 0 0 5.736 0H1.75Z" />
+              </svg>
+              Open Song
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-2 h-2 opacity-60">
+                <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </button>
+            {showOpenSong && (
+              <OpenSongDropdown anchorRef={openSongBtnRef} onClose={() => setShowOpenSong(false)} />
+            )}
+          </div>
         </div>
       </div>
 
