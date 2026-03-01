@@ -1,73 +1,53 @@
-# React + TypeScript + Vite
+# Groove Theory
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A browser-based drum machine and music theory workstation. Create beats with drum and melodic sequencers, explore scales and chords, build chord progressions, arrange songs, and export to MIDI, WAV, or MP3.
 
-Currently, two official plugins are available:
+**Live:** [groove-theory.web.app](https://groove-theory.web.app)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- 16-step drum sequencer with velocity control
+- Melodic step sequencer with multiple synth voices
+- 4 pattern slots (A-D) with song arrangement
+- Scale explorer, chord explorer, and diatonic chord grids
+- Chord progression builder with audio preview
+- Export patterns and songs to MIDI, WAV, or MP3
+- Preset beats and full song demos
+- All data stored locally in the browser — no accounts, no server
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- React 19, TypeScript, Vite
+- Tailwind CSS
+- Zustand (state management)
+- Tone.js (audio engine)
+- Web Audio API, lamejs (MP3 encoding), midi-writer-js (MIDI export)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Getting Started
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone https://github.com/dylvez/groove-theory.git
+cd groove-theory
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Build & Deploy
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Production build
+npm run build
+
+# Deploy to Firebase Hosting
+npm run deploy
 ```
+
+## License
+
+[MIT](LICENSE)
+
+## Contact
+
+[groovetheoryapp@gmail.com](mailto:groovetheoryapp@gmail.com)

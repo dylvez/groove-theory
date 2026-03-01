@@ -60,26 +60,3 @@ export function createDefaultPattern(id: string, name: string): Pattern {
   };
 }
 
-export function clearPattern(pattern: Pattern): Pattern {
-  return {
-    ...pattern,
-    drumTracks: pattern.drumTracks.map(t => ({
-      ...t,
-      steps: new Array(pattern.numSteps).fill(0),
-    })),
-    melodicTracks: pattern.melodicTracks.map(t => ({
-      ...t,
-      steps: t.steps.map(() => ({ active: false, note: null, velocity: 0.8 })),
-    })),
-  };
-}
-
-export function duplicatePattern(pattern: Pattern, newId: string, newName: string): Pattern {
-  return {
-    ...structuredClone(pattern),
-    id: newId,
-    name: newName,
-    drumTracks: pattern.drumTracks.map(t => ({ ...structuredClone(t), id: uid() })),
-    melodicTracks: pattern.melodicTracks.map(t => ({ ...structuredClone(t), id: uid() })),
-  };
-}

@@ -1,13 +1,22 @@
 {
   "name": "groove-theory",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A browser-based drum machine and music theory workstation",
+  "author": "Groove Theory <groovetheoryapp@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dylvez/groove-theory.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:local": "tsc -b && vite build --base=/groove-theory/",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && npx firebase deploy --only hosting",
+    "deploy:local": "npm run build:local && rm -rf C:/family-server/apps/groove-theory/assets && cp -r dist/* C:/family-server/apps/groove-theory/"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
@@ -28,7 +37,6 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "sharp": "^0.34.5",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",

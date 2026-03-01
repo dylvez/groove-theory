@@ -57,16 +57,6 @@ export function getScaleNotesWithOctave(
   return notes;
 }
 
-export function isNoteInScale(note: NoteName, root: NoteName, scale: ScaleDefinition): boolean {
-  const scaleNotes = getScaleNotes(root, scale);
-  return scaleNotes.includes(note);
-}
-
-export function isNoteInChord(note: NoteName, root: NoteName, chord: ChordDefinition): boolean {
-  const chordNotes = getChordNotes(root, chord);
-  return chordNotes.includes(note);
-}
-
 export function getScaleDegree(note: NoteName, root: NoteName, scale: ScaleDefinition): number {
   const scaleNotes = getScaleNotes(root, scale);
   return scaleNotes.indexOf(note);
