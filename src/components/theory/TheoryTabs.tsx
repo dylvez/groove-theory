@@ -4,8 +4,8 @@ import { HarmonyPanel } from './HarmonyPanel';
 import { BeatExplorer } from './BeatExplorer';
 
 const TABS: { key: StudioTab; label: string }[] = [
-  { key: 'harmony', label: 'Harmony' },
   { key: 'beats', label: 'Beats' },
+  { key: 'harmony', label: 'Harmony' },
 ];
 
 interface TheoryTabsProps {

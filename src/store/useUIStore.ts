@@ -13,7 +13,7 @@ const MIN_HEADER_WIDTH = 120;
 const MAX_HEADER_WIDTH = 300;
 
 export const useUIStore = create<UIStore>((set) => ({
-  studioTab: 'harmony',
+  studioTab: 'beats',
   trackHeaderWidth: 216,
   setStudioTab: (tab) => set({ studioTab: tab }),
   setTrackHeaderWidth: (w) => set({ trackHeaderWidth: Math.max(MIN_HEADER_WIDTH, Math.min(MAX_HEADER_WIDTH, w)) }),
