@@ -49,15 +49,18 @@ export function HelpModal({ onClose }: HelpModalProps) {
           </Sub>
           <Sub title="Working with Steps">
             <ul className="list-disc pl-4 space-y-1">
-              <li>Click a cell to toggle it on/off. Active steps are color-coded per track.</li>
-              <li>For synth tracks, clicking opens a <strong>note picker</strong> — choose which pitch to play on that step.</li>
-              <li>Steps are grouped into beats with subtle spacing at bar lines.</li>
+              <li>Click a cell to toggle it on/off. <strong>Click and drag</strong> to paint (or erase) a run of steps in one gesture.</li>
+              <li><strong>Shift+click</strong> an active step to cycle its <strong>velocity</strong>: accent → normal → ghost. Softer hits render dimmer.</li>
+              <li>For synth tracks, clicking an empty step opens a <strong>note picker</strong>. Dragging paints the last note you picked.</li>
+              <li><strong>Right-click</strong> a synth step to edit it: change the note, octave, or <strong>length</strong> (1–8 steps). Long notes draw a tail across the grid.</li>
+              <li>The <strong>ruler</strong> above the grid shows bar.beat numbers and the playhead.</li>
             </ul>
           </Sub>
           <Sub title="Adding & Removing Tracks">
             <ul className="list-disc pl-4 space-y-1">
               <li><Kbd>+ Add Drum</Kbd> — pick from kick, snare, hi-hat, open HH, crash, ride, rim, clap, and toms.</li>
-              <li><Kbd>+ Add Synth</Kbd> — choose Basic, FM, AM, or Mono synth types.</li>
+              <li><Kbd>Kit</Kbd> — swap every drum in the pattern to a different kit: Classic, 808, Lo-Fi, Techno, or Acoustic.</li>
+              <li><Kbd>+ Add Synth</Kbd> — start from a preset (Pluck, Electric Keys, Warm Pad, Square Lead, Sub Bass, Acid Bass, Bell, Organ) or a blank engine.</li>
               <li>Remove any track with the <strong>&times;</strong> button on its header.</li>
             </ul>
           </Sub>
@@ -80,7 +83,8 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <Sub title="Header Buttons">
             <ul className="list-disc pl-4 space-y-1">
               <li><strong>Gear icon</strong> — open the sound settings panel for that track.</li>
-              <li><strong>Track name</strong> — double-click to rename it.</li>
+              <li><strong>Track name</strong> — double-click to rename it. On drum tracks, a single click <strong>auditions</strong> the sound.</li>
+              <li><Kbd>●</Kbd> <strong>Arm</strong> (synth tracks) — play this synth live from your computer keyboard. See <em>Live Keys</em>.</li>
               <li><Kbd>M</Kbd> <strong>Mute</strong> — silence the track (turns red when muted).</li>
               <li><Kbd>S</Kbd> <strong>Solo</strong> — hear only this track (turns amber when active).</li>
               <li><strong>&times;</strong> — remove the track entirely.</li>
@@ -111,15 +115,26 @@ export function HelpModal({ onClose }: HelpModalProps) {
           </Sub>
           <Sub title="Synth Sounds">
             <ul className="list-disc pl-4 space-y-1">
-              <li><strong>Synth type</strong> — switch between Basic, FM, AM, and Mono synths.</li>
-              <li><strong>Wave type</strong> — sine, square, triangle, or sawtooth.</li>
+              <li><strong>Preset</strong> — load a designed sound in one click; the preset name shows under the track name.</li>
+              <li><strong>Engine</strong> — Basic, FM, AM, or Mono synth. <strong>Wave</strong> — sine, square, triangle, or sawtooth.</li>
+              <li><strong>Octave</strong> — transposes every note on the track.</li>
               <li><strong>ADSR envelope</strong> — attack, decay, sustain, and release.</li>
+              <li><strong>Filter</strong> — low-pass cutoff and resonance. Close the cutoff for warmth, raise resonance for squelch.</li>
             </ul>
           </Sub>
-          <Sub title="Volume & Reset">
+          <Sub title="Mix: Volume & Sends">
             <ul className="list-disc pl-4 space-y-1">
-              <li>Volume: -36 to +6 dB per track.</li>
-              <li><strong>Reset</strong> button restores default settings.</li>
+              <li><strong>Volume</strong> — -36 to +6 dB per track.</li>
+              <li><strong>Reverb</strong> / <strong>Delay</strong> — how much of this track is sent to the shared effect buses. Shape the buses themselves with the <Kbd>FX</Kbd> button in the transport bar.</li>
+              <li><Kbd>▶ Hear</Kbd> — audition the sound while you tweak it. <strong>Reset</strong> restores defaults.</li>
+            </ul>
+          </Sub>
+          <Sub title="Mixer & Effects (FX)">
+            <ul className="list-disc pl-4 space-y-1">
+              <li><strong>Master</strong> — output volume and a bus <strong>compressor</strong> that glues the mix together. A <strong>limiter</strong> always protects against clipping; the meter next to FX shows the level.</li>
+              <li><strong>Reverb bus</strong> — size (tail length) and return level.</li>
+              <li><strong>Delay bus</strong> — tempo-synced time (1/16, 1/8, dotted 1/8, 1/4), feedback, and return level.</li>
+              <li>Everything here is baked into WAV and MP3 exports.</li>
             </ul>
           </Sub>
         </>
@@ -134,13 +149,15 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <p>Controls along the top of the sequencer manage playback and timing.</p>
           <ul className="list-disc pl-4 space-y-1">
             <li><Kbd>Play / Stop</Kbd> — start or stop pattern playback. The playhead animates across the grid.</li>
-            <li><Kbd>BPM</Kbd> — set tempo from 40 to 300 using the input field or slider.</li>
+            <li><Kbd>BPM</Kbd> — set tempo from 40 to 300 using the input field or slider, or click <Kbd>Tap</Kbd> in time with a beat.</li>
+            <li><Kbd>●</Kbd> <strong>Record</strong> — with a synth track armed, writes what you play on the keyboard into the grid. See <em>Live Keys</em>.</li>
             <li><Kbd>Swing</Kbd> — add rhythmic feel from 0% (straight) to 75% (heavy triplet swing).</li>
             <li><Kbd>Loop</Kbd> — toggle pattern looping on or off.</li>
             <li><Kbd>4/4</Kbd> / <Kbd>3/4</Kbd> — switch between common and waltz time.</li>
             <li><Kbd>2</Kbd> / <Kbd>4</Kbd> bars — set how many bars each pattern contains.</li>
-            <li><Kbd>Clear</Kbd> — erase all steps in the active pattern.</li>
-            <li><Kbd>Undo</Kbd> — revert the last sequencer change (up to 50 steps).</li>
+            <li><Kbd>1/16</Kbd> / <Kbd>1/32</Kbd> — step resolution. 1/32 doubles the grid for rolls and fast hats.</li>
+            <li><Kbd>Undo</Kbd> / <Kbd>Redo</Kbd> — step backwards and forwards through sequencer changes (up to 50).</li>
+            <li><Kbd>⋯</Kbd> next to the pattern buttons opens the <strong>pattern menu</strong>: copy to another slot, copy/paste, shift left/right, humanize velocities, fill empty bars, or clear.</li>
           </ul>
         </>
       ),
@@ -153,7 +170,8 @@ export function HelpModal({ onClose }: HelpModalProps) {
         <>
           <p>Four independent pattern slots let you build different sections of a song.</p>
           <ul className="list-disc pl-4 space-y-1">
-            <li>Click <Kbd>A</Kbd> <Kbd>B</Kbd> <Kbd>C</Kbd> <Kbd>D</Kbd> to switch patterns. Each is color-coded (orange, purple, pink, teal).</li>
+            <li>Click <Kbd>A</Kbd> <Kbd>B</Kbd> <Kbd>C</Kbd> <Kbd>D</Kbd> (or press <Kbd>1</Kbd>–<Kbd>4</Kbd>) to switch patterns. Each is color-coded.</li>
+            <li>Use the <Kbd>⋯</Kbd> menu to <strong>copy a pattern into another slot</strong> — the fastest way to build a variation.</li>
             <li>Every pattern has its own drum tracks, synth tracks, time signature, and bar count.</li>
             <li>Each pattern maintains its own undo history.</li>
             <li>Arrange patterns into a full song in the Song Arrangement section below the sequencer.</li>
@@ -383,15 +401,49 @@ export function HelpModal({ onClose }: HelpModalProps) {
       ),
     },
     {
+      id: 'live-keys',
+      title: 'Live Keys & Recording',
+      icon: '\u{1F3B9}',
+      content: (
+        <>
+          <p>Play any synth track from your computer keyboard, and record what you play straight into the grid.</p>
+          <Sub title="Playing">
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Click <Kbd>●</Kbd> on a synth track's header to <strong>arm</strong> it. The transport shows a <strong>Keys</strong> badge with the current octave.</li>
+              <li>Keys <Kbd>A</Kbd> <Kbd>W</Kbd> <Kbd>S</Kbd> <Kbd>E</Kbd> <Kbd>D</Kbd> <Kbd>F</Kbd> <Kbd>T</Kbd> <Kbd>G</Kbd> <Kbd>Y</Kbd> <Kbd>H</Kbd> <Kbd>U</Kbd> <Kbd>J</Kbd> <Kbd>K</Kbd> … play a piano layout from C. <Kbd>Z</Kbd> / <Kbd>X</Kbd> move the octave down / up.</li>
+              <li>Notes are held for as long as the key is down, through the track's own sound, filter, and effects.</li>
+              <li>Press <Kbd>Escape</Kbd> or click <Kbd>●</Kbd> again to disarm. While nothing is armed, the keys play the theory panel's piano instead.</li>
+            </ul>
+          </Sub>
+          <Sub title="Recording">
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Start playback, then press <Kbd>●</Kbd> in the transport (or <Kbd>R</Kbd>) to enable <strong>REC</strong>.</li>
+              <li>Every key press is quantized to the nearest step and written into the armed track. Hold a key and the note's <strong>length</strong> follows.</li>
+              <li>Recording loops — keep playing to layer more notes, and use Undo if you fumble.</li>
+            </ul>
+          </Sub>
+        </>
+      ),
+    },
+    {
       id: 'shortcuts',
       title: 'Keyboard Shortcuts',
       icon: '\u{2328}',
       content: (
         <>
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 items-center">
-            <Kbd>Ctrl + Z</Kbd> <span>Undo the last sequencer change</span>
             <Kbd>Space</Kbd> <span>Play / Stop playback</span>
-            <Kbd>Escape</Kbd> <span>Close this help modal</span>
+            <Kbd>1 – 4</Kbd> <span>Select pattern A – D</span>
+            <Kbd>⌘/Ctrl + Z</Kbd> <span>Undo the last sequencer change</span>
+            <Kbd>⌘/Ctrl + Shift + Z</Kbd> <span>Redo</span>
+            <Kbd>⌘/Ctrl + C</Kbd> <span>Copy the active pattern</span>
+            <Kbd>⌘/Ctrl + V</Kbd> <span>Paste into the active pattern</span>
+            <Kbd>[</Kbd> / <Kbd>]</Kbd> <span>Shift the pattern one step left / right</span>
+            <Kbd>Shift + click</Kbd> <span>Cycle a step's velocity</span>
+            <Kbd>Right-click</Kbd> <span>Edit a synth step (note, octave, length)</span>
+            <Kbd>R</Kbd> <span>Toggle recording (when a track is armed)</span>
+            <Kbd>Z</Kbd> / <Kbd>X</Kbd> <span>Live keys octave down / up</span>
+            <Kbd>Escape</Kbd> <span>Disarm live keys / close this help</span>
           </div>
         </>
       ),

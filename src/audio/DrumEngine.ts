@@ -1,5 +1,6 @@
 import * as Tone from 'tone';
-import type { DrumSynthParams, MembraneSynthParams } from '../types';
+import type { DrumSynthParams, MembraneSynthParams, MetalSynthParams } from '../types';
+import type { Mixer, Channel } from './Mixer';
 
 type DrumSynth = Tone.MembraneSynth | Tone.NoiseSynth | Tone.MetalSynth;
 
@@ -16,7 +17,7 @@ export function createDrumSynth(params: DrumSynthParams): DrumSynth {
           sustain: params.sustain,
           release: params.release,
         },
-      }).toDestination();
+      });
 
     case 'noise':
       return new Tone.NoiseSynth({
@@ -27,7 +28,7 @@ export function createDrumSynth(params: DrumSynthParams): DrumSynth {
           sustain: params.sustain,
           release: params.release,
         },
-      }).toDestination();
+      });
 
     case 'metal': {
       const synth = new Tone.MetalSynth({
@@ -40,7 +41,7 @@ export function createDrumSynth(params: DrumSynthParams): DrumSynth {
         modulationIndex: params.modulationIndex,
         resonance: params.resonance,
         octaves: params.octaves,
-      }).toDestination();
+      });
       synth.frequency.value = params.frequency;
       return synth;
     }
@@ -74,61 +75,108 @@ function applyDrumParams(synth: DrumSynth, params: DrumSynthParams) {
   }
 }
 
-export class DrumEngine {
-  private synths = new Map<string, DrumSynth>();
-  private currentParams = new Map<string, DrumSynthParams>();
+interface DrumVoice {
+  synth: DrumSynth;
+  channel: Channel;
+  params: DrumSynthParams;
+  volume: number;
+  reverbSend: number;
+  delaySend: number;
+}
 
-  ensureSynth(sampleKey: string, params: DrumSynthParams, volume?: number) {
-    if (!this.synths.has(sampleKey)) {
+export interface DrumVoiceSettings {
+  params: DrumSynthParams;
+  volume?: number;
+  reverbSend?: number;
+  delaySend?: number;
+}
+
+/**
+ * Owns one synth per drum sample key, each routed through its own mixer channel.
+ * `ensureSynth` is cheap to call every step: it creates the voice on first use and
+ * re-syncs parameters only when the (immutable) params object or levels change.
+ */
+export class DrumEngine {
+  private voices = new Map<string, DrumVoice>();
+
+  private mixer: Mixer;
+
+  constructor(mixer: Mixer) {
+    this.mixer = mixer;
+  }
+
+  ensureSynth(sampleKey: string, params: DrumSynthParams, volume: number = -6, reverbSend: number = 0, delaySend: number = 0) {
+    const existing = this.voices.get(sampleKey);
+    if (!existing) {
+      const channel = this.mixer.createChannel(volume, reverbSend, delaySend);
       const synth = createDrumSynth(params);
-      if (volume !== undefined) synth.volume.value = volume;
-      this.synths.set(sampleKey, synth);
-      this.currentParams.set(sampleKey, { ...params });
+      synth.connect(channel.input);
+      this.voices.set(sampleKey, { synth, channel, params, volume, reverbSend, delaySend });
+      return;
+    }
+    if (existing.params !== params) this.updateParams(sampleKey, params);
+    if (existing.volume !== volume) this.setVolume(sampleKey, volume);
+    if (existing.reverbSend !== reverbSend || existing.delaySend !== delaySend) {
+      this.setSends(sampleKey, reverbSend, delaySend, true);
     }
   }
 
   updateParams(sampleKey: string, params: DrumSynthParams) {
-    const synth = this.synths.get(sampleKey);
-    if (!synth) {
-      this.currentParams.set(sampleKey, params);
-      return;
-    }
-
-    const current = this.currentParams.get(sampleKey);
-    if (current?.synthKind !== params.synthKind) {
-      // synthKind changed — dispose and recreate
-      synth.dispose();
-      this.synths.set(sampleKey, createDrumSynth(params));
+    const voice = this.voices.get(sampleKey);
+    if (!voice) return;
+    if (voice.params.synthKind !== params.synthKind) {
+      voice.synth.dispose();
+      voice.synth = createDrumSynth(params);
+      voice.synth.connect(voice.channel.input);
     } else {
-      applyDrumParams(synth, params);
+      applyDrumParams(voice.synth, params);
     }
-    this.currentParams.set(sampleKey, params);
+    voice.params = params;
   }
 
-  trigger(sampleKey: string, time: number) {
-    const synth = this.synths.get(sampleKey);
-    if (!synth) return;
-
-    const params = this.currentParams.get(sampleKey);
+  trigger(sampleKey: string, time: number, velocity: number = 1) {
+    const voice = this.voices.get(sampleKey);
+    if (!voice) return;
+    const { synth, params } = voice;
+    const vel = Math.max(0.05, Math.min(1, velocity));
 
     if (synth instanceof Tone.NoiseSynth) {
-      synth.triggerAttackRelease('16n', time);
+      synth.triggerAttackRelease('16n', time, vel);
     } else if (synth instanceof Tone.MetalSynth) {
-      synth.triggerAttackRelease('32n', time);
+      // MetalSynth is monophonic in Tone 15: (note, duration, time, velocity)
+      const freq = (params as MetalSynthParams)?.frequency ?? 400;
+      // MetalSynth runs hot compared to the membrane/noise voices — tame it
+      synth.triggerAttackRelease(freq, '32n', time, vel * 0.55);
     } else if (synth instanceof Tone.MembraneSynth) {
       const freq = (params as MembraneSynthParams)?.frequency ?? 60;
-      synth.triggerAttackRelease(freq, '8n', time);
+      synth.triggerAttackRelease(freq, '8n', time, vel);
     }
   }
 
   setVolume(sampleKey: string, db: number) {
-    const synth = this.synths.get(sampleKey);
-    if (synth) synth.volume.value = db;
+    const voice = this.voices.get(sampleKey);
+    if (!voice) return;
+    voice.volume = db;
+    voice.channel.setVolume(db);
+  }
+
+  setSends(sampleKey: string, reverb: number, delay: number, immediate = false) {
+    const voice = this.voices.get(sampleKey);
+    if (!voice) return;
+    voice.reverbSend = reverb;
+    voice.delaySend = delay;
+    voice.channel.setSends(reverb, delay, immediate);
+  }
+
+  has(sampleKey: string): boolean {
+    return this.voices.has(sampleKey);
   }
 
   dispose() {
-    this.synths.forEach(s => s.dispose());
-    this.synths.clear();
-    this.currentParams.clear();
+    this.voices.forEach(v => {
+      v.synth.dispose();
+      v.channel.dispose();
+    });
+    this.voices.clear();
   }
 }

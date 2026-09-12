@@ -95,10 +95,12 @@ export function useSongPlayback() {
               const isMuted = track.muted || (hasSolo && !track.solo);
               return track.steps.map((step) => ({
                 sampleKey: track.sampleKey,
-                active: step === 1,
+                velocity: step,
                 muted: isMuted,
                 synthParams: track.synthParams,
                 volume: track.volume,
+                reverbSend: track.reverbSend ?? 0,
+                delaySend: track.delaySend ?? 0,
               }));
             });
           },
@@ -111,17 +113,22 @@ export function useSongPlayback() {
                 trackId: track.id,
                 note: step.note,
                 active: step.active,
+                velocity: step.velocity,
+                length: step.length ?? 1,
                 muted: isMuted,
                 synthType: track.synthType,
                 synthParams: track.synthParams,
                 volume: track.volume,
+                reverbSend: track.reverbSend ?? 0,
+                delaySend: track.delaySend ?? 0,
               }));
             });
           },
           () => useSequencerStore.getState().getActivePattern().numSteps,
           () => true,
           undefined,
-          () => useTransportStore.getState().swing
+          () => useTransportStore.getState().swing,
+          () => useSequencerStore.getState().getActivePattern().stepResolution
         );
 
         // Step callback with block transitions, mute skipping, and loop support

@@ -6,6 +6,8 @@ import { SongArrangement } from '../song/SongArrangement';
 import { TheoryTabs } from '../theory/TheoryTabs';
 import { useSequencerPlayback } from '../../hooks/useSequencerPlayback';
 import { useSongPlayback } from '../../hooks/useSongPlayback';
+import { useGlobalShortcuts } from '../../hooks/useGlobalShortcuts';
+import { useLiveKeys } from '../../hooks/useLiveKeys';
 
 const MIN_PANEL_WIDTH = 280;
 const MAX_PANEL_WIDTH = 700;
@@ -118,6 +120,8 @@ function StudioView() {
 export function AppShell() {
   useSequencerPlayback();
   useSongPlayback();
+  useGlobalShortcuts();
+  useLiveKeys();
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">

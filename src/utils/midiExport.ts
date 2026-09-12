@@ -1,5 +1,5 @@
 import MidiWriter from 'midi-writer-js';
-import type { Pattern, MelodicTrack } from '../types';
+import type { Pattern } from '../types';
 import type { SongBlock } from '../store/useSongStore';
 
 /**
@@ -19,25 +19,116 @@ const DRUM_MIDI_MAP: Record<string, number> = {
   'ride':         51, // Ride Cymbal 1
 };
 
-/** Ticks per sixteenth note at midi-writer-js default PPQ of 128 */
-const TICKS_PER_16TH = 32;
+/** midi-writer-js default PPQ */
+const PPQ = 128;
+
+/** Ticks per sequencer step for a pattern's resolution */
+function ticksPerStep(pattern: Pattern): number {
+  return pattern.stepResolution === '32n' ? PPQ / 8 : PPQ / 4;
+}
+
+function midiVelocity(v: number): number {
+  return Math.max(1, Math.min(100, Math.round(v * 100)));
+}
+
+type MidiTrack = InstanceType<typeof MidiWriter.Track>;
+
+function newTrack(name: string, bpm: number, timeSignature: string): MidiTrack {
+  const t = new MidiWriter.Track();
+  t.setTempo(bpm);
+  t.addTrackName(name);
+  const [num, den] = timeSignature.split('/').map(Number);
+  t.setTimeSignature(num, den, 24, 8);
+  return t;
+}
 
 /**
- * Export the active pattern as a standard MIDI file and trigger a browser download.
- * Drums go on a single channel-10 track; each melodic track gets its own MIDI track.
+ * Add one pattern pass to the given tracks starting at `startTick`.
+ * Events use absolute `startTick`s so overlapping / long notes are preserved.
+ * Returns the number of ticks the pattern occupies.
  */
-export function exportPatternToMidi(pattern: Pattern, bpm: number): void {
-  const tracks: InstanceType<typeof MidiWriter.Track>[] = [];
+function addPatternEvents(
+  pattern: Pattern,
+  startTick: number,
+  drumTrack: MidiTrack,
+  melodicTracks: Map<string, MidiTrack>,
+  getMelodicTrack: (name: string) => MidiTrack,
+  counters: { drum: number; melodic: number },
+): number {
+  const tps = ticksPerStep(pattern);
+  const drumHasSolo = pattern.drumTracks.some(t => t.solo);
+  const melodicHasSolo = pattern.melodicTracks.some(t => t.solo);
 
-  // --- Drum track (GM channel 10) ---
-  const drumTrack = buildDrumTrack(pattern, bpm);
-  if (drumTrack) tracks.push(drumTrack);
-
-  // --- Melodic tracks ---
-  for (const mTrack of pattern.melodicTracks) {
-    const midiTrack = buildMelodicTrack(mTrack, pattern, bpm);
-    if (midiTrack) tracks.push(midiTrack);
+  for (const dt of pattern.drumTracks) {
+    if (dt.muted || (drumHasSolo && !dt.solo)) continue;
+    const midiNote = DRUM_MIDI_MAP[dt.sampleKey];
+    if (midiNote === undefined) continue;
+    for (let step = 0; step < pattern.numSteps; step++) {
+      const vel = dt.steps[step];
+      if (!vel) continue;
+      drumTrack.addEvent(new MidiWriter.NoteEvent({
+        pitch: [midiNote],
+        duration: `T${tps}`,
+        velocity: midiVelocity(vel),
+        channel: 10,
+        startTick: startTick + step * tps,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any));
+      counters.drum++;
+    }
   }
+
+  for (const mTrack of pattern.melodicTracks) {
+    if (mTrack.muted || (melodicHasSolo && !mTrack.solo)) continue;
+    let track: MidiTrack | null = null;
+    for (let step = 0; step < pattern.numSteps; step++) {
+      const mStep = mTrack.steps[step];
+      if (!mStep.active || !mStep.note) continue;
+      if (!track) track = melodicTracks.get(mTrack.name) ?? getMelodicTrack(mTrack.name);
+      const len = Math.max(1, mStep.length ?? 1);
+      track.addEvent(new MidiWriter.NoteEvent({
+        pitch: [mStep.note],
+        duration: `T${len * tps}`,
+        velocity: midiVelocity(mStep.velocity),
+        startTick: startTick + step * tps,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any));
+      counters.melodic++;
+    }
+  }
+
+  return pattern.numSteps * tps;
+}
+
+function buildAndDownload(
+  sequence: { pattern: Pattern; repeats: number }[],
+  bpm: number,
+  filename: string,
+): void {
+  if (sequence.length === 0) {
+    alert('Nothing to export — no patterns in the sequence.');
+    return;
+  }
+  const timeSignature = sequence[0].pattern.timeSignature;
+  const drumTrack = newTrack('Drums', bpm, timeSignature);
+  const melodicTracks = new Map<string, MidiTrack>();
+  const getMelodicTrack = (name: string) => {
+    const t = newTrack(name, bpm, timeSignature);
+    melodicTracks.set(name, t);
+    return t;
+  };
+  const counters = { drum: 0, melodic: 0 };
+
+  let tick = 0;
+  for (const { pattern, repeats } of sequence) {
+    for (let rep = 0; rep < repeats; rep++) {
+      tick += addPatternEvents(pattern, tick, drumTrack, melodicTracks, getMelodicTrack, counters);
+    }
+  }
+
+  const tracks: MidiTrack[] = [];
+  if (counters.drum > 0) tracks.push(drumTrack);
+  tracks.push(...melodicTracks.values());
 
   if (tracks.length === 0) {
     alert('Nothing to export — all tracks are empty or muted.');
@@ -45,215 +136,32 @@ export function exportPatternToMidi(pattern: Pattern, bpm: number): void {
   }
 
   const writer = new MidiWriter.Writer(tracks);
-  const dataUri = writer.dataUri();
-
-  // Trigger browser download
   const link = document.createElement('a');
-  link.href = dataUri;
-  link.download = `groove-theory-${pattern.name}.mid`;
+  link.href = writer.dataUri();
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-function buildDrumTrack(
-  pattern: Pattern,
-  bpm: number,
-): InstanceType<typeof MidiWriter.Track> | null {
-  const activeTracks = pattern.drumTracks.filter(t => !t.muted);
-  if (activeTracks.length === 0) return null;
-
-  let hasAnyNotes = false;
-  const track = new MidiWriter.Track();
-  track.setTempo(bpm);
-  track.addTrackName('Drums');
-
-  const [num, den] = pattern.timeSignature.split('/').map(Number);
-  track.setTimeSignature(num, den, 24, 8);
-
-  let restTicks = 0;
-
-  for (let step = 0; step < pattern.numSteps; step++) {
-    const pitches: number[] = [];
-
-    for (const dt of activeTracks) {
-      if (dt.steps[step] !== 0) {
-        const midiNote = DRUM_MIDI_MAP[dt.sampleKey];
-        if (midiNote !== undefined) pitches.push(midiNote);
-      }
-    }
-
-    if (pitches.length > 0) {
-      hasAnyNotes = true;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fields: any = {
-        pitch: pitches,
-        duration: `T${TICKS_PER_16TH}`,
-        velocity: 80,
-        channel: 10,
-      };
-      if (restTicks > 0) {
-        fields.wait = `T${restTicks}`;
-      }
-      track.addEvent(new MidiWriter.NoteEvent(fields));
-      restTicks = 0;
-    } else {
-      restTicks += TICKS_PER_16TH;
-    }
-  }
-
-  return hasAnyNotes ? track : null;
+/**
+ * Export the active pattern as a standard MIDI file and trigger a browser download.
+ * Drums go on a single channel-10 track; each melodic track gets its own MIDI track.
+ * Velocities and note lengths are preserved.
+ */
+export function exportPatternToMidi(pattern: Pattern, bpm: number): void {
+  buildAndDownload([{ pattern, repeats: 1 }], bpm, `groove-theory-${pattern.name}.mid`);
 }
 
-function buildMelodicTrack(
-  mTrack: MelodicTrack,
-  pattern: Pattern,
-  bpm: number,
-): InstanceType<typeof MidiWriter.Track> | null {
-  if (mTrack.muted) return null;
-
-  let hasAnyNotes = false;
-  const track = new MidiWriter.Track();
-  track.setTempo(bpm);
-  track.addTrackName(mTrack.name);
-
-  const [num, den] = pattern.timeSignature.split('/').map(Number);
-  track.setTimeSignature(num, den, 24, 8);
-
-  let restTicks = 0;
-
-  for (let step = 0; step < pattern.numSteps; step++) {
-    const mStep = mTrack.steps[step];
-
-    if (mStep.active && mStep.note) {
-      hasAnyNotes = true;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fields: any = {
-        pitch: [mStep.note], // e.g. 'C4', 'D#3' — midi-writer-js accepts note names
-        duration: `T${TICKS_PER_16TH}`,
-        velocity: Math.round(mStep.velocity * 100),
-      };
-      if (restTicks > 0) {
-        fields.wait = `T${restTicks}`;
-      }
-      track.addEvent(new MidiWriter.NoteEvent(fields));
-      restTicks = 0;
-    } else {
-      restTicks += TICKS_PER_16TH;
-    }
-  }
-
-  return hasAnyNotes ? track : null;
-}
-
-// ---------------------------------------------------------------------------
-// Song MIDI export — concatenates all blocks with repeats
-// ---------------------------------------------------------------------------
-
-export function exportSongToMidi(
-  blocks: SongBlock[],
-  patterns: Pattern[],
-  bpm: number
-): void {
-  const drumTrack = new MidiWriter.Track();
-  drumTrack.setTempo(bpm);
-  drumTrack.addTrackName('Drums');
-  drumTrack.setTimeSignature(4, 4, 24, 8);
-
-  const melodicTrackMap = new Map<string, { track: InstanceType<typeof MidiWriter.Track>; restTicks: number }>();
-  let drumRestTicks = 0;
-  let hasDrumNotes = false;
-
+/**
+ * Export the song arrangement (all non-muted blocks with repeats) as one MIDI file.
+ */
+export function exportSongToMidi(blocks: SongBlock[], patterns: Pattern[], bpm: number): void {
+  const sequence: { pattern: Pattern; repeats: number }[] = [];
   for (const block of blocks) {
-    const pattern = patterns.find((p) => p.id === block.patternId);
-    if (!pattern) continue;
-
-    const activeDrums = pattern.drumTracks.filter((t) => !t.muted);
-
-    for (let rep = 0; rep < block.repeats; rep++) {
-      for (let step = 0; step < pattern.numSteps; step++) {
-        const pitches: number[] = [];
-        for (const dt of activeDrums) {
-          if (dt.steps[step] !== 0) {
-            const midiNote = DRUM_MIDI_MAP[dt.sampleKey];
-            if (midiNote !== undefined) pitches.push(midiNote);
-          }
-        }
-        if (pitches.length > 0) {
-          hasDrumNotes = true;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const fields: any = {
-            pitch: pitches,
-            duration: `T${TICKS_PER_16TH}`,
-            velocity: 80,
-            channel: 10,
-          };
-          if (drumRestTicks > 0) {
-            fields.wait = `T${drumRestTicks}`;
-          }
-          drumTrack.addEvent(new MidiWriter.NoteEvent(fields));
-          drumRestTicks = 0;
-        } else {
-          drumRestTicks += TICKS_PER_16TH;
-        }
-      }
-
-      for (const mTrack of pattern.melodicTracks) {
-        if (mTrack.muted) continue;
-        const key = mTrack.name;
-        if (!melodicTrackMap.has(key)) {
-          const t = new MidiWriter.Track();
-          t.setTempo(bpm);
-          t.addTrackName(mTrack.name);
-          t.setTimeSignature(4, 4, 24, 8);
-          melodicTrackMap.set(key, { track: t, restTicks: 0 });
-        }
-        const entry = melodicTrackMap.get(key)!;
-
-        for (let step = 0; step < pattern.numSteps; step++) {
-          const mStep = mTrack.steps[step];
-          if (mStep.active && mStep.note) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const fields: any = {
-              pitch: [mStep.note],
-              duration: `T${TICKS_PER_16TH}`,
-              velocity: Math.round(mStep.velocity * 100),
-            };
-            if (entry.restTicks > 0) {
-              fields.wait = `T${entry.restTicks}`;
-            }
-            entry.track.addEvent(new MidiWriter.NoteEvent(fields));
-            entry.restTicks = 0;
-          } else {
-            entry.restTicks += TICKS_PER_16TH;
-          }
-        }
-      }
-    }
+    if (block.muted) continue;
+    const pattern = patterns.find(p => p.id === block.patternId);
+    if (pattern) sequence.push({ pattern, repeats: block.repeats });
   }
-
-  const allTracks: InstanceType<typeof MidiWriter.Track>[] = [];
-  if (hasDrumNotes) allTracks.push(drumTrack);
-  for (const { track } of melodicTrackMap.values()) {
-    allTracks.push(track);
-  }
-
-  if (allTracks.length === 0) {
-    alert('Nothing to export — all tracks are empty or muted.');
-    return;
-  }
-
-  const writer = new MidiWriter.Writer(allTracks);
-  const dataUri = writer.dataUri();
-
-  const link = document.createElement('a');
-  link.href = dataUri;
-  link.download = 'groove-theory-song.mid';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  buildAndDownload(sequence, bpm, 'groove-theory-song.mid');
 }

@@ -13,6 +13,13 @@ interface TrackHeaderProps {
   onOpenSettings?: () => void;
   settingsOpen?: boolean;
   onFill?: () => void;
+  /** Drum tracks: play the sound once */
+  onAudition?: () => void;
+  /** Melodic tracks: arm for live keyboard input */
+  armed?: boolean;
+  onToggleArm?: () => void;
+  /** Small caption under the name (e.g. synth preset) */
+  subtitle?: string;
 }
 
 export function HeaderResizeHandle() {
@@ -66,6 +73,7 @@ export function HeaderResizeHandle() {
 export function TrackHeader({
   name, color, muted, solo,
   onMute, onSolo, onRemove, onRename, onOpenSettings, settingsOpen, onFill,
+  onAudition, armed, onToggleArm, subtitle,
 }: TrackHeaderProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(name);
@@ -80,7 +88,10 @@ export function TrackHeader({
   };
 
   return (
-    <div className="flex items-center gap-2 shrink-0" style={{ width: trackHeaderWidth }}>
+    <div
+      className={`flex items-center gap-1.5 shrink-0 rounded-md px-1 -mx-1 transition-colors ${armed ? 'bg-accent-red/10' : ''}`}
+      style={{ width: trackHeaderWidth + 8 }}
+    >
       <button
         onClick={onOpenSettings}
         className={`w-5 h-5 shrink-0 flex items-center justify-center text-[15px] font-bold leading-none cursor-pointer rounded transition-opacity ${
@@ -105,23 +116,43 @@ export function TrackHeader({
           className="text-sm font-medium bg-bg-cell border border-accent-orange rounded px-1 w-20 text-text-primary outline-none"
         />
       ) : (
-        <span
-          onDoubleClick={() => {
-            if (onRename) {
-              setEditName(name);
-              setEditing(true);
-            }
-          }}
-          className={`text-sm font-medium truncate ${onRename ? 'cursor-text' : ''} ${
-            muted ? 'text-text-muted line-through' : 'text-text-primary'
-          }`}
-          title={onRename ? 'Double-click to rename' : name}
-        >
-          {name}
-        </span>
+        <div className="flex flex-col min-w-0 leading-tight">
+          <span
+            onDoubleClick={() => {
+              if (onRename) {
+                setEditName(name);
+                setEditing(true);
+              }
+            }}
+            onMouseDown={(e) => {
+              // Single click on a drum name auditions it
+              if (onAudition && e.detail === 1) onAudition();
+            }}
+            className={`text-sm font-medium truncate ${onAudition ? 'cursor-pointer' : onRename ? 'cursor-text' : ''} ${
+              muted ? 'text-text-muted line-through' : 'text-text-primary'
+            }`}
+            title={onAudition ? 'Click to hear · double-click to rename' : onRename ? 'Double-click to rename' : name}
+          >
+            {name}
+          </span>
+          {subtitle && (
+            <span className="text-[9px] text-text-muted truncate leading-none">{subtitle}</span>
+          )}
+        </div>
       )}
 
-      <div className="flex gap-1 ml-auto">
+      <div className="flex gap-1 ml-auto shrink-0">
+        {onToggleArm && (
+          <button
+            onClick={onToggleArm}
+            className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
+              armed ? 'bg-accent-red text-white animate-pulse' : 'bg-bg-cell text-text-muted hover:text-accent-red'
+            }`}
+            title={armed ? 'Armed for live keys — click to disarm' : 'Arm: play this synth with your keyboard'}
+          >
+            ●
+          </button>
+        )}
         {onRemove && (
           <button
             onClick={onRemove}

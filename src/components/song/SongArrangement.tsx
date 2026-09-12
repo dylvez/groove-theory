@@ -19,7 +19,11 @@ const BLOCK_GAP = 8; // gap-2 = 8px
 
 function getBlockWidth(pattern: Pattern | undefined, repeats: number): number {
   if (!pattern) return MIN_BLOCK_WIDTH;
-  const stepsPerMeasure = pattern.timeSignature === '3/4' ? 12 : 16;
+  const stepsPerMeasure = (() => {
+    const beats = pattern.timeSignature === '3/4' ? 3 : 4;
+    const subs = pattern.stepResolution === '32n' ? 8 : 4;
+    return beats * subs;
+  })();
   const bars = pattern.numSteps / stepsPerMeasure;
   return Math.max(MIN_BLOCK_WIDTH, bars * repeats * PX_PER_BAR);
 }
@@ -171,7 +175,11 @@ export function SongArrangement() {
   // Calculate total bars for display
   const totalBars = useMemo(() => {
     return blockData.reduce((sum, { block, pattern }) => {
-      const stepsPerMeasure = (pattern?.timeSignature ?? '4/4') === '3/4' ? 12 : 16;
+      const stepsPerMeasure = (() => {
+        const beats = (pattern?.timeSignature ?? '4/4') === '3/4' ? 3 : 4;
+        const subs = (pattern?.stepResolution ?? '16n') === '32n' ? 8 : 4;
+        return beats * subs;
+      })();
       const bars = (pattern?.numSteps ?? 32) / stepsPerMeasure;
       return sum + bars * block.repeats;
     }, 0);

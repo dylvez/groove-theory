@@ -7,7 +7,11 @@ export function PatternSelector() {
   const setMeasures = useSequencerStore(s => s.setMeasures);
 
   const activePattern = patterns.find(p => p.id === activePatternId) || patterns[0];
-  const stepsPerMeasure = (activePattern?.timeSignature ?? '4/4') === '3/4' ? 12 : 16;
+  const stepsPerMeasure = (() => {
+    const beats = (activePattern?.timeSignature ?? '4/4') === '3/4' ? 3 : 4;
+    const subs = (activePattern?.stepResolution ?? '16n') === '32n' ? 8 : 4;
+    return beats * subs;
+  })();
   const currentMeasures = Math.round((activePattern?.numSteps ?? 32) / stepsPerMeasure);
 
   return (

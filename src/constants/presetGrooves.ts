@@ -91,12 +91,12 @@ function beatToDrumTracks(beatName: string, numSteps: number): DrumTrack[] {
 
 /** Beat-only pattern (empty melodics) */
 function makePattern(id: string, name: string, beatName: string, numSteps: number = 32, timeSignature: TimeSignature = '4/4'): Pattern {
-  return { id, name, numSteps, timeSignature, drumTracks: beatToDrumTracks(beatName, numSteps), melodicTracks: defaultMelodicTracks(numSteps) };
+  return { id, name, numSteps, timeSignature, stepResolution: '16n', drumTracks: beatToDrumTracks(beatName, numSteps), melodicTracks: defaultMelodicTracks(numSteps) };
 }
 
 /** Pattern with custom melodic content */
 function songPat(id: string, name: string, beatName: string, melodics: MelodicTrack[], numSteps: number = 32, timeSignature: TimeSignature = '4/4'): Pattern {
-  return { id, name, numSteps, timeSignature, drumTracks: beatToDrumTracks(beatName, numSteps), melodicTracks: melodics };
+  return { id, name, numSteps, timeSignature, stepResolution: '16n', drumTracks: beatToDrumTracks(beatName, numSteps), melodicTracks: melodics };
 }
 
 function sb(patternId: string, repeats: number, label?: string): SongBlock {

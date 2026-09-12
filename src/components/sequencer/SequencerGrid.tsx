@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useUIStore } from '../../store/useUIStore';
-import { DRUM_KIT } from '../../constants';
+import { DRUM_KIT, DRUM_KITS, SYNTH_PRESETS } from '../../constants';
 import type { SynthType } from '../../types';
 import { DrumTrack } from './DrumTrack';
 import { MelodicTrack } from './MelodicTrack';
+import { StepRuler } from './StepRuler';
 
 const SYNTH_OPTIONS: { type: SynthType; label: string; color: string }[] = [
   { type: 'synth', label: 'Basic Synth', color: '#a855f7' },
@@ -22,10 +23,18 @@ export function SequencerGrid() {
   const removeMelodicTrack = useSequencerStore(s => s.removeMelodicTrack);
   const fillAllDrums = useSequencerStore(s => s.fillAllDrums);
   const fillAllSynths = useSequencerStore(s => s.fillAllSynths);
+  const applyDrumKit = useSequencerStore(s => s.applyDrumKit);
+  const applySynthPreset = useSequencerStore(s => s.applySynthPreset);
   const activePattern = patterns.find(p => p.id === activePatternId) || patterns[0];
+  const drumKitId = activePattern?.kitId ?? 'classic';
 
   const studioTab = useUIStore(s => s.studioTab);
-  const stepsPerMeasure = (activePattern?.timeSignature ?? '4/4') === '3/4' ? 12 : 16;
+  const isCompact = (activePattern?.stepResolution ?? '16n') === '32n';
+  const stepsPerMeasure = (() => {
+    const beats = (activePattern?.timeSignature ?? '4/4') === '3/4' ? 3 : 4;
+    const subs = isCompact ? 8 : 4;
+    return beats * subs;
+  })();
   const [showDrumPicker, setShowDrumPicker] = useState(false);
   const [showSynthPicker, setShowSynthPicker] = useState(false);
   const [drumsCollapsed, setDrumsCollapsed] = useState(false);
@@ -42,31 +51,63 @@ export function SequencerGrid() {
     setShowSynthPicker(false);
   };
 
+  const handleAddPresetSynth = (presetId: string) => {
+    const preset = SYNTH_PRESETS.find(p => p.id === presetId);
+    if (!preset) return;
+    addMelodicTrack(preset.synthType, preset.name);
+    // The new track is appended last — apply the preset to it
+    const pattern = useSequencerStore.getState().getActivePattern();
+    const newTrack = pattern.melodicTracks[pattern.melodicTracks.length - 1];
+    if (newTrack) applySynthPreset(newTrack.id, preset.id);
+    setShowSynthPicker(false);
+  };
+
+  const handleKitChange = (kitId: string) => {
+    applyDrumKit(kitId);
+  };
+
   return (
     <div className="flex flex-col min-h-0 flex-1" data-sequencer-grid>
-      <div className="px-6 py-4 flex flex-col gap-3 overflow-auto min-h-0 flex-1">
+      <div className="px-6 py-3 flex flex-col gap-3 overflow-auto min-h-0 flex-1">
+        <StepRuler numSteps={activePattern.numSteps} stepsPerMeasure={stepsPerMeasure} compact={isCompact} />
+
         {/* Drums section */}
         <div>
-          <button
-            onClick={() => setDrumsCollapsed(!drumsCollapsed)}
-            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider cursor-pointer transition-colors ${
-              studioTab === 'beats'
-                ? 'bg-accent-amber/20 text-accent-amber border border-accent-amber/40'
-                : 'bg-bg-tertiary text-text-secondary border border-transparent'
-            }`}
-          >
-            <svg
-              className={`w-3 h-3 shrink-0 transition-transform ${drumsCollapsed ? '' : 'rotate-90'}`}
-              viewBox="0 0 12 12"
-              fill="currentColor"
+          <div className={`w-full flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
+            studioTab === 'beats'
+              ? 'bg-accent-amber/20 text-accent-amber border border-accent-amber/40'
+              : 'bg-bg-tertiary text-text-secondary border border-transparent'
+          }`}>
+            <button
+              onClick={() => setDrumsCollapsed(!drumsCollapsed)}
+              className="flex items-center gap-2 cursor-pointer"
             >
-              <path d="M4 2l5 4-5 4V2z" />
-            </svg>
-            Drums
+              <svg
+                className={`w-3 h-3 shrink-0 transition-transform ${drumsCollapsed ? '' : 'rotate-90'}`}
+                viewBox="0 0 12 12"
+                fill="currentColor"
+              >
+                <path d="M4 2l5 4-5 4V2z" />
+              </svg>
+              Drums
+            </button>
+            <label className="flex items-center gap-1.5 ml-3 normal-case tracking-normal font-normal">
+              <span className="text-[10px] opacity-70">Kit</span>
+              <select
+                value={drumKitId}
+                onChange={(e) => handleKitChange(e.target.value)}
+                title={DRUM_KITS.find(k => k.id === drumKitId)?.description}
+                className="bg-bg-primary/60 border border-current/30 rounded px-1.5 py-0.5 text-[11px] font-semibold cursor-pointer text-inherit focus:outline-none"
+              >
+                {DRUM_KITS.map(k => (
+                  <option key={k.id} value={k.id}>{k.name}</option>
+                ))}
+              </select>
+            </label>
             <span className="text-[10px] font-normal normal-case tracking-normal opacity-60 ml-auto">
               {activePattern.drumTracks.length} {activePattern.drumTracks.length === 1 ? 'track' : 'tracks'}
             </span>
-          </button>
+          </div>
 
           {!drumsCollapsed && (
             <div className="flex flex-col gap-2 mt-2">
@@ -76,6 +117,7 @@ export function SequencerGrid() {
                   track={track}
                   onRemove={() => removeDrumTrack(track.id)}
                   stepsPerMeasure={stepsPerMeasure}
+                  compact={isCompact}
                 />
               ))}
 
@@ -146,6 +188,7 @@ export function SequencerGrid() {
                   track={track}
                   onRemove={() => removeMelodicTrack(track.id)}
                   stepsPerMeasure={stepsPerMeasure}
+                  compact={isCompact}
                 />
               ))}
 
@@ -165,7 +208,22 @@ export function SequencerGrid() {
                   Fill All Synths
                 </button>
                 {showSynthPicker && (
-                  <div className="absolute top-9 left-0 z-50 bg-bg-secondary border border-border rounded-lg p-2 shadow-xl min-w-44">
+                  <div className="absolute top-9 left-0 z-50 bg-bg-secondary border border-border rounded-lg p-2 shadow-xl min-w-56">
+                    <div className="text-[9px] uppercase tracking-widest text-text-muted px-2 pb-1">Presets</div>
+                    <div className="grid grid-cols-2 gap-1 mb-2">
+                      {SYNTH_PRESETS.map(preset => (
+                        <button
+                          key={preset.id}
+                          onClick={() => handleAddPresetSynth(preset.id)}
+                          title={preset.description}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded text-xs text-text-primary hover:bg-accent-purple/20 cursor-pointer transition-colors text-left"
+                        >
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: SYNTH_OPTIONS.find(o => o.type === preset.synthType)?.color }} />
+                          {preset.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="text-[9px] uppercase tracking-widest text-text-muted px-2 pb-1 border-t border-border/50 pt-2">Blank engine</div>
                     <div className="flex flex-col gap-1">
                       {SYNTH_OPTIONS.map(option => (
                         <button

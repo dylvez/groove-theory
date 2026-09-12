@@ -1,36 +1,70 @@
 import * as Tone from 'tone';
 import { DrumEngine } from './DrumEngine';
 import { SynthEngine } from './SynthEngine';
-import type { DrumSynthParams, MelodicSynthParams, SynthType } from '../types';
+import { Mixer } from './Mixer';
+import type { DrumSynthParams, MelodicSynthParams, SynthType, StepResolution } from '../types';
+import type { MixerSettings } from '../store/useMixerStore';
+import { useMixerStore } from '../store/useMixerStore';
 
 export interface DrumStepData {
   sampleKey: string;
-  active: boolean;
+  /** 0 = off, otherwise velocity 0–1 */
+  velocity: number;
   muted: boolean;
   synthParams: DrumSynthParams;
   volume: number;
+  reverbSend: number;
+  delaySend: number;
 }
 
 export interface MelodicStepData {
   trackId: string;
   note: string | null;
   active: boolean;
+  velocity: number;
+  /** Note length in steps */
+  length: number;
   muted: boolean;
   synthType: SynthType;
   synthParams: MelodicSynthParams;
   volume: number;
+  reverbSend: number;
+  delaySend: number;
+}
+
+/** Seconds per step for a given BPM and resolution. */
+export function stepSeconds(bpm: number, resolution: StepResolution): number {
+  const divisions = resolution === '32n' ? 8 : 4;
+  return 60 / bpm / divisions;
+}
+
+/** Ticks per step on the Tone transport (PPQ-based). */
+export function stepTicks(resolution: StepResolution): number {
+  const divisions = resolution === '32n' ? 8 : 4;
+  return Tone.getTransport().PPQ / divisions;
 }
 
 export class AudioEngine {
   private static instance: AudioEngine | null = null;
+  public mixer: Mixer;
   public drumEngine: DrumEngine;
   public synthEngine: SynthEngine;
   private repeatEventId: number | null = null;
   private stepCallback: ((step: number) => void) | null = null;
+  private unsubscribeMixer: (() => void) | null = null;
 
   private constructor() {
-    this.drumEngine = new DrumEngine();
-    this.synthEngine = new SynthEngine();
+    this.mixer = new Mixer(useMixerStore.getState());
+    this.drumEngine = new DrumEngine(this.mixer);
+    this.synthEngine = new SynthEngine(this.mixer);
+
+    // Keep the live mixer in sync with the persisted mixer settings
+    this.unsubscribeMixer = useMixerStore.subscribe((state, prev) => {
+      const changed: Partial<MixerSettings> = {};
+      (['masterVolume', 'reverbDecay', 'reverbLevel', 'delayTime', 'delayFeedback', 'delayLevel', 'compressor'] as const)
+        .forEach(k => { if (state[k] !== prev[k]) (changed as Record<string, unknown>)[k] = state[k]; });
+      if (Object.keys(changed).length) this.mixer.apply(changed);
+    });
   }
 
   static getInstance(): AudioEngine {
@@ -54,14 +88,17 @@ export class AudioEngine {
     getNumSteps: () => number,
     getLoop: () => boolean = () => true,
     onEnd?: () => void,
-    getSwing: () => number = () => 0
+    getSwing: () => number = () => 0,
+    getStepResolution: () => StepResolution = () => '16n'
   ) {
     this.clearSchedule();
 
     let currentStep = 0;
+    const initialResolution = getStepResolution();
 
     this.repeatEventId = Tone.getTransport().scheduleRepeat((time) => {
       const numSteps = getNumSteps();
+      const resolution = getStepResolution();
 
       // Stop at end of pattern when loop is off
       if (!getLoop() && currentStep >= numSteps) {
@@ -73,33 +110,36 @@ export class AudioEngine {
 
       // Calculate swing offset for odd-numbered steps (off-beats)
       const swing = getSwing();
-      const sixteenthDuration = 60 / Tone.getTransport().bpm.value / 4;
-      const swingOffset = (step % 2 === 1) ? swing * sixteenthDuration * 0.5 : 0;
+      const stepDuration = stepSeconds(Tone.getTransport().bpm.value, resolution);
+      const swingOffset = (step % 2 === 1) ? swing * stepDuration * 0.5 : 0;
       const triggerTime = time + swingOffset;
 
       // Trigger drum sounds
       const drumData = getDrumSteps();
       for (const track of drumData) {
-        // Ensure synth exists for this drum on first step
         if (track.length > 0) {
-          this.drumEngine.ensureSynth(track[0].sampleKey, track[0].synthParams, track[0].volume);
+          const t0 = track[0];
+          this.drumEngine.ensureSynth(t0.sampleKey, t0.synthParams, t0.volume, t0.reverbSend, t0.delaySend);
         }
         const stepData = track[step];
-        if (stepData && stepData.active && !stepData.muted) {
-          this.drumEngine.trigger(stepData.sampleKey, triggerTime);
+        if (stepData && stepData.velocity > 0 && !stepData.muted) {
+          this.drumEngine.trigger(stepData.sampleKey, triggerTime, stepData.velocity);
         }
       }
 
       // Trigger melodic sounds
       const melodicData = getMelodicSteps();
       for (const track of melodicData) {
-        // Ensure synth exists for this melodic track
         if (track.length > 0) {
-          this.synthEngine.ensureSynth(track[0].trackId, track[0].synthType, track[0].synthParams, track[0].volume);
+          const t0 = track[0];
+          this.synthEngine.ensureSynth(t0.trackId, t0.synthType, t0.synthParams, t0.volume, t0.reverbSend, t0.delaySend);
         }
         const stepData = track[step];
         if (stepData && stepData.active && stepData.note && !stepData.muted) {
-          this.synthEngine.playNote(stepData.trackId, stepData.note, '16n', triggerTime);
+          const len = Math.max(1, stepData.length || 1);
+          // Slight gap so identical consecutive notes re-articulate cleanly
+          const duration = Math.max(0.03, len * stepDuration - 0.01);
+          this.synthEngine.playNote(stepData.trackId, stepData.note, duration, triggerTime, stepData.velocity);
         }
       }
 
@@ -109,7 +149,7 @@ export class AudioEngine {
       }, time);
 
       currentStep++;
-    }, '16n');
+    }, initialResolution);
   }
 
   // --- Pass-through methods for live parameter editing ---
@@ -134,6 +174,25 @@ export class AudioEngine {
     this.synthEngine.setVolume(trackId, db);
   }
 
+  setDrumSends(sampleKey: string, reverb: number, delay: number) {
+    this.drumEngine.setSends(sampleKey, reverb, delay);
+  }
+
+  setMelodicSends(trackId: string, reverb: number, delay: number) {
+    this.synthEngine.setSends(trackId, reverb, delay);
+  }
+
+  /** Audition a drum immediately (used by track headers and pads). */
+  auditionDrum(sampleKey: string, params: DrumSynthParams, volume: number, reverbSend = 0, delaySend = 0, velocity = 1) {
+    this.drumEngine.ensureSynth(sampleKey, params, volume, reverbSend, delaySend);
+    this.drumEngine.trigger(sampleKey, Tone.now(), velocity);
+  }
+
+  /** Make sure a melodic track's voice exists so it can be played live. */
+  prepareMelodicVoice(trackId: string, synthType: SynthType, params: MelodicSynthParams, volume: number, reverbSend = 0, delaySend = 0) {
+    this.synthEngine.ensureSynth(trackId, synthType, params, volume, reverbSend, delaySend);
+  }
+
   clearSchedule() {
     if (this.repeatEventId !== null) {
       Tone.getTransport().clear(this.repeatEventId);
@@ -143,6 +202,7 @@ export class AudioEngine {
 
   setBpm(bpm: number) {
     Tone.getTransport().bpm.value = bpm;
+    this.mixer.syncTempo();
   }
 
   start() {
@@ -152,6 +212,7 @@ export class AudioEngine {
   stop() {
     Tone.getTransport().stop();
     Tone.getTransport().position = 0;
+    this.synthEngine.releaseAll();
     this.stepCallback?.(0);
   }
 
@@ -159,10 +220,24 @@ export class AudioEngine {
     return Tone.getTransport().state;
   }
 
+  /** Current transport position quantized to a step index (for live recording). */
+  getCurrentStep(numSteps: number, resolution: StepResolution): number {
+    const ticks = Tone.getTransport().ticks;
+    const perStep = stepTicks(resolution);
+    return Math.round(ticks / perStep) % numSteps;
+  }
+
+  /** Master output level in dB. */
+  getMasterLevel(): number {
+    return this.mixer.getLevel();
+  }
+
   dispose() {
     this.clearSchedule();
+    this.unsubscribeMixer?.();
     this.drumEngine.dispose();
     this.synthEngine.dispose();
+    this.mixer.dispose();
     AudioEngine.instance = null;
   }
 }

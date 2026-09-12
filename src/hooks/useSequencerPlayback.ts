@@ -30,10 +30,12 @@ export function useSequencerPlayback() {
               const isMuted = track.muted || (hasSolo && !track.solo);
               return track.steps.map(step => ({
                 sampleKey: track.sampleKey,
-                active: step === 1,
+                velocity: step,
                 muted: isMuted,
                 synthParams: track.synthParams,
                 volume: track.volume,
+                reverbSend: track.reverbSend ?? 0,
+                delaySend: track.delaySend ?? 0,
               }));
             });
           },
@@ -47,17 +49,22 @@ export function useSequencerPlayback() {
                 trackId: track.id,
                 note: step.note,
                 active: step.active,
+                velocity: step.velocity,
+                length: step.length ?? 1,
                 muted: isMuted,
                 synthType: track.synthType,
                 synthParams: track.synthParams,
                 volume: track.volume,
+                reverbSend: track.reverbSend ?? 0,
+                delaySend: track.delaySend ?? 0,
               }));
             });
           },
           () => useSequencerStore.getState().getActivePattern().numSteps,
           () => useTransportStore.getState().loop,
           () => useTransportStore.getState().stop(),
-          () => useTransportStore.getState().swing
+          () => useTransportStore.getState().swing,
+          () => useSequencerStore.getState().getActivePattern().stepResolution
         );
         scheduledRef.current = true;
       }

@@ -26,7 +26,7 @@ const MiniGrid = memo(function MiniGrid({ pattern }: { pattern: Pattern }) {
             <div
               key={j}
               className="flex-1 rounded-[0.5px]"
-              style={{ backgroundColor: step === 1 ? track.color : '#2a2a3d' }}
+              style={{ backgroundColor: step > 0 ? track.color : '#2a2a3d', opacity: step > 0 ? 0.4 + 0.6 * step : 1 }}
             />
           ))}
         </div>

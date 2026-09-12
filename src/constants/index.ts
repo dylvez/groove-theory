@@ -5,3 +5,5 @@ export * from './drums';
 export * from './beats';
 export * from './diatonicChords';
 export * from './beatContent';
+export * from './drumKits';
+export * from './synthPresets';

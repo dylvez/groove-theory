@@ -16,7 +16,7 @@ export function useKeyboardInput({ baseOctave, onNoteOn, onNoteOff, enabled = tr
     const activeNotes = new Set<string>();
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.repeat || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
       const mapping = KEYBOARD_MAP[e.key.toLowerCase()];
       if (!mapping) return;
 

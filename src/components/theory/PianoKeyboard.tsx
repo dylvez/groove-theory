@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { NoteName, NoteWithOctave } from '../../types';
 import { NOTE_NAMES } from '../../constants';
 import { useTheoryStore } from '../../store/useTheoryStore';
+import { useUIStore } from '../../store/useUIStore';
 import { AudioEngine } from '../../audio/AudioEngine';
 import { useKeyboardInput } from '../../hooks/useKeyboardInput';
 import { isBlackKey } from '../../utils/noteHelpers';
@@ -18,6 +19,8 @@ export function PianoKeyboard({ startOctave = 3, numOctaves = 3 }: PianoKeyboard
   const chordRoot = useTheoryStore(s => s.chordRoot);
   const selectedChord = useTheoryStore(s => s.selectedChord);
   const highlightMode = useTheoryStore(s => s.highlightMode);
+  // When a sequencer track is armed, the keyboard plays that track instead
+  const armedTrackId = useUIStore(s => s.armedTrackId);
 
   const scaleNotes = getScaleNotes(rootNote, selectedScale);
   const chordNotes = highlightMode === 'chord' ? getChordNotes(chordRoot, selectedChord) : [];
@@ -30,6 +33,7 @@ export function PianoKeyboard({ startOctave = 3, numOctaves = 3 }: PianoKeyboard
   useKeyboardInput({
     baseOctave: startOctave + 1,
     onNoteOn: playNote,
+    enabled: armedTrackId === null,
   });
 
   // Build key layout

@@ -1,69 +1,92 @@
 import * as Tone from 'tone';
-import type { Pattern, MembraneSynthParams } from '../types';
+import type { Pattern } from '../types';
 import type { SongBlock } from '../store/useSongStore';
-import { createDrumSynth } from '../audio/DrumEngine';
-import { createPolySynth } from '../audio/SynthEngine';
+import { Mixer } from '../audio/Mixer';
+import { DrumEngine } from '../audio/DrumEngine';
+import { SynthEngine } from '../audio/SynthEngine';
+import { stepSeconds } from '../audio/AudioEngine';
+import { useMixerStore } from '../store/useMixerStore';
+import { useTransportStore } from '../store/useTransportStore';
 
 // ---------------------------------------------------------------------------
-// Core: render pattern to AudioBuffer via Tone.Offline
+// Core: render a sequence of pattern blocks to an AudioBuffer via Tone.Offline
+//
+// The offline render builds the exact same graph as live playback (Mixer +
+// DrumEngine + SynthEngine), so exports include velocity, note lengths,
+// filters, sends, reverb/delay and the master bus.
 // ---------------------------------------------------------------------------
 
-async function renderPatternOffline(pattern: Pattern, bpm: number): Promise<AudioBuffer> {
-  const secondsPer16th = 60 / bpm / 4;
-  const patternDuration = pattern.numSteps * secondsPer16th;
-  // Extra tail so final note releases don't clip
-  const totalDuration = patternDuration + 1.5;
+interface RenderBlock {
+  pattern: Pattern;
+  repeats: number;
+}
 
-  // Figure out solo state once
-  const drumHasSolo = pattern.drumTracks.some(t => t.solo);
-  const melodicHasSolo = pattern.melodicTracks.some(t => t.solo);
+async function renderBlocksOffline(blocks: RenderBlock[], bpm: number): Promise<AudioBuffer> {
+  const swing = useTransportStore.getState().swing;
+  const mixerSettings = useMixerStore.getState();
 
-  const buffer = await Tone.Offline(({ transport }) => {
+  let songDuration = 0;
+  for (const { pattern, repeats } of blocks) {
+    songDuration += pattern.numSteps * repeats * stepSeconds(bpm, pattern.stepResolution);
+  }
+  // Tail so reverb/delay and final releases don't clip
+  const tail = Math.max(1.5, mixerSettings.reverbDecay * 0.8);
+  const totalDuration = songDuration + tail;
+
+  const buffer = await Tone.Offline(async ({ transport }) => {
     transport.bpm.value = bpm;
 
-    // ── Drum tracks ──────────────────────────────────────────────
-    for (const track of pattern.drumTracks) {
-      const isMuted = track.muted || (drumHasSolo && !track.solo);
-      if (isMuted) continue;
-
-      const synth = createDrumSynth(track.synthParams);
-      synth.volume.value = track.volume;
-
-      for (let step = 0; step < pattern.numSteps; step++) {
-        if (track.steps[step] === 0) continue;
-        const time = step * secondsPer16th;
-
-        transport.schedule((t) => {
-          if (synth instanceof Tone.NoiseSynth) {
-            synth.triggerAttackRelease('16n', t);
-          } else if (synth instanceof Tone.MetalSynth) {
-            synth.triggerAttackRelease('32n', t);
-          } else if (synth instanceof Tone.MembraneSynth) {
-            const freq = (track.synthParams as MembraneSynthParams).frequency ?? 60;
-            synth.triggerAttackRelease(freq, '8n', t);
-          }
-        }, time);
-      }
+    const mixer = new Mixer(mixerSettings);
+    const drums = new DrumEngine(mixer);
+    const synths = new SynthEngine(mixer);
+    try {
+      await mixer.ready;
+    } catch {
+      // Reverb generation failed in this context; continue dry rather than fail the export
     }
 
-    // ── Melodic tracks ───────────────────────────────────────────
-    for (const track of pattern.melodicTracks) {
-      const isMuted = track.muted || (melodicHasSolo && !track.solo);
-      if (isMuted) continue;
+    let timeOffset = 0;
 
-      const poly = createPolySynth(track.synthType, track.synthParams);
-      poly.volume.value = track.volume;
+    for (const { pattern, repeats } of blocks) {
+      const secsPerStep = stepSeconds(bpm, pattern.stepResolution);
+      const drumHasSolo = pattern.drumTracks.some(t => t.solo);
+      const melodicHasSolo = pattern.melodicTracks.some(t => t.solo);
 
-      for (let step = 0; step < pattern.numSteps; step++) {
-        const mStep = track.steps[step];
-        if (!mStep.active || !mStep.note) continue;
-        const time = step * secondsPer16th;
+      for (let rep = 0; rep < repeats; rep++) {
+        // Drum tracks
+        for (const track of pattern.drumTracks) {
+          if (track.muted || (drumHasSolo && !track.solo)) continue;
+          drums.ensureSynth(track.sampleKey, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
 
-        // Capture note for closure
-        const note = mStep.note;
-        transport.schedule((t) => {
-          poly.triggerAttackRelease(note, '16n', t);
-        }, time);
+          for (let step = 0; step < pattern.numSteps; step++) {
+            const vel = track.steps[step];
+            if (!vel) continue;
+            const swingOffset = step % 2 === 1 ? swing * secsPerStep * 0.5 : 0;
+            const time = timeOffset + step * secsPerStep + swingOffset;
+            const key = track.sampleKey;
+            transport.schedule((t) => drums.trigger(key, t, vel), time);
+          }
+        }
+
+        // Melodic tracks
+        for (const track of pattern.melodicTracks) {
+          if (track.muted || (melodicHasSolo && !track.solo)) continue;
+          synths.ensureSynth(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
+
+          for (let step = 0; step < pattern.numSteps; step++) {
+            const mStep = track.steps[step];
+            if (!mStep.active || !mStep.note) continue;
+            const swingOffset = step % 2 === 1 ? swing * secsPerStep * 0.5 : 0;
+            const time = timeOffset + step * secsPerStep + swingOffset;
+            const note = mStep.note;
+            const vel = mStep.velocity;
+            const duration = Math.max(0.03, (mStep.length ?? 1) * secsPerStep - 0.01);
+            const id = track.id;
+            transport.schedule((t) => synths.playNote(id, note, duration, t, vel), time);
+          }
+        }
+
+        timeOffset += pattern.numSteps * secsPerStep;
       }
     }
 
@@ -72,6 +95,20 @@ async function renderPatternOffline(pattern: Pattern, bpm: number): Promise<Audi
 
   // ToneAudioBuffer → native AudioBuffer
   return buffer.get() as AudioBuffer;
+}
+
+function renderPatternOffline(pattern: Pattern, bpm: number): Promise<AudioBuffer> {
+  return renderBlocksOffline([{ pattern, repeats: 1 }], bpm);
+}
+
+function renderSongOffline(blocks: SongBlock[], patterns: Pattern[], bpm: number): Promise<AudioBuffer> {
+  const renderBlocks: RenderBlock[] = [];
+  for (const block of blocks) {
+    if (block.muted) continue;
+    const pattern = patterns.find(p => p.id === block.patternId);
+    if (pattern) renderBlocks.push({ pattern, repeats: block.repeats });
+  }
+  return renderBlocksOffline(renderBlocks, bpm);
 }
 
 // ---------------------------------------------------------------------------
@@ -208,95 +245,6 @@ function downloadBlob(blob: Blob, filename: string) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-}
-
-// ---------------------------------------------------------------------------
-// Core: render song (multiple blocks) to AudioBuffer via Tone.Offline
-// ---------------------------------------------------------------------------
-
-async function renderSongOffline(
-  blocks: SongBlock[],
-  patterns: Pattern[],
-  bpm: number
-): Promise<AudioBuffer> {
-  const secondsPer16th = 60 / bpm / 4;
-
-  // Calculate total steps across all blocks
-  let totalSteps = 0;
-  for (const block of blocks) {
-    const pattern = patterns.find((p) => p.id === block.patternId);
-    if (pattern) totalSteps += pattern.numSteps * block.repeats;
-  }
-
-  const songDuration = totalSteps * secondsPer16th;
-  const totalDuration = songDuration + 1.5;
-
-  const buffer = await Tone.Offline(({ transport }) => {
-    transport.bpm.value = bpm;
-
-    let timeOffset = 0;
-
-    for (const block of blocks) {
-      const pattern = patterns.find((p) => p.id === block.patternId);
-      if (!pattern) continue;
-
-      const drumHasSolo = pattern.drumTracks.some((t) => t.solo);
-      const melodicHasSolo = pattern.melodicTracks.some((t) => t.solo);
-
-      for (let rep = 0; rep < block.repeats; rep++) {
-        // Drum tracks
-        for (const track of pattern.drumTracks) {
-          const isMuted = track.muted || (drumHasSolo && !track.solo);
-          if (isMuted) continue;
-
-          const synth = createDrumSynth(track.synthParams);
-          synth.volume.value = track.volume;
-
-          for (let step = 0; step < pattern.numSteps; step++) {
-            if (track.steps[step] === 0) continue;
-            const time = timeOffset + step * secondsPer16th;
-
-            transport.schedule((t) => {
-              if (synth instanceof Tone.NoiseSynth) {
-                synth.triggerAttackRelease('16n', t);
-              } else if (synth instanceof Tone.MetalSynth) {
-                synth.triggerAttackRelease('32n', t);
-              } else if (synth instanceof Tone.MembraneSynth) {
-                const freq = (track.synthParams as MembraneSynthParams).frequency ?? 60;
-                synth.triggerAttackRelease(freq, '8n', t);
-              }
-            }, time);
-          }
-        }
-
-        // Melodic tracks
-        for (const track of pattern.melodicTracks) {
-          const isMuted = track.muted || (melodicHasSolo && !track.solo);
-          if (isMuted) continue;
-
-          const poly = createPolySynth(track.synthType, track.synthParams);
-          poly.volume.value = track.volume;
-
-          for (let step = 0; step < pattern.numSteps; step++) {
-            const mStep = track.steps[step];
-            if (!mStep.active || !mStep.note) continue;
-            const time = timeOffset + step * secondsPer16th;
-            const note = mStep.note;
-
-            transport.schedule((t) => {
-              poly.triggerAttackRelease(note, '16n', t);
-            }, time);
-          }
-        }
-
-        timeOffset += pattern.numSteps * secondsPer16th;
-      }
-    }
-
-    transport.start(0);
-  }, totalDuration);
-
-  return buffer.get() as AudioBuffer;
 }
 
 // ---------------------------------------------------------------------------
