@@ -36,7 +36,7 @@ export function ParamSlider({ label, value, min, max, step, onChange, format, sp
         value={toSlider(value)}
         onChange={e => onChange(fromSlider(parseFloat(e.target.value)))}
         aria-valuetext={spoken ? spoken(value) : display}
-        className="flex-1 accent-accent-orange h-6 cursor-pointer"
+        className="flex-1 accent-[#f4f4f8] h-6 cursor-pointer"
       />
       <span aria-hidden="true" className="w-12 text-right text-text-muted font-mono text-[11px]">{display}</span>
     </label>
@@ -186,7 +186,7 @@ function NameField({ name, onRename }: { name: string; onRename: (n: string) => 
         onChange={e => setValue(e.target.value)}
         onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') commit(); }}
-        className="flex-1 min-w-0 bg-bg-cell border border-border-control rounded px-1.5 py-1 text-xs text-text-primary"
+        className="flex-1 min-w-0 bg-[#111118] border border-border-control rounded-md px-1.5 py-1 text-xs text-text-primary"
       />
     </div>
   );
@@ -208,16 +208,16 @@ function PanelFrame({ title, name, onRename, onClose, onAudition, onReset, child
       ref={ref}
       role="dialog"
       aria-labelledby={headingId}
-      className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border-soft rounded-xl p-3 shadow-xl w-80"
+      className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border-soft rounded-xl p-3 shadow-2xl w-80"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 id={headingId} className="text-xs font-bold text-text-secondary uppercase tracking-wider">{title}: {name}</h3>
+        <h3 id={headingId} className="label-caps !text-text-primary">{title}: {name}</h3>
         <div className="flex items-center gap-2">
           {onAudition && (
             <button
               onClick={onAudition}
-              className="px-2 py-1 rounded text-[11px] font-semibold bg-accent-green/20 text-accent-green-fg border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer"
+              className="pill !min-h-7"
               title="Hear this sound"
             >
               <span aria-hidden="true">▶ </span>Hear
@@ -226,7 +226,7 @@ function PanelFrame({ title, name, onRename, onClose, onAudition, onReset, child
           <button
             onClick={onClose}
             aria-label="Close sound settings"
-            className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary text-sm cursor-pointer leading-none"
+            className="w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-bg-cell text-sm cursor-pointer leading-none"
           >
             ×
           </button>
@@ -238,7 +238,7 @@ function PanelFrame({ title, name, onRename, onClose, onAudition, onReset, child
       </div>
       <button
         onClick={onReset}
-        className="mt-3 px-1 py-1 text-[11px] text-text-muted hover:text-accent-orange-fg cursor-pointer transition-colors uppercase tracking-wider"
+        className="mt-3 self-start pill"
       >
         Reset sound to default
       </button>
@@ -275,7 +275,7 @@ export function DrumSettingsPanel({
       <PanSlider value={pan} onChange={onPanChange} />
       <ParamSlider label="Reverb" value={reverbSend} min={0} max={1} step={0.01} onChange={v => onSendsChange(v, delaySend)} format={pct} />
       <ParamSlider label="Delay" value={delaySend} min={0} max={1} step={0.01} onChange={v => onSendsChange(reverbSend, v)} format={pct} />
-      <div className="border-t border-border/50 my-1" />
+      <div className="border-t border-border my-1" />
       <SectionLabel>Synthesis</SectionLabel>
       {synthParams.synthKind === 'membrane' && (
         <MembraneSettings params={synthParams} onChange={onChange} />
@@ -337,13 +337,13 @@ export function MelodicSettingsPanel({
           ...SYNTH_PRESETS.map(p => ({ value: p.id, label: `${p.name} — ${p.description}` })),
         ]}
       />
-      <div className="border-t border-border/50 my-1" />
+      <div className="border-t border-border my-1" />
       <SectionLabel>Mix</SectionLabel>
       <ParamSlider label="Volume" value={volume} min={-36} max={6} step={1} onChange={onVolumeChange} format={v => `${v > 0 ? '+' : ''}${v} dB`} />
       <PanSlider value={pan} onChange={onPanChange} />
       <ParamSlider label="Reverb" value={reverbSend} min={0} max={1} step={0.01} onChange={v => onSendsChange(v, delaySend)} format={pct} />
       <ParamSlider label="Delay" value={delaySend} min={0} max={1} step={0.01} onChange={v => onSendsChange(reverbSend, v)} format={pct} />
-      <div className="border-t border-border/50 my-1" />
+      <div className="border-t border-border my-1" />
       <SectionLabel>Voice</SectionLabel>
       <SelectControl
         label="Engine"

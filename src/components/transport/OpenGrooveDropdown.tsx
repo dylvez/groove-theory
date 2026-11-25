@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { usePopover, focusableIn } from '../../hooks/usePopover';
 import { confirmReplaceWork } from '../../utils/workState';
 import { announce } from '../../utils/announce';
@@ -16,6 +16,22 @@ import { PRESET_GROOVES } from '../../constants/presetGrooves';
 import { useUIStore } from '../../store/useUIStore';
 import { parseMidi, pickMidiFile, MidiImportError } from '../../utils/midiImport';
 import type { GrooveSlotEntry } from '../../types';
+import { RhythmRing } from '../common/RhythmRing';
+import { ringFromPattern } from '../../utils/rhythmRing';
+
+/** A preset's cover: its opening pattern drawn as a rhythm ring */
+function PresetRing({ preset }: { preset: (typeof PRESET_GROOVES)[number] }) {
+  const ring = useMemo(() => {
+    const g = preset.groove;
+    const p = g.patterns.find(x => x.id === g.activePatternId) ?? g.patterns[0];
+    return p ? ringFromPattern(p) : null;
+  }, [preset]);
+  return (
+    <span aria-hidden="true" className="shrink-0 w-9 h-9 rounded-lg bg-[#121219] border border-border flex items-center justify-center">
+      {ring && <RhythmRing ring={ring} size={32} lit />}
+    </span>
+  );
+}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -116,12 +132,12 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
       ref={ref}
       role="dialog"
       aria-label="Open a groove"
-      className="absolute top-full mt-1.5 right-0 z-50 w-72 bg-bg-secondary border border-border rounded-lg shadow-xl"
+      className="absolute top-full mt-2 right-0 z-50 w-72 bg-bg-secondary border border-border-soft rounded-xl shadow-2xl"
     >
       {/* Saved grooves list */}
       {saves.length > 0 ? (
         <div className="max-h-64 overflow-y-auto">
-          <h2 className="px-3 pt-2.5 pb-1 text-[11px] font-normal text-text-secondary uppercase tracking-wider">Saved grooves</h2>
+          <h2 className="px-3 pt-2.5 pb-1 label-caps">Saved grooves</h2>
           {saves.map(entry => (
             <div key={entry.id} className="flex items-center group hover:bg-bg-cell focus-within:bg-bg-cell transition-colors">
               <button
@@ -147,11 +163,10 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
         </div>
       ) : (
         <div className="px-3 py-4 text-center">
-          <img
-            src={`${import.meta.env.BASE_URL}images/empty-grooves.png`}
-            alt=""
-            className="w-20 h-20 mx-auto mb-2 opacity-70"
-          />
+          {/* An empty ring: a groove with no notes yet */}
+          <div className="flex justify-center mb-2">
+            <RhythmRing ring={{ slots: 16, kick: [], snare: [], hat: [], open: [], synth: [] }} size={56} />
+          </div>
           <p className="text-xs text-text-muted">No saved grooves yet.</p>
           <p className="text-[11px] text-text-muted mt-1">
             Save your current groove or import a .groove file.
@@ -164,21 +179,22 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
         const items = PRESET_GROOVES.filter(p => p.category === cat);
         return (
           <div key={cat} className="border-t border-border">
-            <h2 className="px-3 pt-2.5 pb-1 text-[11px] font-normal text-text-secondary uppercase tracking-wider">
+            <h2 className="px-3 pt-2.5 pb-1 label-caps">
               {cat === 'song' ? 'Preset songs' : 'Beat presets'}
             </h2>
             {items.map(preset => (
               <button
                 key={preset.id}
                 onClick={() => handleLoadPreset(preset.id)}
-                className="flex items-center justify-between w-full px-3 py-2 text-left text-xs
+                className="flex items-center gap-3 w-full px-3 py-2 text-left text-xs
                   hover:bg-bg-cell transition-colors cursor-pointer"
               >
-                <div className="flex flex-col min-w-0">
+                <PresetRing preset={preset} />
+                <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-text-primary truncate">{preset.name}</span>
                   <span className="text-[11px] text-text-muted">{preset.genre} · {preset.bpm} BPM</span>
                 </div>
-                <span className={`text-[11px] shrink-0 ml-2 ${cat === 'song' ? 'text-accent-green-fg' : 'text-accent-orange-fg'}`}>
+                <span className="shrink-0 ml-2 px-2 py-0.5 rounded-full border border-border-soft font-mono text-[10px] font-semibold text-text-secondary">
                   {cat === 'song' ? 'SONG' : 'BEAT'}
                 </span>
               </button>

@@ -213,7 +213,9 @@ export function TransportBar() {
         <button
           onClick={toggleLoop}
           aria-pressed={loop}
-          title={loop ? 'Looping the pattern — click to play it once' : 'Play the pattern once — click to loop'}
+          title={mode === 'song'
+            ? (loop ? 'Looping the song: it starts again after the last block. Click to play it once.' : 'Playing the song once. Click to loop it.')
+            : (loop ? 'Looping the pattern. Click to play it once.' : 'Playing the pattern once. Click to loop it.')}
           className="tog"
         >
           Loop

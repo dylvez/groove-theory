@@ -90,11 +90,11 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
       ref={ref}
       role="dialog"
       aria-label="Save groove"
-      className="absolute top-full mt-1.5 right-0 z-50 w-72 bg-bg-secondary border border-border rounded-lg shadow-xl"
+      className="absolute top-full mt-2 right-0 z-50 w-72 bg-bg-secondary border border-border-soft rounded-xl shadow-2xl"
     >
       {/* Save new */}
       <div className="p-3 border-b border-border">
-        <label htmlFor="save-groove-name" className="text-[11px] text-text-secondary uppercase tracking-wider mb-1.5 block">
+        <label htmlFor="save-groove-name" className="label-caps mb-1.5 block">
           Save current groove
         </label>
         <div className="flex gap-1.5">
@@ -112,9 +112,7 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
           <button
             onClick={handleSave}
             disabled={!name.trim()}
-            className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors
-              bg-accent-green/20 text-accent-green-fg border border-accent-green/30 hover:bg-accent-green/30
-              disabled:opacity-40 disabled:cursor-not-allowed"
+            className="pill pill-go"
           >
             {justSaved ? 'Saved ✓' : 'Save'}
           </button>
@@ -150,7 +148,7 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
       {/* Existing saves */}
       {saves.length > 0 && (
         <div className="max-h-48 overflow-y-auto">
-          <h2 className="px-3 pt-2 pb-1 text-[11px] font-normal text-text-secondary uppercase tracking-wider">Save over an existing groove</h2>
+          <h2 className="px-3 pt-2.5 pb-1 label-caps">Save over an existing groove</h2>
           {saves.map(entry => (
             <button
               key={entry.id}

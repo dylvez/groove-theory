@@ -129,7 +129,11 @@ export function useSongPlayback() {
             if (nextRepeat >= currentBlock.repeats) {
               // Move to next block, skipping muted ones
               const nextCandidate = store.currentBlockIndex + 1;
-              const nextPlayable = findNextPlayableBlock(blocks, nextCandidate, loopStart, loopEnd);
+              let nextPlayable = findNextPlayableBlock(blocks, nextCandidate, loopStart, loopEnd);
+              // Loop (in the transport) on and no loop range: go round the whole song again
+              if (nextPlayable === -1 && useTransportStore.getState().loop) {
+                nextPlayable = findNextPlayableBlock(blocks, 0, null, null);
+              }
 
               if (nextPlayable === -1) {
                 // Song/loop complete

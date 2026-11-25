@@ -14,8 +14,10 @@ import { midiToNote, noteCovering, noteToMidi, stepNotes } from '../../utils/mel
 import { spokenNote } from '../../utils/noteHelpers';
 import { velocityAlpha } from '../../utils/stepDisplay';
 import { describeFx, melodicFx } from '../../utils/stepFx';
+import { glowLevel, hexAlpha } from '../../utils/stepDisplay';
+import { Popover } from '../common/Popover';
 import { announce } from '../../utils/announce';
-import { FxMarks } from './StepFxControls';
+import { FxMarks, StepFxControls } from './StepFxControls';
 
 const LENGTHS = [1, 2, 3, 4, 6, 8];
 const ROW_GAP = 2; // px between rows (gap-0.5)
@@ -57,6 +59,7 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
   const removeMelodicNote = useSequencerStore(s => s.removeMelodicNote);
   const setMelodicNoteLength = useSequencerStore(s => s.setMelodicNoteLength);
   const cycleMelodicNoteVelocity = useSequencerStore(s => s.cycleMelodicNoteVelocity);
+  const setMelodicStepFx = useSequencerStore(s => s.setMelodicStepFx);
 
   const numSteps = track.steps.length;
   const mono = track.synthType === 'monoSynth';
@@ -71,6 +74,8 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
   const [scaleOnly, setScaleOnly] = useState(true);
   const [drawLength, setDrawLength] = useState(1);
   const [focus, setFocus] = useState<{ pitch: number; step: number } | null>(null);
+  // Chance / repeats / timing editor for the step a note starts on
+  const [fxEdit, setFxEdit] = useState<{ start: number; note: NoteWithOctave; x: number; y: number } | null>(null);
   const lo = (baseOctave + 1) * 12;
   const hi = lo + 24;
 
@@ -212,6 +217,16 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
     setMelodicNoteLength(track.id, d.start, midiToNote(d.pitch), step - d.start + 1);
   }, [setMelodicNoteLength, track.id]);
 
+  /** Right-click or Alt+Enter on a note: edit its step's chance, repeats and timing */
+  const openFx = useCallback((pitch: number, step: number, el: HTMLElement) => {
+    const cover = noteCovering(track.steps, pitch, step);
+    if (!cover) { announce('No note here. Add a note first.'); return; }
+    const base = rowsRef.current?.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    if (!base) return;
+    setFxEdit({ start: cover.start, note: cover.event.note, x: r.left - base.left, y: r.bottom - base.top + 6 });
+  }, [track.steps]);
+
   // --- Keyboard ------------------------------------------------------------
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -222,6 +237,11 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
     const rowIndex = pitches.indexOf(pitch);
     const cover = noteCovering(track.steps, pitch, step);
 
+    if (e.key === 'Enter' && e.altKey) {
+      e.preventDefault();
+      openFx(pitch, step, t);
+      return;
+    }
     if (e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       e.preventDefault();
       if (!cover) return;
@@ -284,8 +304,8 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
       <p id={helpId} className="sr-only">
         Rows are pitches, columns are steps. Arrow keys move. Enter adds a note of the chosen length or removes one.
         Shift+Left and Shift+Right change a note’s length, Shift+Up and Shift+Down move it to the next row,
-        Shift+Enter changes velocity, Delete removes it. A step’s chance, repeats and timing apply to all its notes;
-        set them on the track’s step row above with Alt+Enter or a right-click.
+        Shift+Enter changes velocity, Delete removes it. Alt+Enter, or a right-click, on a note sets its step’s
+        chance, repeats and timing, which apply to every note that starts on that step.
       </p>
 
       {/* Toolbar — pinned to the left while the grid scrolls sideways */}
@@ -373,9 +393,32 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
             onCellEnter={onCellEnter}
             onActivate={activate}
             onAudition={audition}
+            onEdit={openFx}
           />
         ))}
         <Playhead left={labelWidth + 4} compact={compact} stepsPerMeasure={stepsPerMeasure} />
+        <RollGlow rows={rows} pitches={pitches} color={color} numSteps={numSteps} left={labelWidth + 4} compact={compact} stepsPerMeasure={stepsPerMeasure} />
+        {fxEdit && (
+          <Popover
+            label={`Chance, repeats and timing: ${spokenNote(fxEdit.note)} ${stepPosition(fxEdit.start, stepsPerMeasure, stepsPerBeat)}`}
+            onClose={() => setFxEdit(null)}
+            className="absolute z-30 w-64 p-3 flex flex-col gap-2.5 bg-bg-secondary border border-border-soft rounded-xl shadow-2xl"
+            style={{ left: Math.max(0, fxEdit.x - 8), top: fxEdit.y }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h5 className="label-caps !text-text-primary">{fxEdit.note} · {stepPosition(fxEdit.start, stepsPerMeasure, stepsPerBeat)}</h5>
+              <button
+                onClick={() => setFxEdit(null)}
+                aria-label="Close"
+                className="w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-bg-cell cursor-pointer"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-text-muted leading-snug">Applies to every note that starts on this step.</p>
+            <StepFxControls fx={melodicFx(track.steps[fxEdit.start])} onChange={(f) => setMelodicStepFx(track.id, fxEdit.start, f)} />
+          </Popover>
+        )}
       </div>
     </section>
   );
@@ -397,11 +440,12 @@ interface RowProps {
   onCellEnter: (pitch: number, step: number) => void;
   onActivate: (pitch: number, step: number, shift: boolean) => void;
   onAudition: (note: NoteWithOctave) => void;
+  onEdit: (pitch: number, step: number, el: HTMLElement) => void;
 }
 
 const PianoRollRow = memo(function PianoRollRow({
   midi, cells, numSteps, tabStopStep, inScale, isRoot, color, stepsPerMeasure, stepsPerBeat, compact, labelWidth,
-  onCellDown, onCellEnter, onActivate, onAudition,
+  onCellDown, onCellEnter, onActivate, onAudition, onEdit,
 }: RowProps) {
   const note = midiToNote(midi);
   const spoken = spokenNote(note);
@@ -448,7 +492,7 @@ const PianoRollRow = memo(function PianoRollRow({
               onMouseDown={(e) => onCellDown(midi, i, e)}
               onMouseEnter={() => onCellEnter(midi, i)}
               onClick={(e) => { if (e.detail === 0) onActivate(midi, i, e.shiftKey); }}
-              onContextMenu={(e) => e.preventDefault()}
+              onContextMenu={(e) => { e.preventDefault(); if (c) onEdit(midi, i, e.currentTarget); }}
               className={`relative ${cellW} h-6 border cursor-pointer select-none ${isBarStart ? 'ml-2' : ''} ${
                 c
                   ? `step-active border-transparent ${c.kind === 'start' ? (continues ? 'rounded-l-sm' : 'rounded-sm') : continues ? '' : 'rounded-r-sm'}`
@@ -468,6 +512,52 @@ const PianoRollRow = memo(function PianoRollRow({
     </div>
   );
 });
+
+/**
+ * Night Glow in the piano roll: notes sounding under the playhead bloom, and
+ * the two steps just played keep a fading afterglow. Drawn as one light
+ * overlay so the rows themselves don't redraw on every step.
+ */
+function RollGlow({ rows, pitches, color, numSteps, left, compact, stepsPerMeasure }: {
+  rows: Map<number, (Cell | undefined)[]>;
+  pitches: number[];
+  color: string;
+  numSteps: number;
+  left: number;
+  compact: boolean;
+  stepsPerMeasure: number;
+}) {
+  const step = useTransportStore(s => s.currentStep);
+  const songPlaying = useSongStore(s => s.songState) === 'playing';
+  const playing = useTransportStore(s => s.state) === 'playing' || songPlaying;
+  if (!playing) return null;
+  const w = compact ? 24 : 36;
+  const gap = compact ? 2 : 4;
+  const boxes: { key: string; x: number; y: number; level: number }[] = [];
+  for (const back of [2, 1, 0]) {
+    const s = (step - back + numSteps) % numSteps;
+    const level = glowLevel(s, step, true, numSteps);
+    pitches.forEach((m, r) => {
+      if (rows.get(m)?.[s]) boxes.push({ key: `${m}-${s}`, x: left + s * (w + gap) + Math.floor(s / stepsPerMeasure) * 8, y: r * (24 + ROW_GAP), level });
+    });
+  }
+  return (
+    <div aria-hidden="true" className="pointer-events-none">
+      {boxes.map(b => (
+        <span
+          key={b.key}
+          className="absolute rounded-sm"
+          style={{
+            left: b.x, top: b.y, width: w, height: 24,
+            boxShadow: b.level >= 1
+              ? `0 0 0 2px #ffffff, 0 0 18px ${color}f2, 0 0 6px #ffffff`
+              : `0 0 ${Math.round(16 * b.level)}px ${color}${hexAlpha(0.8 * b.level)}`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 /** Column highlight that follows playback across all rows */
 function Playhead({ left, compact, stepsPerMeasure }: { left: number; compact: boolean; stepsPerMeasure: number }) {

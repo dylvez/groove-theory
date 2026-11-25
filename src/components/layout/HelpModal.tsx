@@ -71,7 +71,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li><strong>New note length</strong> sets how long clicked notes are. <strong>▼ / ▲</strong> move the two-octave view; the numbers show how many notes sit outside it.</li>
               <li><strong>Scale notes only</strong> hides rows outside the key chosen in the Harmony tab. Rows that already hold notes always stay visible.</li>
               <li>A Mono Synth plays one note at a time, so adding a note replaces the one on that step.</li>
-              <li>Notes show the same stripes, ticks and arrows as the lane for a step's chance, repeats and timing. These belong to the step, so they apply to every note in a chord. Change them on the track's own row above (right-click a step).</li>
+              <li>Notes show the same stripes, ticks and arrows as the lane for a step's chance, repeats and timing. These belong to the step, so they apply to every note in a chord. Right-click a note, or press <Kbd>Alt + Enter</Kbd> on it, to change them right here (or on the track's own row above).</li>
             </ul>
           </Sub>
           <Sub title="Adding & Removing Tracks">
@@ -173,7 +173,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <li><Kbd>Live</Kbd> — scale lock, the computer keys' octave, and connecting a MIDI keyboard.</li>
             <li><Kbd>Mixer</Kbd> — reverb, delay and the master bus.</li>
             <li><Kbd>Swing</Kbd> — add rhythmic feel from 0% (straight) to 75% (heavy triplet swing).</li>
-            <li><Kbd>Loop</Kbd> — loop the pattern, or play it once. (The song has its own loop range.)</li>
+            <li><Kbd>Loop</Kbd> — keep going round, or play once. In Pattern mode it loops the pattern; in Song mode it starts the song again after the last block. A loop range set in the song bar always loops.</li>
             <li><Kbd>Follow</Kbd> — while a pattern or song plays, the grid scrolls a page at a time to keep the playing step in view. Turn it off to scroll freely. Track names stay pinned on the left as the grid scrolls.</li>
             <li>The <strong>pattern row</strong> above the grid holds the pattern's own settings:
               <Kbd>1</Kbd> / <Kbd>2</Kbd> / <Kbd>4</Kbd> / <Kbd>8</Kbd> bars, <Kbd>4/4</Kbd> or <Kbd>3/4</Kbd> time, <Kbd>1/16</Kbd> or <Kbd>1/32</Kbd> steps (1/32 doubles the grid for rolls and fast hats),
