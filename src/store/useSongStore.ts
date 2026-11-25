@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import * as history from './history';
 
 export interface SongBlock {
   id: string;
@@ -50,7 +51,27 @@ function uid(): string {
 
 export const useSongStore = create<SongStore>()(
   persist(
-    (set) => ({
+    (_set, get) => {
+      // Record arrangement edits in the shared undo history
+      const set = (
+        partial: SongStore | Partial<SongStore> | ((state: SongStore) => SongStore | Partial<SongStore>),
+        replace?: boolean,
+      ) => {
+        const prevBlocks = get().blocks;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        _set(partial as any, replace as any);
+        if (get().blocks !== prevBlocks) history.recordChange({ blocks: prevBlocks });
+      };
+      history.registerSongHistory(
+        () => get().blocks,
+        (blocks) => _set((s) => ({
+          blocks,
+          // A loop range that points past the restored arrangement is dropped
+          ...(s.loopEnd !== null && s.loopEnd >= blocks.length ? { loopStart: null, loopEnd: null } : {}),
+        })),
+      );
+
+      return {
       blocks: [],
       songState: 'stopped',
       currentBlockIndex: 0,
@@ -84,12 +105,12 @@ export const useSongStore = create<SongStore>()(
           ),
         })),
 
-      setBlockRepeats: (blockId, repeats) =>
+      setBlockRepeats: (blockId, repeats) => history.coalesced(`repeats:${blockId}`, () =>
         set((s) => ({
           blocks: s.blocks.map((b) =>
             b.id === blockId ? { ...b, repeats: Math.max(1, Math.min(99, repeats)) } : b
           ),
-        })),
+        }))),
 
       duplicateBlock: (blockId) =>
         set((s) => {
@@ -181,8 +202,9 @@ export const useSongStore = create<SongStore>()(
 
       setCurrentBlockIndex: (index) => set({ currentBlockIndex: index }),
       setCurrentRepeat: (repeat) => set({ currentRepeat: repeat }),
-      setCurrentStep: (step) => set({ currentStep: step }),
-    }),
+      setCurrentStep: (step) => _set({ currentStep: step }),
+    };
+    },
     {
       name: 'groove-theory-song',
       version: 2,

@@ -4,7 +4,7 @@ import { NOTE_NAMES, SCALES } from '../../constants';
 import { useTheoryStore } from '../../store/useTheoryStore';
 import { AudioEngine } from '../../audio/AudioEngine';
 import { getScaleNotes, getScaleNotesWithOctave } from '../../utils/musicTheory';
-import { formatNote } from '../../utils/noteHelpers';
+import { formatNote, spokenNote } from '../../utils/noteHelpers';
 
 export function KeyScalePicker() {
   const rootNote = useTheoryStore(s => s.rootNote);
@@ -38,6 +38,7 @@ export function KeyScalePicker() {
       <div className="flex items-center gap-2">
         <label className="text-xs text-text-muted shrink-0">Key:</label>
         <select
+          aria-label="Key"
           value={rootNote}
           onChange={(e) => { setRootNote(e.target.value as NoteName); setHighlightMode('scale'); }}
           className="px-2 py-1 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-orange min-w-[3.5rem]"
@@ -48,6 +49,7 @@ export function KeyScalePicker() {
         </select>
 
         <select
+          aria-label="Scale"
           value={selectedScale.name}
           onChange={(e) => {
             const scale = SCALES.find(s => s.name === e.target.value);
@@ -62,8 +64,9 @@ export function KeyScalePicker() {
 
         <button
           onClick={playScale}
-          className="px-2.5 py-1 rounded-md bg-accent-blue/20 text-accent-blue text-xs font-medium border border-accent-blue/30 hover:bg-accent-blue/30 cursor-pointer transition-colors shrink-0"
+          className="px-2.5 py-1 rounded-md bg-accent-blue/20 text-accent-blue-fg text-xs font-medium border border-accent-blue/30 hover:bg-accent-blue/30 cursor-pointer transition-colors shrink-0"
           title="Play scale"
+          aria-label="Play scale"
         >
           &#9654; Scale
         </button>
@@ -75,10 +78,11 @@ export function KeyScalePicker() {
           <button
             key={`${note}-${i}`}
             onClick={() => playNote(note)}
-            className="px-2 py-0.5 rounded bg-accent-blue/15 text-accent-blue text-xs font-medium border border-accent-blue/25 hover:bg-accent-blue/25 cursor-pointer transition-colors"
+            aria-label={`Play ${spokenNote(note)}, ${selectedScale.intervals[i] === 0 ? 'root' : `${selectedScale.intervals[i]} semitones up`}`}
+            className="px-2 py-1 rounded bg-accent-blue/15 text-accent-blue-fg text-xs font-medium border border-accent-blue/25 hover:bg-accent-blue/25 cursor-pointer transition-colors"
           >
             {formatNote(note)}
-            <span className="ml-1 text-text-muted text-[9px]">
+            <span className="ml-1 text-text-muted text-[11px]">
               {selectedScale.intervals[i] === 0 ? 'R' : `+${selectedScale.intervals[i]}`}
             </span>
           </button>

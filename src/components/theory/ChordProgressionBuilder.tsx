@@ -93,7 +93,7 @@ export function ChordProgressionBuilder() {
             className="px-3 py-2 rounded-md bg-bg-cell border border-border hover:border-accent-cyan/50 hover:bg-bg-cell-hover cursor-pointer transition-colors flex flex-col items-center"
           >
             <span className="text-sm font-bold text-text-primary">{chord.numeral}</span>
-            <span className="text-[10px] text-text-muted">{formatNote(chord.root)}</span>
+            <span className="text-[11px] text-text-muted">{formatNote(chord.root)}</span>
           </button>
         ))}
       </div>
@@ -109,12 +109,12 @@ export function ChordProgressionBuilder() {
                   key={slot.id}
                   className="px-3 py-2 rounded-md bg-accent-cyan/15 border border-accent-cyan/30 flex items-center gap-2 group"
                 >
-                  <span className="text-sm font-bold text-accent-cyan">
+                  <span className="text-sm font-bold text-accent-cyan-fg">
                     {chord?.numeral || slot.scaleDegree + 1}
                   </span>
                   <button
                     onClick={() => removeProgressionSlot(slot.id)}
-                    className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-accent-red text-xs cursor-pointer transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-accent-red-fg text-xs cursor-pointer transition-opacity"
                   >
                     x
                   </button>
@@ -126,13 +126,13 @@ export function ChordProgressionBuilder() {
           <div className="flex gap-2">
             <button
               onClick={playProgression}
-              className="px-3 py-1.5 rounded-md bg-accent-cyan/20 text-accent-cyan text-sm font-medium border border-accent-cyan/30 hover:bg-accent-cyan/30 cursor-pointer transition-colors"
+              className="px-3 py-1.5 rounded-md bg-accent-cyan/20 text-accent-cyan-fg text-sm font-medium border border-accent-cyan/30 hover:bg-accent-cyan/30 cursor-pointer transition-colors"
             >
               Play
             </button>
             <button
               onClick={applyToTrack}
-              className="px-3 py-1.5 rounded-md bg-accent-green/20 text-accent-green text-sm font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors"
+              className="px-3 py-1.5 rounded-md bg-accent-green/20 text-accent-green-fg text-sm font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors"
             >
               Apply to Track
             </button>

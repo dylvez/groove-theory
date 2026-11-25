@@ -1,10 +1,11 @@
+import { announce } from '../../utils/announce';
 import { useCallback, useMemo } from 'react';
 import type { NoteName } from '../../types';
 import { CHORDS, NOTE_NAMES } from '../../constants';
 import { getDiatonicChordsForScale } from '../../constants/diatonicChords';
 import { useTheoryStore } from '../../store/useTheoryStore';
 import { AudioEngine } from '../../audio/AudioEngine';
-import { formatNote } from '../../utils/noteHelpers';
+import { spokenNote, formatNote } from '../../utils/noteHelpers';
 
 export function UnifiedDiatonicChords() {
   const rootNote = useTheoryStore(s => s.rootNote);
@@ -69,6 +70,7 @@ export function UnifiedDiatonicChords() {
     if (!chords) return;
     const chord = chords[degreeIndex];
 
+    announce(`Added ${chord.numeral} to the progression`);
     addProgressionSlot({
       id: `slot-${Date.now()}-${degreeIndex}`,
       scaleDegree: chord.degree,
@@ -101,9 +103,11 @@ export function UnifiedDiatonicChords() {
       </h4>
       <div className="flex gap-1.5 flex-wrap">
         {chords?.map((chord, i) => (
+          <div key={i} className="relative group">
           <button
-            key={i}
             onClick={() => handleChordClick(i)}
+            aria-pressed={selectedDegreeIndex === i}
+            aria-label={`${chord.numeral}, ${spokenNote(chord.rootNote)} ${chord.chordDef.name}`}
             className={`relative px-3 py-2 rounded-md border cursor-pointer transition-colors flex flex-col items-center min-w-[3rem] group ${
               selectedDegreeIndex === i
                 ? 'bg-accent-purple/25 border-accent-purple/50 ring-1 ring-accent-purple/30'
@@ -111,23 +115,24 @@ export function UnifiedDiatonicChords() {
             }`}
           >
             <span className={`text-sm font-bold ${
-              selectedDegreeIndex === i ? 'text-accent-purple' : 'text-text-primary'
+              selectedDegreeIndex === i ? 'text-accent-purple-fg' : 'text-text-primary'
             }`}>
               {chord.numeral}
             </span>
-            <span className="text-[10px] text-text-muted">
+            <span className="text-[11px] text-text-muted">
               {formatNote(chord.rootNote)}
             </span>
-
-            {/* Add to progression button */}
-            <div
-              onClick={(e) => handleAddToProgression(i, e)}
-              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-accent-cyan text-white text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent-cyan/80"
-              title="Add to progression"
-            >
-              +
-            </div>
           </button>
+          {/* Add to progression — shown on hover or keyboard focus */}
+          <button
+            onClick={(e) => handleAddToProgression(i, e)}
+            aria-label={`Add ${chord.numeral} to the progression`}
+            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-accent-cyan text-on-accent text-sm font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-accent-cyan/80 cursor-pointer"
+            title="Add to progression"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+          </div>
         ))}
       </div>
     </div>

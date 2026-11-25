@@ -6,6 +6,8 @@
   --color-bg-tertiary: #252535;
   --color-bg-cell: #2a2a3d;
   --color-bg-cell-hover: #353550;
+
+  /* Accent fills (backgrounds, borders, playheads, track colours) */
   --color-accent-orange: #f97316;
   --color-accent-cyan: #06b6d4;
   --color-accent-purple: #a855f7;
@@ -14,10 +16,38 @@
   --color-accent-amber: #f59e0b;
   --color-accent-blue: #3b82f6;
   --color-accent-red: #ef4444;
+  --color-accent-teal: #28d7d4;
+
+  /* Accent text: lighter shades that keep ≥4.5:1 on every dark surface,
+     including their own 10–30% tinted chip backgrounds */
+  --color-accent-orange-fg: #fdba74;
+  --color-accent-cyan-fg: #22d3ee;
+  --color-accent-purple-fg: #d8b4fe;
+  --color-accent-pink-fg: #f9a8d4;
+  --color-accent-green-fg: #4ade80;
+  --color-accent-amber-fg: #fbbf24;
+  --color-accent-blue-fg: #93c5fd;
+  --color-accent-red-fg: #fca5a5;
+  --color-accent-teal-fg: #5ee4e1;
+
+  /* Text on a solid accent fill */
+  --color-on-accent: #0f0f13;
+
   --color-text-primary: #f1f1f5;
-  --color-text-secondary: #9ca3af;
-  --color-text-muted: #6b7280;
+  --color-text-secondary: #b8bec9;
+  /* ≥4.5:1 on bg-primary … bg-cell */
+  --color-text-muted: #959cab;
+
+  /* Decorative dividers */
   --color-border: #374151;
+  /* Outlines that identify a control (inputs, empty step cells): ≥3:1 */
+  --color-border-control: #737c91;
+  --color-border-cell: #5b6478;
+}
+
+/* Plain custom properties (Tailwind only emits @theme values that a utility uses) */
+:root {
+  --focus-ring: #fde047;
 }
 
 html, body, #root {
@@ -31,4 +61,44 @@ html, body, #root {
 
 * {
   box-sizing: border-box;
+}
+
+/* One clearly visible keyboard focus indicator everywhere. Unlayered, so it
+   wins over utility classes such as focus:outline-none. */
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* On light surfaces (piano white keys) use a dark ring instead */
+.focus-on-light:focus-visible {
+  outline-color: var(--color-bg-primary);
+  outline-offset: -4px;
+}
+
+/* Respect "reduce motion": stop pulsing, sliding and smooth scrolling */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Windows High Contrast / forced colours: keep state visible where we rely on
+   background colour alone */
+@media (forced-colors: active) {
+  [aria-pressed="true"],
+  [aria-selected="true"],
+  [aria-current="true"] {
+    outline: 2px solid CanvasText;
+    outline-offset: -2px;
+  }
+  .step-active {
+    background: Highlight !important;
+    forced-color-adjust: none;
+  }
 }

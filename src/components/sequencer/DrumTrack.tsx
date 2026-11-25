@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { DrumTrack as DrumTrackType, DrumSynthParams } from '../../types';
 import { DEFAULT_VELOCITY } from '../../types';
 import { useSequencerStore } from '../../store/useSequencerStore';
+import { beginUndoGroup, endUndoGroup } from '../../store/history';
 import { AudioEngine } from '../../audio/AudioEngine';
 import { DEFAULT_DRUM_PARAMS } from '../../constants';
 import { StepCell } from './StepCell';
@@ -31,13 +32,20 @@ export function DrumTrack({ track, onRemove, stepsPerMeasure = 16, compact = fal
   const paintValue = useRef<number | null>(null);
 
   useEffect(() => {
-    const stop = () => { paintValue.current = null; };
+    const stop = () => {
+      if (paintValue.current !== null) endUndoGroup();
+      paintValue.current = null;
+    };
     window.addEventListener('mouseup', stop);
     return () => window.removeEventListener('mouseup', stop);
   }, []);
 
   const handlePointerDown = useCallback((i: number, e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     e.preventDefault();
+    // preventDefault stops the browser focusing the cell; do it ourselves so
+    // keyboard navigation continues from where the mouse last was
+    (e.currentTarget as HTMLElement).focus({ preventScroll: true });
     const current = track.steps[i];
     if (e.shiftKey) {
       cycleDrumVelocity(track.id, i);
@@ -45,8 +53,15 @@ export function DrumTrack({ track, onRemove, stepsPerMeasure = 16, compact = fal
       return;
     }
     const next = current > 0 ? 0 : DEFAULT_VELOCITY;
+    // The whole drag-paint gesture is one undo step
+    beginUndoGroup();
     paintValue.current = next;
     setDrumStep(track.id, i, next);
+  }, [track.id, track.steps, cycleDrumVelocity, setDrumStep]);
+
+  const handleActivate = useCallback((i: number, shift: boolean) => {
+    if (shift) { cycleDrumVelocity(track.id, i); return; }
+    setDrumStep(track.id, i, track.steps[i] > 0 ? 0 : DEFAULT_VELOCITY);
   }, [track.id, track.steps, cycleDrumVelocity, setDrumStep]);
 
   const handlePointerEnter = useCallback((i: number) => {
@@ -102,22 +117,32 @@ export function DrumTrack({ track, onRemove, stepsPerMeasure = 16, compact = fal
         onAudition={handleAudition}
       />
       <HeaderResizeHandle />
-      <div className={`flex ${compact ? 'gap-0.5' : 'gap-1'}`}>
+      <div
+        role="group"
+        aria-label={`${track.name} steps`}
+        aria-describedby="grid-instructions"
+        className={`flex ${compact ? 'gap-0.5' : 'gap-1'}`}
+      >
         {track.steps.map((step, i) => (
           <StepCell
             key={i}
             velocity={step}
             stepIndex={i}
             color={track.color}
+            trackId={track.id}
+            trackName={track.name}
             stepsPerMeasure={stepsPerMeasure}
             compact={compact}
             onPointerDown={handlePointerDown}
             onPointerEnter={handlePointerEnter}
+            onActivate={handleActivate}
           />
         ))}
       </div>
       {showSettings && (
         <DrumSettingsPanel
+          name={track.name}
+          onRename={(newName) => renameTrack(track.id, 'drum', newName)}
           synthParams={track.synthParams}
           volume={track.volume}
           reverbSend={track.reverbSend ?? 0}

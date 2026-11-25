@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
 import { useTransportStore } from '../../store/useTransportStore';
+import { announce } from '../../utils/announce';
 
 /** Tap a button in time; BPM is set from the average interval of the last taps. */
 export function TapTempo() {
@@ -18,7 +19,9 @@ export function TapTempo() {
       const intervals: number[] = [];
       for (let i = 1; i < list.length; i++) intervals.push(list[i] - list[i - 1]);
       const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      setBpm(Math.round(60000 / avg));
+      const next = Math.round(60000 / avg);
+      setBpm(next);
+      announce(`${next} BPM`);
     }
     setFlash(true);
     setTimeout(() => setFlash(false), 90);
@@ -27,10 +30,11 @@ export function TapTempo() {
   return (
     <button
       onClick={tap}
-      className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border cursor-pointer transition-colors shrink-0 ${
+      aria-label="Tap tempo"
+      className={`px-2 py-1 min-h-7 rounded-md text-[11px] font-bold uppercase tracking-wider border cursor-pointer transition-colors shrink-0 ${
         flash
-          ? 'bg-accent-orange text-white border-accent-orange'
-          : 'bg-bg-cell text-text-muted border-border hover:text-accent-orange hover:border-accent-orange/50'
+          ? 'bg-accent-orange text-on-accent border-accent-orange'
+          : 'bg-bg-cell text-text-muted border-border hover:text-accent-orange-fg hover:border-accent-orange/50'
       }`}
       title="Tap tempo — click in time with the beat"
     >

@@ -1,3 +1,5 @@
+import { withUndoGroup } from '../../store/history';
+import { announce } from '../../utils/announce';
 import { useState, useCallback, useMemo } from 'react';
 import type { NoteName, NoteWithOctave } from '../../types';
 import { NOTE_NAMES } from '../../constants';
@@ -85,11 +87,14 @@ export function ProgressionDisplay() {
       cycle[i * 4] = `${chord.root}${trackOctave}` as NoteWithOctave;
     });
 
-    // Tile across all sequencer steps
-    for (let step = 0; step < pattern.numSteps; step++) {
-      const note = cycle[step % cycleLength];
-      setMelodicStep(melodicTrack.id, step, note);
-    }
+    // Tile across all sequencer steps — one undo step for the whole write
+    withUndoGroup(() => {
+      for (let step = 0; step < pattern.numSteps; step++) {
+        const note = cycle[step % cycleLength];
+        setMelodicStep(melodicTrack.id, step, note);
+      }
+    });
+    announce(`Progression written to ${melodicTrack.name}`);
   }, [resolvedChords, resolvedTrackId, setMelodicStep]);
 
   if (progression.length === 0) {
@@ -98,8 +103,8 @@ export function ProgressionDisplay() {
         <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Progression
         </h4>
-        <p className="text-xs text-text-muted/60 italic">
-          Hover a diatonic chord and click <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-accent-cyan text-white text-[9px] font-bold leading-none align-text-bottom not-italic">+</span> to build a progression.
+        <p className="text-xs text-text-muted italic">
+          Hover a diatonic chord and click <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-accent-cyan text-on-accent text-[11px] font-bold leading-none align-text-bottom not-italic">+</span> to build a progression.
         </p>
       </div>
     );
@@ -120,15 +125,15 @@ export function ProgressionDisplay() {
               key={slot.id}
               className="px-3 py-2 rounded-md bg-accent-cyan/15 border border-accent-cyan/30 flex items-center gap-2 group"
             >
-              <span className="text-sm font-bold text-accent-cyan">
+              <span className="text-sm font-bold text-accent-cyan-fg">
                 {chord?.numeral || slot.scaleDegree + 1}
               </span>
-              <span className="text-[10px] text-text-muted">
+              <span className="text-[11px] text-text-muted">
                 {chord ? formatNote(chord.root) : ''}
               </span>
               <button
                 onClick={() => removeProgressionSlot(slot.id)}
-                className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-accent-red text-xs cursor-pointer transition-opacity"
+                className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-accent-red-fg text-xs cursor-pointer transition-opacity"
               >
                 ×
               </button>
@@ -141,18 +146,19 @@ export function ProgressionDisplay() {
       <div className="flex gap-2 items-center flex-wrap">
         <button
           onClick={playProgression}
-          className="px-3 py-1 rounded-md bg-accent-cyan/20 text-accent-cyan text-xs font-medium border border-accent-cyan/30 hover:bg-accent-cyan/30 cursor-pointer transition-colors"
+          className="px-3 py-1 rounded-md bg-accent-cyan/20 text-accent-cyan-fg text-xs font-medium border border-accent-cyan/30 hover:bg-accent-cyan/30 cursor-pointer transition-colors"
         >
           Play
         </button>
         <button
           onClick={applyToTrack}
           disabled={!resolvedTrackId}
-          className="px-3 py-1 rounded-md bg-accent-green/20 text-accent-green text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1 rounded-md bg-accent-green/20 text-accent-green-fg text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Apply
         </button>
         <select
+          aria-label="Synth track to write the progression to"
           value={resolvedTrackId ?? ''}
           onChange={(e) => setTargetTrackId(e.target.value)}
           disabled={melodicTracks.length === 0}

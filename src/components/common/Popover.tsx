@@ -1,0 +1,17 @@
+import type { ReactNode } from 'react';
+import { usePopover } from '../../hooks/usePopover';
+
+/** A floating panel with the app's standard close / focus behaviour. */
+export function Popover({ onClose, label, className, children }: {
+  onClose: () => void;
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const ref = usePopover<HTMLDivElement>(onClose);
+  return (
+    <div ref={ref} role="dialog" aria-label={label} className={className}>
+      {children}
+    </div>
+  );
+}

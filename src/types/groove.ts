@@ -1,6 +1,7 @@
 import type { Pattern } from './sequencer';
 import type { NoteName, ScaleDefinition, ChordDefinition, ProgressionSlot } from './music';
 import type { SongBlock } from '../store/useSongStore';
+import type { MixerSettings } from '../store/useMixerStore';
 
 /** Full session snapshot that can be saved/loaded/exported */
 export interface SavedGroove {
@@ -29,6 +30,9 @@ export interface SavedGroove {
 
   // --- Song arrangement (optional for backward compatibility) ---
   songBlocks?: SongBlock[];
+
+  // --- Mixer & effects (optional: older saves and presets use the defaults) ---
+  mixer?: MixerSettings;
 }
 
 /** Pattern bank snapshot (patterns + transport + theory, no song arrangement) */

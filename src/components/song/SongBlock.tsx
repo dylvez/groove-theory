@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, memo } from 'react';
 import { useSongStore, type SongBlock as SongBlockType } from '../../store/useSongStore';
-import { PATTERN_COLORS } from '../../constants/patterns';
+import { PATTERN_COLORS, patternTextColor } from '../../constants/patterns';
 import type { Pattern } from '../../types/sequencer';
 
 interface SongBlockProps {
@@ -13,7 +13,8 @@ interface SongBlockProps {
   onDragStart: (index: number) => void;
   onDragOver: (e: React.DragEvent, index: number) => void;
   onDrop: (index: number) => void;
-  onContextMenu: (e: React.MouseEvent, blockId: string) => void;
+  /** Open the block's options menu at a screen position */
+  onContextMenu: (pos: { x: number; y: number }, blockId: string) => void;
 }
 
 /** Mini-grid preview showing drum track activity as tiny step rows */
@@ -100,7 +101,16 @@ export function SongBlockChip({
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      onContextMenu(e, block.id);
+      onContextMenu({ x: e.clientX, y: e.clientY }, block.id);
+    },
+    [block.id, onContextMenu]
+  );
+
+  // Keyboard / single-click way to the same menu
+  const openOptions = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      const r = e.currentTarget.getBoundingClientRect();
+      onContextMenu({ x: r.left, y: r.bottom + 4 }, block.id);
     },
     [block.id, onContextMenu]
   );
@@ -112,12 +122,12 @@ export function SongBlockChip({
       onDragOver={(e) => onDragOver(e, index)}
       onDrop={() => onDrop(index)}
       onContextMenu={handleContextMenu}
-      title="Right-click for options"
+      title="Drag to reorder · click the letter or right-click for options"
       className={`group relative flex flex-col rounded-lg cursor-grab transition-all select-none shrink-0 h-full ${
         block.muted ? 'opacity-40' : ''
       } ${
         isActive
-          ? 'ring-2 ring-[#28d7d4]'
+          ? 'ring-2 ring-accent-teal'
           : 'hover:ring-1 hover:ring-border'
       }`}
       style={{ width: widthPx, minWidth: 60 }}
@@ -130,19 +140,23 @@ export function SongBlockChip({
 
       {/* Block body */}
       <div className="flex-1 flex items-stretch bg-bg-cell rounded-b-lg overflow-hidden min-h-0">
-        {/* Pattern letter badge */}
-        <div
-          className="flex items-center justify-center px-2 shrink-0"
+        {/* Pattern letter badge — also the options button */}
+        <button
+          type="button"
+          onClick={openOptions}
+          aria-haspopup="dialog"
+          aria-label={`Block ${index + 1}${block.sectionLabel ? `, ${block.sectionLabel}` : ''}: pattern ${patternName}, ${block.repeats} time${block.repeats === 1 ? '' : 's'}${block.muted ? ', muted' : ''}${isActive ? ', playing' : ''}. Options`}
+          className="flex items-center justify-center px-2 min-w-6 shrink-0 cursor-pointer hover:brightness-125"
           style={{ backgroundColor: `${color}15` }}
         >
-          <span className="text-sm font-bold" style={{ color }}>
+          <span aria-hidden="true" className="text-sm font-bold" style={{ color: patternTextColor(block.patternId) }}>
             {patternName}
           </span>
-        </div>
+        </button>
 
         {/* Mini-grid preview (center area) */}
         {pattern && widthPx > 80 && (
-          <div className="flex-1 py-1 px-1 min-w-0 overflow-hidden">
+          <div aria-hidden="true" className="flex-1 py-1 px-1 min-w-0 overflow-hidden">
             <MiniGrid pattern={pattern} />
           </div>
         )}
@@ -159,16 +173,18 @@ export function SongBlockChip({
               onChange={handleRepeatsChange}
               onBlur={handleRepeatsBlur}
               onKeyDown={handleRepeatsKeyDown}
-              className="w-8 text-center text-[10px] bg-bg-primary border border-border rounded px-0.5 py-0 text-text-primary focus:outline-none focus:border-accent-orange"
+              aria-label={`Repeats for block ${index + 1}`}
+              className="w-8 text-center text-[11px] bg-bg-primary border border-border rounded px-0.5 py-0 text-text-primary focus:outline-none focus:border-accent-orange"
             />
           ) : (
             <button
               onClick={handleRepeatsClick}
-              className="text-[10px] text-text-muted hover:text-text-primary cursor-pointer"
+              aria-label={`Block ${index + 1} repeats ${block.repeats} time${block.repeats === 1 ? '' : 's'}. Edit`}
+              className="text-[11px] min-h-6 min-w-6 px-0.5 text-text-muted hover:text-text-primary cursor-pointer"
               title="Click to edit repeats"
             >
               {isActive ? (
-                <span className="text-[#28d7d4]">{currentRepeat + 1}/{block.repeats}</span>
+                <span className="text-accent-teal-fg">{currentRepeat + 1}/{block.repeats}</span>
               ) : (
                 <span>×{block.repeats}</span>
               )}
@@ -179,7 +195,7 @@ export function SongBlockChip({
 
       {/* Mute indicator */}
       {block.muted && (
-        <div className="absolute top-1.5 left-1 text-[8px] font-bold text-accent-red bg-accent-red/20 rounded px-0.5">
+        <div aria-hidden="true" className="absolute top-1.5 left-1 text-[11px] font-bold text-accent-red-fg bg-accent-red/20 rounded px-0.5">
           M
         </div>
       )}
@@ -188,11 +204,13 @@ export function SongBlockChip({
       {songState !== 'playing' && (
         <button
           onClick={() => removeBlock(block.id)}
-          className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-bg-tertiary border border-border text-text-muted
-            hover:bg-accent-red hover:text-white hover:border-accent-red
-            opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-[10px]"
+          aria-label={`Remove block ${index + 1}`}
+          title="Remove block"
+          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-bg-tertiary border border-border-control text-text-muted
+            hover:bg-accent-red hover:text-on-accent hover:border-accent-red
+            opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-sm"
         >
-          ×
+          <span aria-hidden="true">×</span>
         </button>
       )}
     </div>

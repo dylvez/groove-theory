@@ -60,9 +60,12 @@ export function HeaderResizeHandle() {
     };
   }, [setTrackHeaderWidth]);
 
+  // Mouse-only shortcut; the keyboard version is the separator in the ruler row
   return (
     <div
+      aria-hidden="true"
       onMouseDown={handleResizeStart}
+      onDoubleClick={() => setTrackHeaderWidth(216)}
       className="shrink-0 w-2 self-stretch cursor-col-resize flex items-center justify-center group"
     >
       <div className="w-0.5 h-full rounded bg-border/30 group-hover:bg-accent-orange transition-colors" />
@@ -94,13 +97,14 @@ export function TrackHeader({
     >
       <button
         onClick={onOpenSettings}
-        className={`w-5 h-5 shrink-0 flex items-center justify-center text-[15px] font-bold leading-none cursor-pointer rounded transition-opacity ${
-          settingsOpen ? 'opacity-100' : 'opacity-80 hover:opacity-100'
-        }`}
+        aria-label={`${name} sound settings`}
+        aria-expanded={!!settingsOpen}
+        aria-haspopup="dialog"
+        className="w-6 h-6 shrink-0 flex items-center justify-center text-[15px] font-bold leading-none cursor-pointer rounded hover:bg-bg-cell transition-colors"
         style={{ color, textShadow: `0 0 2px ${color}` }}
         title="Sound settings"
       >
-        &#9881;
+        <span aria-hidden="true">&#9881;</span>
       </button>
 
       {editing ? (
@@ -113,7 +117,8 @@ export function TrackHeader({
             if (e.key === 'Enter') commitRename();
             if (e.key === 'Escape') setEditing(false);
           }}
-          className="text-sm font-medium bg-bg-cell border border-accent-orange rounded px-1 w-20 text-text-primary outline-none"
+          aria-label={`Rename ${name}`}
+          className="text-sm font-medium bg-bg-cell border border-accent-orange rounded px-1 w-20 text-text-primary"
         />
       ) : (
         <div className="flex flex-col min-w-0 leading-tight">
@@ -133,10 +138,11 @@ export function TrackHeader({
             }`}
             title={onAudition ? 'Click to hear · double-click to rename' : onRename ? 'Double-click to rename' : name}
           >
+            {muted && <span className="sr-only">(muted) </span>}
             {name}
           </span>
           {subtitle && (
-            <span className="text-[9px] text-text-muted truncate leading-none">{subtitle}</span>
+            <span className="text-[11px] text-text-muted truncate leading-none">{subtitle}</span>
           )}
         </div>
       )}
@@ -145,27 +151,32 @@ export function TrackHeader({
         {onToggleArm && (
           <button
             onClick={onToggleArm}
+            aria-pressed={!!armed}
+            aria-label={`Play ${name} from the computer keyboard`}
             className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-              armed ? 'bg-accent-red text-white animate-pulse' : 'bg-bg-cell text-text-muted hover:text-accent-red'
+              armed ? 'bg-accent-red text-on-accent animate-pulse' : 'bg-bg-cell text-text-muted hover:text-accent-red-fg'
             }`}
             title={armed ? 'Armed for live keys — click to disarm' : 'Arm: play this synth with your keyboard'}
           >
-            ●
+            <span aria-hidden="true">●</span>
           </button>
         )}
         {onRemove && (
           <button
             onClick={onRemove}
-            className="w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center cursor-pointer transition-colors bg-bg-cell text-text-muted hover:bg-accent-red/30 hover:text-accent-red"
+            aria-label={`Remove ${name}`}
+            className="w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors bg-bg-cell text-text-muted hover:bg-accent-red/30 hover:text-accent-red-fg"
             title={`Remove ${name}`}
           >
-            ×
+            <span aria-hidden="true">×</span>
           </button>
         )}
         <button
           onClick={onMute}
-          className={`w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-            muted ? 'bg-accent-red/30 text-accent-red' : 'bg-bg-cell text-text-muted hover:text-text-secondary'
+          aria-pressed={muted}
+          aria-label={`Mute ${name}`}
+          className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
+            muted ? 'bg-accent-red/30 text-accent-red-fg ring-1 ring-accent-red-fg' : 'bg-bg-cell text-text-muted hover:text-text-secondary'
           }`}
           title={muted ? `Unmute ${name}` : `Mute ${name}`}
         >
@@ -173,8 +184,10 @@ export function TrackHeader({
         </button>
         <button
           onClick={onSolo}
-          className={`w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-            solo ? 'bg-accent-amber/30 text-accent-amber' : 'bg-bg-cell text-text-muted hover:text-text-secondary'
+          aria-pressed={solo}
+          aria-label={`Solo ${name}`}
+          className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
+            solo ? 'bg-accent-amber/30 text-accent-amber-fg ring-1 ring-accent-amber-fg' : 'bg-bg-cell text-text-muted hover:text-text-secondary'
           }`}
           title={solo ? `Unsolo ${name}` : `Solo ${name}`}
         >
@@ -183,7 +196,8 @@ export function TrackHeader({
         {onFill && (
           <button
             onClick={onFill}
-            className="w-6 h-6 rounded text-[8px] font-bold flex items-center justify-center cursor-pointer transition-colors bg-bg-cell text-text-muted hover:bg-accent-purple/30 hover:text-accent-purple"
+            aria-label={`Fill empty bars of ${name}`}
+            className="w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors bg-bg-cell text-text-muted hover:bg-accent-purple/30 hover:text-accent-purple-fg"
             title="Fill blank bars with existing pattern"
           >
             Fill

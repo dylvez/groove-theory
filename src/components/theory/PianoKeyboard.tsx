@@ -5,7 +5,7 @@ import { useTheoryStore } from '../../store/useTheoryStore';
 import { useUIStore } from '../../store/useUIStore';
 import { AudioEngine } from '../../audio/AudioEngine';
 import { useKeyboardInput } from '../../hooks/useKeyboardInput';
-import { isBlackKey } from '../../utils/noteHelpers';
+import { isBlackKey, spokenNote } from '../../utils/noteHelpers';
 import { getScaleNotes, getChordNotes, getScaleDegree } from '../../utils/musicTheory';
 
 interface PianoKeyboardProps {
@@ -21,19 +21,34 @@ export function PianoKeyboard({ startOctave = 3, numOctaves = 3 }: PianoKeyboard
   const highlightMode = useTheoryStore(s => s.highlightMode);
   // When a sequencer track is armed, the keyboard plays that track instead
   const armedTrackId = useUIStore(s => s.armedTrackId);
+  const singleKeyShortcuts = useUIStore(s => s.singleKeyShortcuts);
 
   const scaleNotes = getScaleNotes(rootNote, selectedScale);
   const chordNotes = highlightMode === 'chord' ? getChordNotes(chordRoot, selectedChord) : [];
 
   const playNote = useCallback((note: NoteWithOctave) => {
     const engine = AudioEngine.getInstance();
-    engine.synthEngine.previewNote(note, '8n');
+    // The first sound needs the audio context started by a user gesture
+    engine.init().then(() => engine.synthEngine.previewNote(note, '8n'));
   }, []);
+
+  const keyLabel = (note: NoteName, octave: number, inScale: boolean, isRoot: boolean, degree: number) => {
+    const name = spokenNote(`${note}${octave}`);
+    if (isRoot) return `${name}, root`;
+    if (inScale && degree >= 0) return `${name}, scale degree ${degree + 1}`;
+    return name;
+  };
+
+  // Mouse plays on press for responsiveness; keyboard and screen readers send a click
+  const keyHandlers = (noteStr: NoteWithOctave) => ({
+    onMouseDown: () => playNote(noteStr),
+    onClick: (e: React.MouseEvent) => { if (e.detail === 0) playNote(noteStr); },
+  });
 
   useKeyboardInput({
     baseOctave: startOctave + 1,
     onNoteOn: playNote,
-    enabled: armedTrackId === null,
+    enabled: armedTrackId === null && singleKeyShortcuts,
   });
 
   // Build key layout
@@ -55,7 +70,7 @@ export function PianoKeyboard({ startOctave = 3, numOctaves = 3 }: PianoKeyboard
   };
 
   return (
-    <div className="relative select-none">
+    <div className="relative select-none w-max" role="group" aria-label="Piano">
       {/* White keys */}
       <div className="flex">
         {whiteKeys.map((k, i) => {
@@ -65,24 +80,26 @@ export function PianoKeyboard({ startOctave = 3, numOctaves = 3 }: PianoKeyboard
           const isRoot = k.note === rootNote;
           const degree = getScaleDegree(k.note, rootNote, selectedScale);
 
-          // Degree label color based on scale/chord context
+          // Degree label color based on scale/chord context — darker shades so
+          // they keep at least 4.5:1 contrast on the white keys
           const getDegreeColor = () => {
-            if (isRoot) return 'text-accent-orange';
-            if (highlightMode === 'chord' && isInChord && isInScale) return 'text-accent-cyan';
-            if (highlightMode === 'chord' && isInChord) return 'text-accent-blue';
-            if (isInScale) return 'text-accent-cyan';
+            if (isRoot) return 'text-orange-700';
+            if (highlightMode === 'chord' && isInChord && isInScale) return 'text-cyan-800';
+            if (highlightMode === 'chord' && isInChord) return 'text-blue-700';
+            if (isInScale) return 'text-cyan-800';
             return '';
           };
 
           return (
             <button
               key={`${k.note}${k.octave}-${i}`}
-              onMouseDown={() => playNote(noteStr)}
-              className="relative w-11 h-32 rounded-b-lg border border-border/30 cursor-pointer transition-colors flex flex-col items-center justify-end pb-2 bg-white hover:bg-gray-100 active:bg-gray-200"
+              {...keyHandlers(noteStr)}
+              aria-label={keyLabel(k.note, k.octave, isInScale, isRoot, degree)}
+              className="focus-on-light relative w-11 shrink-0 h-32 rounded-b-lg border border-gray-400 cursor-pointer transition-colors flex flex-col items-center justify-end pb-2 bg-white hover:bg-gray-100 active:bg-gray-200"
             >
-              <span className={`text-[10px] font-medium ${isInScale ? getDegreeColor() : 'text-gray-400'}`}>{k.note}</span>
+              <span aria-hidden="true" className={`text-[11px] font-medium ${isInScale ? getDegreeColor() : 'text-gray-600'}`}>{k.note}</span>
               {isInScale && degree >= 0 && (
-                <span className={`text-[10px] font-bold ${getDegreeColor()}`}>{degree + 1}</span>
+                <span aria-hidden="true" className={`text-[11px] font-bold ${getDegreeColor()}`}>{degree + 1}</span>
               )}
             </button>
           );
@@ -105,22 +122,23 @@ export function PianoKeyboard({ startOctave = 3, numOctaves = 3 }: PianoKeyboard
 
         // Degree label color based on scale/chord context
         const getDegreeColor = () => {
-          if (isRoot) return 'text-accent-orange';
-          if (highlightMode === 'chord' && isInChord && isInScale) return 'text-accent-cyan';
-          if (highlightMode === 'chord' && isInChord) return 'text-accent-blue';
-          if (isInScale) return 'text-accent-cyan';
+          if (isRoot) return 'text-accent-orange-fg';
+          if (highlightMode === 'chord' && isInChord && isInScale) return 'text-accent-cyan-fg';
+          if (highlightMode === 'chord' && isInChord) return 'text-accent-blue-fg';
+          if (isInScale) return 'text-accent-cyan-fg';
           return '';
         };
 
         return (
           <button
             key={`${k.note}${k.octave}`}
-            onMouseDown={() => playNote(noteStr)}
+            {...keyHandlers(noteStr)}
+            aria-label={keyLabel(k.note, k.octave, isInScale, isRoot, degree)}
             className="absolute top-0 w-7 h-20 rounded-b-md z-10 border border-border/50 cursor-pointer transition-colors flex flex-col items-end justify-center pb-1 bg-gray-900 hover:bg-gray-700 active:bg-gray-600"
             style={{ left: `${leftPos}px` }}
           >
             {isInScale && degree >= 0 && (
-              <span className={`text-[9px] font-bold w-full text-center ${getDegreeColor()}`}>{degree + 1}</span>
+              <span aria-hidden="true" className={`text-[11px] font-bold w-full text-center ${getDegreeColor()}`}>{degree + 1}</span>
             )}
           </button>
         );

@@ -16,6 +16,7 @@ interface HarmonyPanelProps {
 export function HarmonyPanel({ showPiano = true, pianoOctaves = 2, pianoStartOctave = 4 }: HarmonyPanelProps) {
   return (
     <div className="flex flex-col gap-4">
+      <h3 className="sr-only">Harmony</h3>
       {/* 1. Key & Scale picker */}
       <KeyScalePicker />
 
@@ -25,7 +26,7 @@ export function HarmonyPanel({ showPiano = true, pianoOctaves = 2, pianoStartOct
       {/* 3. Piano keyboard (collapsible to save vertical space) */}
       {showPiano && (
         <CollapsibleSection title="Piano" defaultOpen>
-          <div className="overflow-x-auto pb-1">
+          <div className="overflow-x-auto pb-1" tabIndex={-1}>
             <PianoKeyboard startOctave={pianoStartOctave} numOctaves={pianoOctaves} />
           </div>
         </CollapsibleSection>

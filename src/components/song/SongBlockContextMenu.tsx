@@ -1,17 +1,25 @@
 import { useState, useCallback } from 'react';
 import { useSongStore, type SongBlock } from '../../store/useSongStore';
 import { useSequencerStore } from '../../store/useSequencerStore';
-import { useClickOutside } from '../../hooks/useClickOutside';
-import { PATTERN_IDS, PATTERN_COLORS } from '../../constants/patterns';
+import { usePopover } from '../../hooks/usePopover';
+import { PATTERN_IDS, PATTERN_COLORS, patternTextColor } from '../../constants/patterns';
+import { announce } from '../../utils/announce';
 
 interface ContextMenuProps {
   x: number;
   y: number;
   block: SongBlock;
+  index: number;
+  count: number;
   onClose: () => void;
 }
 
-export function SongBlockContextMenu({ x, y, block, onClose }: ContextMenuProps) {
+export function SongBlockContextMenu({ x, y, block, index, count, onClose }: ContextMenuProps) {
+  const reorderBlock = useSongStore((s) => s.reorderBlock);
+  const insertBlock = useSongStore((s) => s.insertBlock);
+  const loopStart = useSongStore((s) => s.loopStart);
+  const loopEnd = useSongStore((s) => s.loopEnd);
+  const setLoopRange = useSongStore((s) => s.setLoopRange);
   const duplicateBlock = useSongStore((s) => s.duplicateBlock);
   const removeBlock = useSongStore((s) => s.removeBlock);
   const setBlockPattern = useSongStore((s) => s.setBlockPattern);
@@ -27,12 +35,12 @@ export function SongBlockContextMenu({ x, y, block, onClose }: ContextMenuProps)
   const [repeatsValue, setRepeatsValue] = useState(String(block.repeats));
   const [labelValue, setLabelValue] = useState(block.sectionLabel ?? '');
 
-  const ref = useClickOutside<HTMLDivElement>(onClose, true);
+  const ref = usePopover<HTMLDivElement>(onClose);
 
   // Keep menu on screen
   const menuStyle: React.CSSProperties = {
     position: 'fixed',
-    top: Math.min(y, window.innerHeight - 300),
+    top: Math.min(y, window.innerHeight - 400),
     left: Math.min(x, window.innerWidth - 200),
     zIndex: 50,
   };
@@ -74,8 +82,35 @@ export function SongBlockContextMenu({ x, y, block, onClose }: ContextMenuProps)
 
   const handleRemove = useCallback(() => {
     removeBlock(block.id);
+    announce(`Removed block ${index + 1}`);
     onClose();
-  }, [removeBlock, block.id, onClose]);
+  }, [removeBlock, block.id, index, onClose]);
+
+  const handleMove = useCallback((to: number) => {
+    reorderBlock(index, to);
+    announce(`Moved to position ${to + 1}`);
+    onClose();
+  }, [reorderBlock, index, onClose]);
+
+  const handleInsert = useCallback((patternId: string, at: number, name: string) => {
+    insertBlock(patternId, at);
+    announce(`Inserted pattern ${name} at position ${at + 1}`);
+    onClose();
+  }, [insertBlock, onClose]);
+
+  const handleLoopFrom = useCallback(() => {
+    const end = loopEnd !== null && loopEnd >= index ? loopEnd : index;
+    setLoopRange(index, end);
+    announce(`Loop: blocks ${index + 1} to ${end + 1}`);
+    onClose();
+  }, [loopEnd, index, setLoopRange, onClose]);
+
+  const handleLoopTo = useCallback(() => {
+    const start = loopStart !== null && loopStart <= index ? loopStart : index;
+    setLoopRange(start, index);
+    announce(`Loop: blocks ${start + 1} to ${index + 1}`);
+    onClose();
+  }, [loopStart, index, setLoopRange, onClose]);
 
   const patternName = patterns.find((p) => p.id === block.patternId)?.name ?? '?';
   const color = PATTERN_COLORS[block.patternId] ?? '#888';
@@ -84,15 +119,34 @@ export function SongBlockContextMenu({ x, y, block, onClose }: ContextMenuProps)
     <div
       ref={ref}
       style={menuStyle}
-      className="bg-bg-secondary border border-border rounded-lg shadow-xl py-1 min-w-[160px] text-xs"
+      role="dialog"
+      aria-label={`Options for block ${index + 1}, pattern ${patternName}`}
+      className="bg-bg-secondary border border-border-control rounded-lg shadow-xl py-1 min-w-[180px] text-xs"
     >
       {/* Header showing block info */}
-      <div className="px-3 py-1.5 text-text-muted border-b border-border/50 flex items-center gap-2">
-        <span className="font-bold" style={{ color }}>
+      <div aria-hidden="true" className="px-3 py-1.5 text-text-muted border-b border-border/50 flex items-center gap-2">
+        <span className="font-bold" style={{ color: patternTextColor(block.patternId) || color }}>
           {patternName}
         </span>
         <span>×{block.repeats}</span>
       </div>
+
+      {/* Move (keyboard alternative to drag-and-drop) */}
+      <button
+        onClick={() => handleMove(index - 1)}
+        disabled={index === 0}
+        className="w-full px-3 py-1.5 text-left text-text-secondary hover:bg-bg-cell transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Move left
+      </button>
+      <button
+        onClick={() => handleMove(index + 1)}
+        disabled={index >= count - 1}
+        className="w-full px-3 py-1.5 text-left text-text-secondary hover:bg-bg-cell transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Move right
+      </button>
+      <div className="border-t border-border/50 my-0.5" />
 
       {/* Duplicate */}
       <button
@@ -121,9 +175,9 @@ export function SongBlockContextMenu({ x, y, block, onClose }: ContextMenuProps)
             max={99}
             value={repeatsValue}
             onChange={(e) => setRepeatsValue(e.target.value)}
+            aria-label="Repeats"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleRepeatsSubmit();
-              if (e.key === 'Escape') setEditingRepeats(false);
             }}
             onBlur={handleRepeatsSubmit}
             className="w-12 px-1 py-0.5 bg-bg-primary border border-border rounded text-center text-xs text-text-primary focus:outline-none focus:border-accent-orange"
@@ -140,8 +194,8 @@ export function SongBlockContextMenu({ x, y, block, onClose }: ContextMenuProps)
 
       {/* Replace With */}
       {showReplace ? (
-        <div className="px-3 py-1.5 flex items-center gap-1">
-          <span className="text-text-muted mr-1">Replace:</span>
+        <div role="group" aria-label="Replace with pattern" className="px-3 py-1.5 flex items-center gap-1">
+          <span aria-hidden="true" className="text-text-muted mr-1">Replace:</span>
           {PATTERN_IDS.map((pid) => {
             const name = patterns.find((p) => p.id === pid)?.name ?? '?';
             const c = PATTERN_COLORS[pid];
@@ -149,8 +203,9 @@ export function SongBlockContextMenu({ x, y, block, onClose }: ContextMenuProps)
               <button
                 key={pid}
                 onClick={() => handleReplace(pid)}
-                className="w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center cursor-pointer hover:opacity-80"
-                style={{ backgroundColor: `${c}20`, color: c }}
+                className="w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer hover:opacity-80"
+                style={{ backgroundColor: `${c}20`, color: patternTextColor(pid) }}
+                aria-label={`Pattern ${name}`}
               >
                 {name}
               </button>
@@ -184,10 +239,10 @@ export function SongBlockContextMenu({ x, y, block, onClose }: ContextMenuProps)
             type="text"
             value={labelValue}
             placeholder="e.g. Intro, Verse..."
+            aria-label="Section label"
             onChange={(e) => setLabelValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleLabelSubmit();
-              if (e.key === 'Escape') setEditingLabel(false);
             }}
             onBlur={handleLabelSubmit}
             className="flex-1 px-1 py-0.5 bg-bg-primary border border-border rounded text-xs text-text-primary focus:outline-none focus:border-accent-orange"
@@ -202,12 +257,50 @@ export function SongBlockContextMenu({ x, y, block, onClose }: ContextMenuProps)
         </button>
       )}
 
+      {/* Insert (larger-target alternative to the thin insert strips between blocks) */}
+      {([['before', index], ['after', index + 1]] as const).map(([where, at]) => (
+        <div key={where} role="group" aria-label={`Insert a block ${where} this one`} className="px-3 py-1.5 flex items-center gap-1">
+          <span aria-hidden="true" className="text-text-muted mr-1 w-20">Insert {where}:</span>
+          {PATTERN_IDS.map((pid) => {
+            const name = patterns.find((p) => p.id === pid)?.name ?? '?';
+            const c = PATTERN_COLORS[pid];
+            return (
+              <button
+                key={pid}
+                onClick={() => handleInsert(pid, at, name)}
+                className="w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer hover:opacity-80"
+                style={{ backgroundColor: `${c}20`, color: patternTextColor(pid) }}
+                aria-label={`Pattern ${name}`}
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+
+      <div className="border-t border-border/50 my-0.5" />
+
+      {/* Loop range (keyboard alternative to Shift+click) */}
+      <button
+        onClick={handleLoopFrom}
+        className="w-full px-3 py-1.5 text-left text-text-secondary hover:bg-bg-cell transition-colors cursor-pointer"
+      >
+        Start loop here
+      </button>
+      <button
+        onClick={handleLoopTo}
+        className="w-full px-3 py-1.5 text-left text-text-secondary hover:bg-bg-cell transition-colors cursor-pointer"
+      >
+        End loop here
+      </button>
+
       <div className="border-t border-border/50 my-0.5" />
 
       {/* Remove */}
       <button
         onClick={handleRemove}
-        className="w-full px-3 py-1.5 text-left text-accent-red hover:bg-accent-red/10 transition-colors cursor-pointer"
+        className="w-full px-3 py-1.5 text-left text-accent-red-fg hover:bg-accent-red/10 transition-colors cursor-pointer"
       >
         Remove
       </button>

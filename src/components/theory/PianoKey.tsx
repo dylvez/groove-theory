@@ -32,7 +32,7 @@ export function PianoKey({ note, isInScale, isInChord, isRoot, scaleDegree, onPl
         style={{ marginLeft: '-16px' }}
       >
         {isInScale && scaleDegree >= 0 && (
-          <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] text-white/80 font-medium">
+          <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[11px] text-white/80 font-medium">
             {note}
           </span>
         )}
@@ -47,9 +47,9 @@ export function PianoKey({ note, isInScale, isInChord, isRoot, scaleDegree, onPl
         getHighlightColor() || 'bg-white hover:bg-gray-100'
       } ${isInScale || isInChord || isRoot ? 'text-white' : 'text-gray-600'}`}
     >
-      <span className="text-[10px] font-medium">{note}</span>
+      <span className="text-[11px] font-medium">{note}</span>
       {isInScale && scaleDegree >= 0 && (
-        <span className="text-[9px] opacity-70">{scaleDegree + 1}</span>
+        <span className="text-[11px] opacity-70">{scaleDegree + 1}</span>
       )}
     </button>
   );

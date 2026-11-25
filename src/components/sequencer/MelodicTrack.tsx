@@ -1,4 +1,8 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useId } from 'react';
+import { beginUndoGroup, endUndoGroup } from '../../store/history';
+import { useGridFocusStore, stepPosition, velocityName } from '../../store/useGridFocusStore';
+import { usePopover } from '../../hooks/usePopover';
+import { spokenNote } from '../../utils/noteHelpers';
 import type { MelodicTrack as MelodicTrackType, NoteWithOctave, MelodicSynthParams, SynthType } from '../../types';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useTheoryStore } from '../../store/useTheoryStore';
@@ -8,7 +12,7 @@ import { AudioEngine } from '../../audio/AudioEngine';
 import { DEFAULT_MELODIC_PARAMS, SYNTH_PRESETS } from '../../constants';
 import { TrackHeader, HeaderResizeHandle } from './TrackHeader';
 import { MelodicSettingsPanel } from './TrackSettingsPanel';
-import { velocityAlpha, SYNTH_COLORS } from '../../utils/stepDisplay';
+import { velocityAlpha, velocityOpacity, readableTextOn, SYNTH_COLORS } from '../../utils/stepDisplay';
 import { getScaleNotes } from '../../utils/musicTheory';
 
 interface MelodicTrackProps {
@@ -55,6 +59,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
   const armedTrackId = useUIStore(s => s.armedTrackId);
   const setArmedTrack = useUIStore(s => s.setArmedTrack);
   const armed = armedTrackId === track.id;
+  const tabStopStep = useGridFocusStore(s => (s.trackId === track.id ? s.step : -1));
 
   const [activePopup, setActivePopup] = useState<number | null>(null);
   const [popupOctave, setPopupOctave] = useState(track.octave);
@@ -86,20 +91,15 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
     return map;
   }, [track.steps, trackColor]);
 
-  // A mouseup anywhere ends any drag-paint gesture
+  // A mouseup anywhere ends any drag-paint gesture (and its undo group)
   useEffect(() => {
-    const onUp = () => { paintRef.current = null; };
+    const onUp = () => {
+      if (paintRef.current) endUndoGroup();
+      paintRef.current = null;
+    };
     window.addEventListener('mouseup', onUp);
     return () => window.removeEventListener('mouseup', onUp);
   }, []);
-
-  // Escape closes the note editor
-  useEffect(() => {
-    if (activePopup === null) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setActivePopup(null); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [activePopup]);
 
   const openPopupFor = (stepIndex: number) => {
     const existingNote = track.steps[stepIndex].note;
@@ -135,6 +135,8 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
       paintRef.current = null;
       return;
     }
+    if (e.button !== 0) return;
+    beginUndoGroup();
     paintRef.current = { start: i, painted: false, erase: track.steps[i].active };
   };
 
@@ -142,7 +144,19 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
   const handlePointerUp = (i: number) => {
     const p = paintRef.current;
     paintRef.current = null;
+    if (p) endUndoGroup();
     if (p && !p.painted && p.start === i) handleStepClick(i);
+  };
+
+  /**
+   * Keyboard / screen reader activation. Enter opens the note editor (for an
+   * active step too, so length and note can be changed); Shift+Enter cycles
+   * velocity. Delete clears (handled by the grid).
+   */
+  const handleActivate = (i: number, shift: boolean) => {
+    if (shift && track.steps[i].active) { cycleMelodicVelocity(track.id, i); return; }
+    if (activePopup === i) setActivePopup(null);
+    else openPopupFor(i);
   };
 
   const handlePointerEnter = (i: number) => {
@@ -245,7 +259,12 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
         subtitle={presetName ?? undefined}
       />
       <HeaderResizeHandle />
-      <div className={`flex ${compact ? 'gap-0.5' : 'gap-1'} relative`}>
+      <div
+        role="group"
+        aria-label={`${track.name} steps`}
+        aria-describedby="grid-instructions"
+        className={`flex ${compact ? 'gap-0.5' : 'gap-1'} relative`}
+      >
         {track.steps.map((step, i) => {
           const isCurrent = isPlaying && currentStep === i;
           const stepsPerBeat = compact ? 8 : 4;
@@ -255,118 +274,77 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
           const tail = !step.active ? tails.get(i) : undefined;
           const len = Math.max(1, step.length ?? 1);
           const hasTail = step.active && len > 1 && i + 1 < track.steps.length && !track.steps[i + 1].active;
+          const position = stepPosition(i, stepsPerMeasure, stepsPerBeat);
+          const label = step.active && step.note
+            ? `${track.name} ${position}: ${spokenNote(step.note)}, ${len} step${len > 1 ? 's' : ''} long, ${velocityName(step.velocity)}`
+            : tail ? `${track.name} ${position}: held note` : `${track.name} ${position}: empty`;
+          const textColor = step.active ? readableTextOn(trackColor, velocityOpacity(step.velocity)) : undefined;
 
           return (
             <div key={i} className={`relative ${isBarStart ? 'ml-2' : ''}`}>
               <button
+                type="button"
+                data-cell="melodic"
+                data-track={track.id}
+                data-step={i}
+                tabIndex={tabStopStep === i ? 0 : -1}
+                aria-label={label}
+                aria-haspopup="dialog"
+                aria-expanded={activePopup === i}
                 onMouseDown={(e) => handlePointerDown(i, e)}
                 onMouseUp={() => handlePointerUp(i)}
                 onMouseEnter={() => handlePointerEnter(i)}
+                onClick={(e) => { if (e.detail === 0) handleActivate(i, e.shiftKey); }}
                 onContextMenu={(e) => e.preventDefault()}
                 title={
                   step.active
                     ? `${step.note} · ${len} step${len > 1 ? 's' : ''} · vel ${Math.round(step.velocity * 100)}%\nClick to clear · right-click to edit · shift+click for velocity`
                     : tail ? 'Held note — right-click the note to change its length' : 'Click to pick a note · drag to paint · right-click to edit'
                 }
-                className={`${cellW} ${cellH} border text-[10px] font-medium transition-all duration-75 cursor-pointer select-none relative ${
+                className={`${cellW} ${cellH} border text-[11px] font-medium transition-all duration-75 cursor-pointer select-none relative ${
                   hasTail ? 'rounded-l-md rounded-r-none border-r-0' : tail ? (tail.last ? 'rounded-r-md rounded-l-none border-l-0' : 'rounded-none border-l-0 border-r-0') : 'rounded-md'
                 } ${
                   isCurrent ? 'ring-2 ring-white/70 z-10' : ''
                 } ${
                   step.active
-                    ? 'border-transparent text-white'
+                    ? 'step-active border-transparent'
                     : tail
                     ? 'border-transparent'
                     : isBeatStart
-                    ? 'bg-bg-cell-hover border-border/50 hover:border-border text-text-muted'
-                    : 'bg-bg-cell border-border/30 hover:border-border/60 text-text-muted'
+                    ? 'bg-bg-cell-hover border-border-cell hover:border-border-control text-text-muted'
+                    : 'bg-bg-cell border-border-cell hover:border-border-control text-text-muted'
                 }`}
                 style={
                   step.active
-                    ? { backgroundColor: `${trackColor}${velocityAlpha(step.velocity)}` }
+                    ? { backgroundColor: `${trackColor}${velocityAlpha(step.velocity)}`, color: textColor }
                     : tail
                     ? { backgroundColor: `${tail.color}${velocityAlpha(tail.velocity * 0.45)}` }
                     : undefined
                 }
               >
                 {!compact && step.note ? (
-                  <span className="flex flex-col items-center leading-none">
+                  <span aria-hidden="true" className="flex flex-col items-center leading-none">
                     <span>{step.note.replace(/\d+$/, '')}</span>
-                    <span className="text-[7px] opacity-60">{octaveDigit}</span>
+                    <span className="text-[11px] font-normal">{octaveDigit}</span>
                   </span>
                 ) : ''}
               </button>
 
               {/* Note editor popup: octave, note, length */}
               {activePopup === i && (
-                <div
-                  className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border rounded-lg p-2 shadow-xl min-w-36"
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] uppercase tracking-wider text-text-muted">Step {i + 1}</span>
-                    <button
-                      onClick={() => setActivePopup(null)}
-                      className="text-text-muted hover:text-text-primary text-xs cursor-pointer leading-none"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  {/* Octave selector */}
-                  <div className="flex gap-1 mb-2">
-                    {[2, 3, 4, 5, 6].map(oct => (
-                      <button
-                        key={oct}
-                        onClick={() => setPopupOctave(oct)}
-                        className={`w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-                          popupOctave === oct
-                            ? 'bg-accent-purple text-white'
-                            : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
-                        }`}
-                      >
-                        {oct}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Scale notes grid */}
-                  <div className="grid grid-cols-2 gap-1">
-                    {scaleNotes.map((note, idx) => {
-                      const full = `${note}${popupOctave}` as NoteWithOctave;
-                      const isSet = step.note === full;
-                      return (
-                        <button
-                          key={note}
-                          onClick={() => handleNoteSelect(i, full)}
-                          className={`px-2 py-1 text-xs rounded cursor-pointer transition-colors flex items-center justify-between gap-1 ${
-                            isSet ? 'bg-accent-purple text-white' : 'bg-bg-cell hover:bg-accent-purple/30 text-text-primary'
-                          }`}
-                        >
-                          <span>{note}</span>
-                          <span className={`text-[9px] ${isSet ? 'text-white/70' : 'text-text-muted'}`}>{idx + 1}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {/* Length (only for active steps) */}
-                  {step.active && (
-                    <div className="mt-2 pt-2 border-t border-border/50">
-                      <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Length</div>
-                      <div className="flex gap-1">
-                        {LENGTH_OPTIONS.map(L => (
-                          <button
-                            key={L}
-                            onClick={() => setMelodicStepLength(track.id, i, L)}
-                            className={`w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-                              len === L ? 'bg-accent-cyan text-white' : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
-                            }`}
-                          >
-                            {L}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <NoteEditor
+                  title={`${track.name} ${position}`}
+                  scaleNotes={scaleNotes}
+                  octave={popupOctave}
+                  onOctave={setPopupOctave}
+                  currentNote={step.note}
+                  active={step.active}
+                  length={len}
+                  onSelect={(note) => handleNoteSelect(i, note)}
+                  onLength={(L) => setMelodicStepLength(track.id, i, L)}
+                  onClear={() => { setMelodicStep(track.id, i, null); setActivePopup(null); }}
+                  onClose={() => setActivePopup(null)}
+                />
               )}
             </div>
           );
@@ -374,6 +352,8 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
       </div>
       {showSettings && (
         <MelodicSettingsPanel
+          name={track.name}
+          onRename={(newName) => renameTrack(track.id, 'melodic', newName)}
           synthType={track.synthType}
           synthParams={track.synthParams}
           volume={track.volume}
@@ -390,6 +370,115 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
           onAudition={handleAudition}
           onClose={() => setShowSettings(false)}
         />
+      )}
+    </div>
+  );
+}
+
+interface NoteEditorProps {
+  title: string;
+  scaleNotes: string[];
+  octave: number;
+  onOctave: (o: number) => void;
+  currentNote: NoteWithOctave | null;
+  active: boolean;
+  length: number;
+  onSelect: (note: NoteWithOctave) => void;
+  onLength: (length: number) => void;
+  onClear: () => void;
+  onClose: () => void;
+}
+
+/** Floating editor for one synth step: octave, scale note, length. */
+function NoteEditor({
+  title, scaleNotes, octave, onOctave, currentNote, active, length, onSelect, onLength, onClear, onClose,
+}: NoteEditorProps) {
+  const ref = usePopover<HTMLDivElement>(onClose);
+  const headingId = useId();
+
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-labelledby={headingId}
+      className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border-control rounded-lg p-2 shadow-xl min-w-40"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between mb-1.5 gap-2">
+        <h3 id={headingId} className="text-[11px] font-normal uppercase tracking-wider text-text-muted whitespace-nowrap">{title}</h3>
+        <button
+          onClick={onClose}
+          aria-label="Close note editor"
+          className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary text-sm cursor-pointer leading-none"
+        >
+          ×
+        </button>
+      </div>
+      {/* Octave selector */}
+      <div role="group" aria-label="Octave" className="flex gap-1 mb-2">
+        {[2, 3, 4, 5, 6].map(oct => (
+          <button
+            key={oct}
+            onClick={() => onOctave(oct)}
+            aria-pressed={octave === oct}
+            aria-label={`Octave ${oct}`}
+            className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
+              octave === oct
+                ? 'bg-accent-purple text-on-accent'
+                : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
+            }`}
+          >
+            {oct}
+          </button>
+        ))}
+      </div>
+      {/* Scale notes grid */}
+      <div role="group" aria-label="Note" className="grid grid-cols-2 gap-1">
+        {scaleNotes.map((note, idx) => {
+          const full = `${note}${octave}` as NoteWithOctave;
+          const isSet = currentNote === full;
+          return (
+            <button
+              key={note}
+              onClick={() => onSelect(full)}
+              aria-pressed={isSet}
+              aria-label={`${spokenNote(full)}, scale degree ${idx + 1}`}
+              className={`px-2 py-1 min-h-6 text-xs rounded cursor-pointer transition-colors flex items-center justify-between gap-1 ${
+                isSet ? 'bg-accent-purple text-on-accent' : 'bg-bg-cell hover:bg-accent-purple/30 text-text-primary'
+              }`}
+            >
+              <span>{note}</span>
+              <span className={`text-[11px] ${isSet ? '' : 'text-text-muted'}`}>{idx + 1}</span>
+            </button>
+          );
+        })}
+      </div>
+      {/* Length and clear (only for active steps) */}
+      {active && (
+        <div className="mt-2 pt-2 border-t border-border/50">
+          <div id={`${headingId}-len`} className="text-[11px] uppercase tracking-wider text-text-muted mb-1">Length (steps)</div>
+          <div role="group" aria-labelledby={`${headingId}-len`} className="flex gap-1">
+            {LENGTH_OPTIONS.map(L => (
+              <button
+                key={L}
+                onClick={() => onLength(L)}
+                aria-pressed={length === L}
+                aria-label={`${L} step${L > 1 ? 's' : ''}`}
+                className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
+                  length === L ? 'bg-accent-cyan text-on-accent' : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
+                }`}
+              >
+                {L}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={onClear}
+            className="mt-2 w-full px-2 py-1 rounded text-xs text-accent-red-fg bg-bg-cell hover:bg-accent-red/15 cursor-pointer transition-colors"
+          >
+            Clear step
+          </button>
+        </div>
       )}
     </div>
   );

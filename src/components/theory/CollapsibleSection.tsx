@@ -13,9 +13,11 @@ export function CollapsibleSection({ title, defaultOpen = false, children }: Col
     <div className="flex flex-col">
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
         className="flex items-center gap-2 py-1.5 cursor-pointer group"
       >
         <svg
+          aria-hidden="true"
           className={`w-3 h-3 text-text-muted transition-transform ${open ? 'rotate-90' : ''}`}
           fill="currentColor"
           viewBox="0 0 20 20"

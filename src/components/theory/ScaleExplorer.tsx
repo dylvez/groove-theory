@@ -41,6 +41,7 @@ export function ScaleExplorer() {
         <div className="flex flex-col gap-1">
           <label className="text-xs text-text-muted">Root</label>
           <select
+          aria-label="Root"
             value={rootNote}
             onChange={(e) => { setRootNote(e.target.value as NoteName); setHighlightMode('scale'); }}
             className="px-3 py-1.5 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-orange"
@@ -55,6 +56,7 @@ export function ScaleExplorer() {
         <div className="flex flex-col gap-1">
           <label className="text-xs text-text-muted">Scale</label>
           <select
+          aria-label="Scale"
             value={selectedScale.name}
             onChange={(e) => {
               const scale = SCALES.find(s => s.name === e.target.value);
@@ -72,7 +74,7 @@ export function ScaleExplorer() {
         <div className="flex flex-col gap-1 justify-end">
           <button
             onClick={playScale}
-            className="px-3 py-1.5 rounded-md bg-accent-blue/20 text-accent-blue text-sm font-medium border border-accent-blue/30 hover:bg-accent-blue/30 cursor-pointer transition-colors"
+            className="px-3 py-1.5 rounded-md bg-accent-blue/20 text-accent-blue-fg text-sm font-medium border border-accent-blue/30 hover:bg-accent-blue/30 cursor-pointer transition-colors"
           >
             Play Scale
           </button>
@@ -85,7 +87,7 @@ export function ScaleExplorer() {
           <button
             key={`${note}-${i}`}
             onClick={() => playNote(note)}
-            className="px-2.5 py-1 rounded-md bg-accent-blue/20 text-accent-blue text-sm font-medium border border-accent-blue/30 hover:bg-accent-blue/30 cursor-pointer transition-colors"
+            className="px-2.5 py-1 rounded-md bg-accent-blue/20 text-accent-blue-fg text-sm font-medium border border-accent-blue/30 hover:bg-accent-blue/30 cursor-pointer transition-colors"
           >
             {formatNote(note)}
           </button>

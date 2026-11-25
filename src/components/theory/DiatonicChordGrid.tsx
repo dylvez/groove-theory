@@ -93,11 +93,11 @@ export function DiatonicChordGrid() {
             }`}
           >
             <span className={`text-sm font-bold ${
-              selectedDegreeIndex === i ? 'text-accent-purple' : 'text-text-primary'
+              selectedDegreeIndex === i ? 'text-accent-purple-fg' : 'text-text-primary'
             }`}>
               {chord.numeral}
             </span>
-            <span className="text-[10px] text-text-muted">
+            <span className="text-[11px] text-text-muted">
               {formatNote(chord.rootNote)}
             </span>
           </button>

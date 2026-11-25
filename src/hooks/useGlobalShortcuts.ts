@@ -5,6 +5,7 @@ import { useSongStore } from '../store/useSongStore';
 import { useUIStore } from '../store/useUIStore';
 import { AudioEngine } from '../audio/AudioEngine';
 import { PATTERN_IDS } from '../constants/patterns';
+import { announce } from '../utils/announce';
 
 function isTypingTarget(t: EventTarget | null): boolean {
   return t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement
@@ -20,6 +21,9 @@ function isTypingTarget(t: EventTarget | null): boolean {
  *   [ / ]            shift pattern left / right one step
  *   R                toggle record (when a track is armed)
  *   Escape           disarm live keys
+ *
+ * The single-character ones (1–4, [ ], R) can be switched off in Help, for
+ * speech-input users and anyone who triggers them by accident (WCAG 2.1.4).
  */
 export function useGlobalShortcuts() {
   useEffect(() => {
@@ -66,17 +70,24 @@ export function useGlobalShortcuts() {
         return;
       }
 
+      const ui = useUIStore.getState();
+      if (key === 'escape' && ui.armedTrackId) { ui.setArmedTrack(null); announce('Live keys off'); return; }
+      if (!ui.singleKeyShortcuts || e.altKey) return;
+
       if (key >= '1' && key <= '4') {
         const id = PATTERN_IDS[parseInt(key, 10) - 1];
-        if (id) { e.preventDefault(); seq.setActivePattern(id); }
+        if (id) { e.preventDefault(); seq.setActivePattern(id); announce(`Pattern ${'ABCD'[parseInt(key, 10) - 1]}`); }
         return;
       }
-      if (key === '[') { e.preventDefault(); seq.shiftPattern(-1); return; }
-      if (key === ']') { e.preventDefault(); seq.shiftPattern(1); return; }
+      if (key === '[') { e.preventDefault(); seq.shiftPattern(-1); announce('Shifted left'); return; }
+      if (key === ']') { e.preventDefault(); seq.shiftPattern(1); announce('Shifted right'); return; }
 
-      const ui = useUIStore.getState();
-      if (key === 'r' && ui.armedTrackId) { e.preventDefault(); ui.toggleRecording(); return; }
-      if (key === 'escape' && ui.armedTrackId) { ui.setArmedTrack(null); return; }
+      if (key === 'r' && ui.armedTrackId) {
+        e.preventDefault();
+        ui.toggleRecording();
+        announce(useUIStore.getState().recording ? 'Recording' : 'Recording stopped');
+        return;
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);

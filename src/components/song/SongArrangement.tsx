@@ -5,12 +5,13 @@ import { useTransportStore } from '../../store/useTransportStore';
 import { useAudioInit } from '../../audio/useAudioInit';
 import { SongBlockChip } from './SongBlock';
 import { SongBlockContextMenu } from './SongBlockContextMenu';
-import { PATTERN_IDS, PATTERN_COLORS } from '../../constants/patterns';
+import { PATTERN_IDS, PATTERN_COLORS, patternTextColor } from '../../constants/patterns';
 import {
   buildSongSnapshot,
   exportSongToFile,
 } from '../../utils/grooveStorage';
 import { OpenSongDropdown } from './OpenSongDropdown';
+import { announce } from '../../utils/announce';
 import type { Pattern } from '../../types/sequencer';
 
 const PX_PER_BAR = 40;
@@ -67,8 +68,8 @@ export function SongArrangement() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
 
   // Open song dropdown state
-  const [showOpenSong, setShowOpenSong] = useState(false);
-  const openSongBtnRef = useRef<HTMLButtonElement>(null);
+  const [openSongPos, setOpenSongPos] = useState<{ top: number; left: number } | null>(null);
+  const showOpenSong = openSongPos !== null;
 
   // Precompute pattern lookups and block widths
   const blockData = useMemo(() => {
@@ -125,8 +126,8 @@ export function SongArrangement() {
   );
 
   const handleBlockContextMenu = useCallback(
-    (e: React.MouseEvent, blockId: string) => {
-      setContextMenu({ x: e.clientX, y: e.clientY, blockId });
+    (pos: { x: number; y: number }, blockId: string) => {
+      setContextMenu({ x: pos.x, y: pos.y, blockId });
     },
     []
   );
@@ -166,8 +167,9 @@ export function SongArrangement() {
     exportSongToFile(snapshot);
   }, []);
 
-  const handleToggleOpenSong = useCallback(() => {
-    setShowOpenSong(prev => !prev);
+  const handleToggleOpenSong = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setOpenSongPos(prev => (prev ? null : { top: r.top, left: r.right }));
   }, []);
 
   const hasBlocks = blocks.length > 0;
@@ -224,89 +226,100 @@ export function SongArrangement() {
       <div className="flex items-center gap-3 px-4 sm:px-6 py-2 bg-bg-tertiary border-b-2 border-border shrink-0">
         {/* Song label + info */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-text-secondary uppercase tracking-wider font-medium">Song</span>
+          <h2 id="song-heading" className="text-xs text-text-secondary uppercase tracking-wider font-medium">Song</h2>
           {hasBlocks && (
-            <span className="text-[10px] text-text-muted">
+            <span className="text-[11px] text-text-muted">
               {blocks.length} block{blocks.length !== 1 ? 's' : ''} · {totalBars} bar{totalBars !== 1 ? 's' : ''}
             </span>
           )}
           {songState === 'playing' && (
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse" />
+            <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse" />
           )}
         </div>
 
-        <div className="w-px h-5 bg-border shrink-0" />
+        <div aria-hidden="true" className="w-px h-5 bg-border shrink-0" />
 
         {/* Play/Stop */}
         <button
           onClick={handlePlaySong}
           disabled={!hasBlocks}
+          aria-label={songState === 'playing' ? 'Stop song' : 'Play song'}
+          title={!hasBlocks ? 'Add blocks to play the song' : songState === 'playing' ? 'Stop song' : 'Play song'}
           className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-colors shrink-0 ${
             !hasBlocks
               ? 'bg-bg-cell text-text-muted/30 cursor-not-allowed'
               : songState === 'playing'
-                ? 'bg-accent-red text-white cursor-pointer'
-                : 'bg-accent-green text-white cursor-pointer'
+                ? 'bg-accent-red text-on-accent cursor-pointer'
+                : 'bg-accent-green text-on-accent cursor-pointer'
           }`}
         >
-          {songState === 'playing' ? '\u25A0' : '\u25B6'}
+          <span aria-hidden="true">{songState === 'playing' ? '\u25A0' : '\u25B6'}</span>
         </button>
 
         {/* BPM */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <label className="text-[10px] text-text-muted uppercase tracking-wider">BPM</label>
+          <label htmlFor="song-bpm" className="text-[11px] text-text-muted uppercase tracking-wider">BPM</label>
           <input
+            id="song-bpm"
             type="number"
             min={40}
             max={300}
             value={bpm}
             onChange={(e) => setBpm(parseInt(e.target.value) || 120)}
-            className="w-12 px-1 py-0.5 bg-bg-cell border border-border rounded text-center text-xs text-text-primary focus:outline-none focus:border-accent-orange"
+            className="w-12 px-1 py-1 bg-bg-cell border border-border-control rounded text-center text-xs text-text-primary focus:border-accent-orange"
           />
           <input
             type="range"
             min={40}
             max={300}
             value={bpm}
+            aria-label="Song tempo"
+            aria-valuetext={`${bpm} BPM`}
             onChange={(e) => setBpm(parseInt(e.target.value))}
-            className="w-16 accent-accent-orange hidden md:block"
+            className="w-16 h-6 accent-accent-orange hidden md:block"
           />
         </div>
 
         {/* Swing */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <label className="text-[10px] text-text-muted uppercase tracking-wider">Swing</label>
+          <label htmlFor="song-swing" className="text-[11px] text-text-muted uppercase tracking-wider">Swing</label>
           <input
+            id="song-swing"
             type="number"
             min={0}
             max={75}
             value={Math.round(swing * 100)}
             onChange={(e) => setSwing((parseInt(e.target.value) || 0) / 100)}
-            className="w-12 px-1 py-0.5 bg-bg-cell border border-border rounded text-center text-xs text-text-primary focus:outline-none focus:border-accent-orange"
+            aria-describedby="song-swing-unit"
+            className="w-12 px-1 py-1 bg-bg-cell border border-border-control rounded text-center text-xs text-text-primary focus:border-accent-orange"
           />
           <input
             type="range"
             min={0}
             max={75}
             value={Math.round(swing * 100)}
+            aria-label="Song swing amount"
+            aria-valuetext={`${Math.round(swing * 100)}%`}
             onChange={(e) => setSwing(parseInt(e.target.value) / 100)}
-            className="w-14 accent-accent-orange hidden md:block"
+            className="w-14 h-6 accent-accent-orange hidden md:block"
           />
-          <span className="text-[10px] text-text-muted hidden md:block">%</span>
+          <span id="song-swing-unit" className="text-[11px] text-text-muted">%</span>
         </div>
 
         {/* Loop toggle */}
         {hasBlocks && (
           <>
-            <div className="w-px h-4 bg-border/50" />
+            <div aria-hidden="true" className="w-px h-4 bg-border/50" />
             <button
-              onClick={() => hasLoop ? clearLoopRange() : null}
-              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer shrink-0 ${
+              onClick={() => { if (hasLoop) { clearLoopRange(); announce('Loop cleared'); } }}
+              aria-pressed={hasLoop}
+              aria-label={hasLoop ? `Loop blocks ${loopStart! + 1} to ${loopEnd! + 1}. Press to clear` : 'Loop: off. Set a loop range from a block’s options menu'}
+              className={`px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer shrink-0 ${
                 hasLoop
-                  ? 'bg-accent-blue/20 text-accent-blue border border-accent-blue/40'
-                  : 'bg-bg-cell text-text-muted border border-border hover:bg-bg-cell-hover'
+                  ? 'bg-accent-blue/20 text-accent-blue-fg border border-accent-blue/40'
+                  : 'bg-bg-cell text-text-muted border border-border-control hover:bg-bg-cell-hover'
               }`}
-              title={hasLoop ? `Loop: blocks ${loopStart! + 1}–${loopEnd! + 1} (click to clear)` : 'Shift+click two blocks to set loop range'}
+              title={hasLoop ? `Loop: blocks ${loopStart! + 1}–${loopEnd! + 1} (click to clear)` : 'Shift+click two blocks, or use a block’s options menu, to set a loop range'}
             >
               LOOP{hasLoop ? ` ${loopStart! + 1}–${loopEnd! + 1}` : ''}
             </button>
@@ -316,10 +329,12 @@ export function SongArrangement() {
         {/* Clear song */}
         {hasBlocks && songState !== 'playing' && (
           <>
-            <div className="w-px h-4 bg-border/50" />
+            <div aria-hidden="true" className="w-px h-4 bg-border/50" />
             <button
-              onClick={clearSong}
-              className="px-2 py-0.5 rounded text-[10px] text-text-muted bg-bg-cell hover:bg-bg-cell-hover border border-border cursor-pointer transition-colors"
+              onClick={() => { clearSong(); announce('Song cleared. Undo brings it back.'); }}
+              aria-label="Clear song arrangement"
+              title="Clear the song arrangement (Undo brings it back)"
+              className="px-2 py-1 rounded text-[11px] text-text-muted bg-bg-cell hover:bg-bg-cell-hover border border-border-control cursor-pointer transition-colors"
             >
               Clear
             </button>
@@ -335,9 +350,9 @@ export function SongArrangement() {
             onClick={handleSaveSong}
             disabled={!hasBlocks}
             title="Save song arrangement to file"
-            className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border transition-colors ${
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
               hasBlocks
-                ? 'bg-accent-green/15 text-accent-green border-accent-green/25 hover:bg-accent-green/25 cursor-pointer'
+                ? 'bg-accent-green/15 text-accent-green-fg border-accent-green/25 hover:bg-accent-green/25 cursor-pointer'
                 : 'bg-bg-cell text-text-muted/30 border-border/50 cursor-not-allowed'
             }`}
           >
@@ -349,11 +364,12 @@ export function SongArrangement() {
           </button>
           <div className="relative">
             <button
-              ref={openSongBtnRef}
               onClick={handleToggleOpenSong}
               title="Open song — presets or import file"
-              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border transition-colors
-                bg-accent-blue/15 text-accent-blue border-accent-blue/25 hover:bg-accent-blue/25 cursor-pointer"
+              aria-expanded={showOpenSong}
+              aria-haspopup="dialog"
+              className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border transition-colors
+                bg-accent-blue/15 text-accent-blue-fg border-accent-blue/25 hover:bg-accent-blue/25 cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-2.5 h-2.5">
                 <path d="M1.75 2A1.75 1.75 0 0 0 0 3.75v.5A1.75 1.75 0 0 0 1.02 5.89l.857 6A1.75 1.75 0 0 0 3.607 13.5h8.786a1.75 1.75 0 0 0 1.731-1.61l.857-6A1.75 1.75 0 0 0 16 4.25v-.5A1.75 1.75 0 0 0 14.25 2H9.236a.75.75 0 0 1-.447-.148L7.078.578A2.25 2.25 0 0 0 5.736 0H1.75Z" />
@@ -363,8 +379,8 @@ export function SongArrangement() {
                 <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
               </svg>
             </button>
-            {showOpenSong && (
-              <OpenSongDropdown anchorRef={openSongBtnRef} onClose={() => setShowOpenSong(false)} />
+            {openSongPos && (
+              <OpenSongDropdown pos={openSongPos} onClose={() => setOpenSongPos(null)} />
             )}
           </div>
         </div>
@@ -402,7 +418,7 @@ export function SongArrangement() {
               >
                 {/* Section label */}
                 {block.sectionLabel && (
-                  <div className="absolute -top-4 left-0 text-[9px] font-medium text-accent-orange uppercase tracking-wider truncate max-w-full">
+                  <div className="absolute -top-4 left-0 text-[11px] font-medium text-accent-orange-fg uppercase tracking-wider truncate max-w-full">
                     {block.sectionLabel}
                   </div>
                 )}
@@ -447,10 +463,11 @@ export function SongArrangement() {
                     return (
                       <button
                         key={pid}
-                        onClick={() => handleAddBlock(pid)}
+                        onClick={() => { handleAddBlock(pid); announce(`Added pattern ${name} to the song`); }}
                         className="w-8 h-8 rounded-md text-sm font-bold flex items-center justify-center cursor-pointer transition-colors hover:opacity-80"
-                        style={{ backgroundColor: `${PATTERN_COLORS[pid]}20`, color: PATTERN_COLORS[pid] }}
+                        style={{ backgroundColor: `${PATTERN_COLORS[pid]}20`, color: patternTextColor(pid) }}
                         title={`Add pattern ${name}`}
+                        aria-label={`Add pattern ${name} to the end of the song`}
                       >
                         {name}
                       </button>
@@ -458,6 +475,7 @@ export function SongArrangement() {
                   })}
                   <button
                     onClick={() => setShowAddButtons(false)}
+                    aria-label="Close add block"
                     className="w-6 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary cursor-pointer transition-colors text-xs"
                     title="Close"
                   >
@@ -467,6 +485,7 @@ export function SongArrangement() {
               ) : (
                 <button
                   onClick={() => setShowAddButtons(true)}
+                  aria-label="Add a block to the song"
                   className="w-10 h-10 rounded-lg border-2 border-dashed border-border hover:border-text-muted
                     flex items-center justify-center text-text-muted hover:text-text-secondary
                     cursor-pointer transition-colors bg-bg-cell/50"
@@ -484,7 +503,8 @@ export function SongArrangement() {
         {/* Playback Cursor */}
         {songState === 'playing' && cursorX !== null && (
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-[#28d7d4] pointer-events-none z-10"
+            aria-hidden="true"
+            className="absolute top-0 bottom-0 w-0.5 bg-accent-teal pointer-events-none z-10"
             style={{
               transform: `translateX(${cursorX + 16}px)`,
               boxShadow: '0 0 6px #28d7d4',
@@ -502,6 +522,8 @@ export function SongArrangement() {
             x={contextMenu.x}
             y={contextMenu.y}
             block={block}
+            index={blocks.indexOf(block)}
+            count={blocks.length}
             onClose={() => setContextMenu(null)}
           />
         );
@@ -533,10 +555,11 @@ function InsertionZone({
           return (
             <button
               key={pid}
-              onClick={() => onInsert(pid, index)}
-              className="w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center cursor-pointer hover:opacity-80"
-              style={{ backgroundColor: `${c}25`, color: c }}
+              onClick={() => { onInsert(pid, index); announce(`Inserted pattern ${name}`); }}
+              className="w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer hover:opacity-80"
+              style={{ backgroundColor: `${c}25`, color: patternTextColor(pid) }}
               title={`Insert ${name}`}
+              aria-label={`Insert pattern ${name} at position ${index + 1}`}
             >
               {name}
             </button>
@@ -547,18 +570,20 @@ function InsertionZone({
   }
 
   return (
-    <div
-      className="group/insert w-1 hover:w-5 shrink-0 self-stretch flex items-center justify-center cursor-pointer transition-all"
+    <button
+      type="button"
+      className="group/insert w-1 hover:w-5 focus-visible:w-6 shrink-0 self-stretch flex items-center justify-center cursor-pointer transition-all"
       onClick={onToggle}
       title="Insert block here"
+      aria-label={`Insert a block at position ${index + 1}`}
     >
       <div className="w-px h-full bg-transparent group-hover/insert:bg-accent-orange/40 transition-colors relative">
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center opacity-0 group-hover/insert:opacity-100 transition-opacity">
-          <span className="w-4 h-4 rounded-full bg-accent-orange/20 text-accent-orange text-[10px] font-bold flex items-center justify-center">
+        <div aria-hidden="true" className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center opacity-0 group-hover/insert:opacity-100 group-focus-visible/insert:opacity-100 transition-opacity">
+          <span className="w-4 h-4 rounded-full bg-accent-orange/20 text-accent-orange-fg text-[11px] font-bold flex items-center justify-center">
             +
           </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }

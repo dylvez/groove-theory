@@ -34,6 +34,7 @@ export function ChordExplorer() {
         <div className="flex flex-col gap-1">
           <label className="text-xs text-text-muted">Root</label>
           <select
+          aria-label="Root"
             value={chordRoot}
             onChange={(e) => { setChordRoot(e.target.value as NoteName); setHighlightMode('chord'); setSelectedDegreeIndex(null); }}
             className="px-3 py-1.5 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-purple"
@@ -48,6 +49,7 @@ export function ChordExplorer() {
         <div className="flex flex-col gap-1">
           <label className="text-xs text-text-muted">Type</label>
           <select
+          aria-label="Type"
             value={selectedChord.name}
             onChange={(e) => {
               const chord = CHORDS.find(c => c.name === e.target.value);
@@ -69,7 +71,7 @@ export function ChordExplorer() {
         </div>
         <button
           onClick={playChord}
-          className="px-3 py-1.5 rounded-md bg-accent-purple/20 text-accent-purple text-sm font-medium border border-accent-purple/30 hover:bg-accent-purple/30 cursor-pointer transition-colors"
+          className="px-3 py-1.5 rounded-md bg-accent-purple/20 text-accent-purple-fg text-sm font-medium border border-accent-purple/30 hover:bg-accent-purple/30 cursor-pointer transition-colors"
         >
           Play
         </button>
@@ -80,7 +82,7 @@ export function ChordExplorer() {
         {chordNotes.map((note, i) => (
           <div
             key={`${note}-${i}`}
-            className="px-2.5 py-1 rounded-md bg-accent-purple/20 text-accent-purple text-sm font-medium border border-accent-purple/30"
+            className="px-2.5 py-1 rounded-md bg-accent-purple/20 text-accent-purple-fg text-sm font-medium border border-accent-purple/30"
           >
             {formatNote(note)}
           </div>
@@ -96,7 +98,7 @@ export function ChordExplorer() {
             onClick={() => setChordInversion(i)}
             className={`w-7 h-7 rounded-md text-xs font-medium flex items-center justify-center cursor-pointer transition-colors ${
               chordInversion === i
-                ? 'bg-accent-purple text-white'
+                ? 'bg-accent-purple text-on-accent'
                 : 'bg-bg-cell text-text-secondary hover:bg-bg-cell-hover'
             }`}
           >

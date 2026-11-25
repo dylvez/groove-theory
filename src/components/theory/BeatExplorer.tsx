@@ -1,3 +1,5 @@
+import { withUndoGroup } from '../../store/history';
+import { announce } from '../../utils/announce';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import * as Tone from 'tone';
 import { BEATS, DEFAULT_DRUM_PARAMS, DRUM_KIT } from '../../constants';
@@ -173,7 +175,7 @@ export function BeatExplorer() {
     setIsPlaying(true);
   }, [selectedBeat, variationSteps, variation, stepsPerBar, bpm, stopBeat]);
 
-  const applyToTrack = useCallback(() => {
+  const applyToTrack = useCallback(() => withUndoGroup(() => {
     const { getActivePattern, setDrumSteps, addDrumTrack } = useSequencerStore.getState();
     let pattern = getActivePattern();
 
@@ -193,7 +195,8 @@ export function BeatExplorer() {
       }
       setDrumSteps(drumTrack.id, steps);
     }
-  }, [variationSteps]);
+    announce(`${selectedBeat.name} written to the drum tracks`);
+  }), [variationSteps, selectedBeat.name]);
 
   // Stop playback on beat/variation change
   useEffect(() => { if (isPlaying) stopBeat(); }, [selectedBeat, variation]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -251,7 +254,7 @@ export function BeatExplorer() {
   }, [customKick, customSnare, customHihat, customAccent]);
 
   // ── Apply building-block or custom-beat merged pattern to tracks ─────
-  const applyMergedToTrack = useCallback((merged: Record<string, number[]>) => {
+  const applyMergedToTrack = useCallback((merged: Record<string, number[]>) => withUndoGroup(() => {
     const { getActivePattern, setDrumSteps, addDrumTrack } = useSequencerStore.getState();
     let pattern = getActivePattern();
 
@@ -271,7 +274,8 @@ export function BeatExplorer() {
       }
       setDrumSteps(drumTrack.id, steps);
     }
-  }, []);
+    announce('Written to the drum tracks');
+  }), []);
 
   // ── Play a 16-step pattern (for building blocks, custom beat, fills) ─
   const playMergedPattern = useCallback(async (merged: Record<string, number[]>) => {
@@ -314,6 +318,7 @@ export function BeatExplorer() {
       <div className="flex flex-col gap-1">
         <label className="text-xs text-text-muted">Pattern</label>
         <select
+          aria-label="Pattern"
           value={selectedBeat.name}
           onChange={(e) => {
             const beat = BEATS.find(b => b.name === e.target.value);
@@ -334,8 +339,8 @@ export function BeatExplorer() {
           onClick={isPlaying ? stopBeat : playBeat}
           className={`px-3 py-1.5 rounded-md text-sm font-medium border cursor-pointer transition-colors ${
             isPlaying
-              ? 'bg-accent-red/20 text-accent-red border-accent-red/30 hover:bg-accent-red/30'
-              : 'bg-accent-green/20 text-accent-green border-accent-green/30 hover:bg-accent-green/30'
+              ? 'bg-accent-red/20 text-accent-red-fg border-accent-red/30 hover:bg-accent-red/30'
+              : 'bg-accent-green/20 text-accent-green-fg border-accent-green/30 hover:bg-accent-green/30'
           }`}
         >
           {isPlaying ? 'Stop' : 'Play'}
@@ -343,7 +348,7 @@ export function BeatExplorer() {
         <button
           onClick={applyToTrack}
           disabled={!canApply}
-          className="px-3 py-1.5 rounded-md text-sm font-medium border cursor-pointer transition-colors bg-accent-green/20 text-accent-green border-accent-green/30 hover:bg-accent-green/30 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 rounded-md text-sm font-medium border cursor-pointer transition-colors bg-accent-green/20 text-accent-green-fg border-accent-green/30 hover:bg-accent-green/30 disabled:opacity-40 disabled:cursor-not-allowed"
           title={applyTooltip}
         >
           Apply to Track
@@ -373,9 +378,10 @@ export function BeatExplorer() {
                 {' '}(
                 <span className="text-text-primary">{song.artist}</span>,{' '}
                 <button
-                  onClick={() => setBpm(song.bpm)}
-                  className="text-accent-blue font-bold hover:underline cursor-pointer"
+                  onClick={() => { setBpm(song.bpm); announce(`Tempo set to ${song.bpm} BPM`); }}
+                  className="inline-flex items-center min-h-6 px-0.5 -my-1 text-accent-blue-fg font-bold underline decoration-dotted hover:decoration-solid cursor-pointer"
                   title={`Set BPM to ${song.bpm}`}
+                  aria-label={`${song.bpm} BPM — set the tempo to ${song.bpm}`}
                 >
                   {song.bpm} BPM
                 </button>
@@ -388,7 +394,7 @@ export function BeatExplorer() {
 
       {/* ── 4. Tags row (existing) ─────────────────────────────────────── */}
       <div className="flex gap-1.5 flex-wrap">
-        <span className="px-2 py-0.5 rounded text-xs bg-accent-green/15 text-accent-green border border-accent-green/20">
+        <span className="px-2 py-0.5 rounded text-xs bg-accent-green/15 text-accent-green-fg border border-accent-green/20">
           {selectedBeat.genre}
         </span>
         <span className="px-2 py-0.5 rounded text-xs bg-bg-cell text-text-muted">
@@ -407,7 +413,7 @@ export function BeatExplorer() {
             onClick={() => setVariation(v)}
             className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors border ${
               variation === v
-                ? 'bg-accent-purple/25 text-accent-purple border-accent-purple/40'
+                ? 'bg-accent-purple/25 text-accent-purple-fg border-accent-purple/40'
                 : 'bg-bg-cell text-text-secondary border-border hover:bg-bg-cell-hover'
             }`}
           >
@@ -418,10 +424,11 @@ export function BeatExplorer() {
 
       {/* ── 6. Rhythm Map (Feature D — collapsible) ────────────────────── */}
       <CollapsibleSection title="Rhythm Map">
-        <div className="flex flex-col gap-1.5">
+        <BeatTextAlternative tracks={variationSteps} total={totalDisplaySteps} stepsPerBeat={stepsPerBeat} />
+        <div aria-hidden="true" className="flex flex-col gap-1.5">
           {variationSteps.map((track, ti) => (
             <div key={`${track.instrument}-${ti}`} className="flex items-center gap-1.5">
-              <span className="w-7 shrink-0 text-[9px] text-text-muted font-mono text-right pr-0.5 truncate" title={track.label}>
+              <span className="w-7 shrink-0 text-[11px] text-text-muted font-mono text-right pr-0.5 truncate" title={track.label}>
                 {track.label}
               </span>
               <div className="flex-1 flex h-3 rounded-sm overflow-hidden bg-bg-cell/30">
@@ -455,7 +462,7 @@ export function BeatExplorer() {
             {variationSteps.map((track, i) => (
               <div key={`${track.instrument}-${i}`} className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-[1px]" style={{ backgroundColor: getInstColor(track.instrument) }} />
-                <span className="text-[9px] text-text-muted">{track.label}</span>
+                <span className="text-[11px] text-text-muted">{track.label}</span>
               </div>
             ))}
           </div>
@@ -463,10 +470,11 @@ export function BeatExplorer() {
       </CollapsibleSection>
 
       {/* ── 7. Grid Preview (existing, enhanced) ───────────────────────── */}
-      <div className="flex flex-col gap-1 overflow-x-auto pb-1">
+      <BeatTextAlternative tracks={variationSteps} total={totalDisplaySteps} stepsPerBeat={stepsPerBeat} />
+      <div aria-hidden="true" className="flex flex-col gap-1 overflow-x-auto pb-1">
         {variationSteps.map((track, ti) => (
           <div key={`${track.instrument}-${ti}`} className="flex items-center gap-1">
-            <span className="w-8 shrink-0 text-[10px] text-text-muted font-mono text-right pr-1">
+            <span className="w-8 shrink-0 text-[11px] text-text-muted font-mono text-right pr-1">
               {track.label}
             </span>
             <div className="flex gap-px">
@@ -500,7 +508,7 @@ export function BeatExplorer() {
               return (
                 <div key={i} className={`w-4 h-3 flex items-center justify-center ${isBarStart ? 'ml-2' : ''}`}>
                   {i % stepsPerBeat === 0 && (
-                    <span className="text-[9px] text-text-muted">
+                    <span className="text-[11px] text-text-muted">
                       {Math.floor(i / stepsPerBeat) + 1}
                     </span>
                   )}
@@ -516,26 +524,28 @@ export function BeatExplorer() {
         <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Building Blocks</h4>
         <div className="flex flex-wrap gap-1.5">
           {BUILDING_BLOCKS.map(block => (
+            <div key={block.name} className="relative group">
             <button
-              key={block.name}
               onClick={() => playMergedPattern({ [block.instrument]: block.steps })}
-              className="relative flex flex-col items-center justify-center w-16 h-16 bg-bg-cell border border-border rounded-lg hover:border-accent-green/60 transition-colors cursor-pointer group"
+              className="relative flex flex-col items-center justify-center w-16 h-16 bg-bg-cell border border-border rounded-lg hover:border-accent-green/60 transition-colors cursor-pointer"
               title={block.description}
             >
               <span className="text-xs font-bold text-text-primary">{block.shortLabel}</span>
-              <span className="text-[9px] text-text-muted">{block.instrumentLabel}</span>
-              {/* Add to groove builder */}
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setGrooveBlocks(prev => [...prev, block]);
-                }}
-                className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-accent-green text-white text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent-green/80"
-                title="Add to Groove Builder"
-              >
-                +
-              </div>
+              <span className="text-[11px] text-text-muted"><span className="sr-only">, </span>{block.instrumentLabel}</span>
             </button>
+            {/* Add to groove builder — shown on hover or keyboard focus */}
+            <button
+              onClick={() => {
+                setGrooveBlocks(prev => [...prev, block]);
+                announce(`Added ${block.name} to the groove builder`);
+              }}
+              aria-label={`Add ${block.name} to the groove builder`}
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-accent-green text-on-accent text-sm font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-accent-green/80 cursor-pointer"
+              title="Add to Groove Builder"
+            >
+              <span aria-hidden="true">+</span>
+            </button>
+            </div>
           ))}
         </div>
       </div>
@@ -544,8 +554,8 @@ export function BeatExplorer() {
       <div className="flex flex-col gap-2">
         <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Groove Builder</h4>
         {grooveBlocks.length === 0 ? (
-          <p className="text-xs text-text-muted/60 italic">
-            Hover a building block and click <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-accent-green text-white text-[9px] font-bold leading-none align-text-bottom not-italic">+</span> to build a groove.
+          <p className="text-xs text-text-muted italic">
+            Hover over or tab to a building block and press <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-accent-green text-on-accent text-[11px] font-bold leading-none align-text-bottom not-italic">+</span> to build a groove.
           </p>
         ) : (
           <>
@@ -572,7 +582,7 @@ export function BeatExplorer() {
               <div className="flex flex-col gap-px">
                 {Object.entries(grooveMerged).map(([inst, steps]) => (
                   <div key={inst} className="flex items-center gap-1">
-                    <span className="w-7 shrink-0 text-[9px] text-text-muted font-mono text-right truncate">
+                    <span className="w-7 shrink-0 text-[11px] text-text-muted font-mono text-right truncate">
                       {DRUM_KIT.find(k => k.key === inst)?.name?.slice(0, 4) ?? inst.slice(0, 4)}
                     </span>
                     <div className="flex gap-px">
@@ -592,13 +602,13 @@ export function BeatExplorer() {
             <div className="flex gap-2 items-center">
               <button
                 onClick={() => grooveMerged && (isPlaying ? stopBeat() : playMergedPattern(grooveMerged))}
-                className="px-3 py-1 rounded-md bg-accent-cyan/20 text-accent-cyan text-xs font-medium border border-accent-cyan/30 hover:bg-accent-cyan/30 cursor-pointer transition-colors"
+                className="px-3 py-1 rounded-md bg-accent-cyan/20 text-accent-cyan-fg text-xs font-medium border border-accent-cyan/30 hover:bg-accent-cyan/30 cursor-pointer transition-colors"
               >
                 {isPlaying ? 'Stop' : 'Play Groove'}
               </button>
               <button
                 onClick={() => grooveMerged && applyMergedToTrack(grooveMerged)}
-                className="px-3 py-1 rounded-md bg-accent-green/20 text-accent-green text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors"
+                className="px-3 py-1 rounded-md bg-accent-green/20 text-accent-green-fg text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors"
               >
                 Apply to Track
               </button>
@@ -617,21 +627,21 @@ export function BeatExplorer() {
       <div className="flex flex-col gap-2">
         <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Fill Helper</h4>
         {fillSuggestions.length === 0 ? (
-          <p className="text-xs text-text-muted/60 italic">Build a groove above to generate fill suggestions.</p>
+          <p className="text-xs text-text-muted italic">Build a groove above to generate fill suggestions.</p>
         ) : (
           <div className="flex flex-col gap-2">
             {fillSuggestions.map(fill => (
               <div key={fill.name} className="bg-bg-cell border border-border rounded-md p-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-text-primary">{fill.name}</span>
-                  <span className="text-[10px] text-text-muted">{fill.duration} · {fill.intensity}</span>
+                  <span className="text-[11px] text-text-muted">{fill.duration} · {fill.intensity}</span>
                 </div>
-                <p className="text-[10px] text-text-secondary mt-1">{fill.description}</p>
+                <p className="text-[11px] text-text-secondary mt-1">{fill.description}</p>
                 {/* Mini fill grid */}
                 <div className="flex flex-col gap-px mt-1.5">
                   {Object.entries(fill.steps).map(([inst, steps]) => (
                     <div key={inst} className="flex items-center gap-1">
-                      <span className="w-6 shrink-0 text-[8px] text-text-muted font-mono text-right truncate">
+                      <span className="w-6 shrink-0 text-[11px] text-text-muted font-mono text-right truncate">
                         {inst.slice(0, 4)}
                       </span>
                       <div className="flex gap-px">
@@ -649,7 +659,7 @@ export function BeatExplorer() {
                 <div className="flex gap-2 mt-1.5">
                   <button
                     onClick={() => playMergedPattern(fill.steps)}
-                    className="text-xs text-accent-blue hover:underline cursor-pointer"
+                    className="text-xs text-accent-blue-fg hover:underline cursor-pointer"
                   >
                     Play
                   </button>
@@ -668,7 +678,7 @@ export function BeatExplorer() {
                         }]);
                       }
                     }}
-                    className="text-xs text-accent-green hover:underline cursor-pointer"
+                    className="text-xs text-accent-green-fg hover:underline cursor-pointer"
                   >
                     Insert
                   </button>
@@ -684,8 +694,9 @@ export function BeatExplorer() {
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] text-text-secondary">Kick Pattern</label>
+              <label className="text-[11px] text-text-secondary">Kick Pattern</label>
               <select
+          aria-label="Kick Pattern"
                 value={customKick}
                 onChange={(e) => setCustomKick(e.target.value)}
                 className="w-full px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary focus:outline-none focus:border-accent-green"
@@ -696,8 +707,9 @@ export function BeatExplorer() {
               </select>
             </div>
             <div>
-              <label className="text-[10px] text-text-secondary">Snare Pattern</label>
+              <label className="text-[11px] text-text-secondary">Snare Pattern</label>
               <select
+          aria-label="Snare Pattern"
                 value={customSnare}
                 onChange={(e) => setCustomSnare(e.target.value)}
                 className="w-full px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary focus:outline-none focus:border-accent-green"
@@ -708,8 +720,9 @@ export function BeatExplorer() {
               </select>
             </div>
             <div>
-              <label className="text-[10px] text-text-secondary">Hi-Hat Pattern</label>
+              <label className="text-[11px] text-text-secondary">Hi-Hat Pattern</label>
               <select
+          aria-label="Hi-Hat Pattern"
                 value={customHihat}
                 onChange={(e) => setCustomHihat(e.target.value)}
                 className="w-full px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary focus:outline-none focus:border-accent-green"
@@ -720,8 +733,9 @@ export function BeatExplorer() {
               </select>
             </div>
             <div>
-              <label className="text-[10px] text-text-secondary">Accent</label>
+              <label className="text-[11px] text-text-secondary">Accent</label>
               <select
+          aria-label="Accent"
                 value={customAccent}
                 onChange={(e) => setCustomAccent(e.target.value)}
                 className="w-full px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary focus:outline-none focus:border-accent-green"
@@ -734,7 +748,7 @@ export function BeatExplorer() {
           </div>
 
           {/* Custom beat name */}
-          <p className="text-[10px] text-text-muted">
+          <p className="text-[11px] text-text-muted">
             {[
               CUSTOM_BEAT_OPTIONS.kick.find(o => o.value === customKick)?.label,
               CUSTOM_BEAT_OPTIONS.snare.find(o => o.value === customSnare)?.label,
@@ -747,7 +761,7 @@ export function BeatExplorer() {
           <div className="flex flex-col gap-px">
             {Object.entries(customMerged).map(([inst, steps]) => (
               <div key={inst} className="flex items-center gap-1">
-                <span className="w-8 shrink-0 text-[9px] text-text-muted font-mono text-right truncate">
+                <span className="w-8 shrink-0 text-[11px] text-text-muted font-mono text-right truncate">
                   {DRUM_KIT.find(k => k.key === inst)?.name?.slice(0, 5) ?? inst.slice(0, 5)}
                 </span>
                 <div className="flex gap-px">
@@ -769,15 +783,15 @@ export function BeatExplorer() {
               onClick={() => isPlaying ? stopBeat() : playMergedPattern(customMerged)}
               className={`px-3 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
                 isPlaying
-                  ? 'bg-accent-red/20 text-accent-red border-accent-red/30 hover:bg-accent-red/30'
-                  : 'bg-accent-green/20 text-accent-green border-accent-green/30 hover:bg-accent-green/30'
+                  ? 'bg-accent-red/20 text-accent-red-fg border-accent-red/30 hover:bg-accent-red/30'
+                  : 'bg-accent-green/20 text-accent-green-fg border-accent-green/30 hover:bg-accent-green/30'
               }`}
             >
               {isPlaying ? 'Stop' : 'Play'}
             </button>
             <button
               onClick={() => applyMergedToTrack(customMerged)}
-              className="px-3 py-1 rounded-md bg-accent-green/20 text-accent-green text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors"
+              className="px-3 py-1 rounded-md bg-accent-green/20 text-accent-green-fg text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors"
             >
               Apply to Track
             </button>
@@ -785,5 +799,31 @@ export function BeatExplorer() {
         </div>
       </CollapsibleSection>
     </div>
+  );
+}
+
+/**
+ * Screen reader version of the visual step previews: which beats each
+ * instrument plays, e.g. "Kick: beat 1, beat 3, beat 4 and".
+ */
+function BeatTextAlternative({ tracks, total, stepsPerBeat }: {
+  tracks: { label: string; steps: ArrayLike<number | boolean> }[];
+  total: number;
+  stepsPerBeat: number;
+}) {
+  const subNames = stepsPerBeat === 4 ? ['', ' e', ' and', ' a'] : stepsPerBeat === 3 ? ['', ' trip', ' let'] : null;
+  const describe = (i: number) => {
+    const beat = Math.floor(i / stepsPerBeat) + 1;
+    const sub = i % stepsPerBeat;
+    return subNames ? `${beat}${subNames[sub] ?? ''}` : `${beat}.${sub + 1}`;
+  };
+  return (
+    <ul className="sr-only">
+      {tracks.map((t, ti) => {
+        const hits: string[] = [];
+        for (let i = 0; i < total; i++) if (t.steps[i]) hits.push(describe(i));
+        return <li key={ti}>{t.label}: {hits.length ? hits.join(', ') : 'silent'}</li>;
+      })}
+    </ul>
   );
 }

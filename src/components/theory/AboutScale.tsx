@@ -1,3 +1,4 @@
+import { announce } from '../../utils/announce';
 import { useTheoryStore } from '../../store/useTheoryStore';
 import { SCALE_DESCRIPTIONS, SCALE_SONG_EXAMPLES } from '../../constants/scaleDescriptions';
 import type { NoteName } from '../../types';
@@ -37,13 +38,14 @@ export function AboutScale() {
                 </a>
                 {' '}(
                 <button
-                  onClick={() => setRootNote(song.key as NoteName)}
-                  className="text-accent-blue font-bold hover:underline cursor-pointer"
+                  onClick={() => { setRootNote(song.key as NoteName); announce(`Key set to ${song.key} ${selectedScale.name}`); }}
+                  className="inline-flex items-center min-h-6 px-0.5 -my-1 text-accent-blue-fg font-bold underline decoration-dotted hover:decoration-solid cursor-pointer"
                   title={`Set key to ${song.key}`}
+                  aria-label={`${song.key} ${selectedScale.name} — set the key`}
                 >
-                  {song.key}
+                  {song.key} {selectedScale.name}
                 </button>
-                {' '}{selectedScale.name})
+                )
               </span>
             ))}
           </p>

@@ -1,3 +1,5 @@
+import { withUndoGroup } from '../../store/history';
+import { announce } from '../../utils/announce';
 import { useState, useCallback, useMemo } from 'react';
 import type { NoteWithOctave } from '../../types';
 import { useTheoryStore } from '../../store/useTheoryStore';
@@ -73,11 +75,14 @@ export function MelodyHelper() {
     const cycleLength = melodyNotes.length;
     if (cycleLength === 0) return;
 
-    // Tile melody notes across all sequencer steps
-    for (let step = 0; step < pattern.numSteps; step++) {
-      const note = melodyNotes[step % cycleLength];
-      setMelodicStep(track.id, step, note);
-    }
+    // Tile melody notes across all sequencer steps — one undo step
+    withUndoGroup(() => {
+      for (let step = 0; step < pattern.numSteps; step++) {
+        const note = melodyNotes[step % cycleLength];
+        setMelodicStep(track.id, step, note);
+      }
+    });
+    announce(`Melody written to ${track.name}`);
   }, [melodyNotes, resolvedTrackId, setMelodicStep]);
 
   // Show hint when no progression exists
@@ -87,7 +92,7 @@ export function MelodyHelper() {
         <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Melody Helper
         </h4>
-        <p className="text-xs text-text-muted/60 italic">
+        <p className="text-xs text-text-muted italic">
           Add chords to the progression above to generate melody patterns.
         </p>
       </div>
@@ -107,6 +112,7 @@ export function MelodyHelper() {
       <div className="flex items-center gap-2">
         <label className="text-xs text-text-muted shrink-0">Pattern:</label>
         <select
+          aria-label="Pattern"
           value={patternType}
           onChange={(e) => setPatternType(e.target.value as MelodyPatternType)}
           className="px-2 py-1 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-orange flex-1 min-w-0"
@@ -121,6 +127,7 @@ export function MelodyHelper() {
       <div className="flex items-center gap-2">
         <label className="text-xs text-text-muted shrink-0">Track:</label>
         <select
+          aria-label="Track"
           value={resolvedTrackId ?? ''}
           onChange={(e) => setTargetTrackId(e.target.value)}
           disabled={melodicTracks.length === 0}
@@ -133,14 +140,14 @@ export function MelodyHelper() {
 
         <button
           onClick={previewMelody}
-          className="px-2.5 py-1 rounded-md bg-accent-purple/20 text-accent-purple text-xs font-medium border border-accent-purple/30 hover:bg-accent-purple/30 cursor-pointer transition-colors shrink-0"
+          className="px-2.5 py-1 rounded-md bg-accent-purple/20 text-accent-purple-fg text-xs font-medium border border-accent-purple/30 hover:bg-accent-purple/30 cursor-pointer transition-colors shrink-0"
         >
           Preview
         </button>
         <button
           onClick={applyToTrack}
           disabled={!resolvedTrackId}
-          className="px-2.5 py-1 rounded-md bg-accent-green/20 text-accent-green text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-2.5 py-1 rounded-md bg-accent-green/20 text-accent-green-fg text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Apply
         </button>
@@ -152,10 +159,10 @@ export function MelodyHelper() {
           {melodyNotes.map((note, i) => (
             <div
               key={i}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-medium min-w-[2rem] text-center ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium min-w-[2rem] text-center ${
                 note
-                  ? 'bg-accent-purple/15 text-accent-purple border border-accent-purple/25'
-                  : 'bg-bg-cell text-text-muted/30 border border-transparent'
+                  ? 'bg-accent-purple/15 text-accent-purple-fg border border-accent-purple/25'
+                  : 'bg-bg-cell text-text-muted border border-transparent'
               }`}
             >
               {note ? formatNote(note.replace(/\d$/, '') as any) : '—'}

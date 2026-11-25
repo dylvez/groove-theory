@@ -44,7 +44,7 @@ export function PatternSelector() {
             onClick={() => setMeasures(m)}
             className={`w-8 h-8 rounded-md text-sm font-bold flex items-center justify-center cursor-pointer transition-colors ${
               currentMeasures === m
-                ? 'bg-accent-purple/25 text-accent-purple border border-accent-purple/40'
+                ? 'bg-accent-purple/25 text-accent-purple-fg border border-accent-purple/40'
                 : 'bg-bg-cell text-text-secondary hover:bg-bg-cell-hover border border-transparent'
             }`}
           >

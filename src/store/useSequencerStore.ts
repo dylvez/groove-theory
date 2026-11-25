@@ -4,13 +4,12 @@ import type { Pattern, StepValue, NoteWithOctave, DrumSynthParams, MelodicSynthP
 import { VELOCITY_LEVELS, DEFAULT_VELOCITY } from '../types';
 import { DEFAULT_DRUM_PARAMS, DEFAULT_MELODIC_PARAMS, getDrumKit, getSynthPreset } from '../constants';
 import { createDefaultPattern, createEmptyDrumTrack, createEmptyMelodicTrack, getStepsPerMeasure } from '../utils/patternHelpers';
+import * as history from './history';
+import { announce } from '../utils/announce';
 
-// --- Undo / redo stacks (module-level, not persisted) ---
-const _undoStack: Pattern[][] = [];
-const _redoStack: Pattern[][] = [];
-let _isUndoing = false;
+// Undo history lives in ./history (shared with the song arrangement).
+// Don't record anything until persisted state has been rehydrated.
 let _initialized = false;
-const MAX_UNDO = 50;
 
 // --- Pattern clipboard (module-level, not persisted) ---
 let _clipboard: Pattern | null = null;
@@ -122,15 +121,16 @@ export const useSequencerStore = create<SequencerStore>()(
         const prevPatterns = get().patterns;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         _set(partial as any, replace as any);
-        const curPatterns = get().patterns;
-        if (curPatterns !== prevPatterns && _initialized && !_isUndoing) {
-          _undoStack.push(structuredClone(prevPatterns));
-          if (_undoStack.length > MAX_UNDO) _undoStack.shift();
-          _redoStack.length = 0;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          _set({ undoDepth: _undoStack.length, redoDepth: 0 } as any);
+        if (get().patterns !== prevPatterns && _initialized) {
+          history.recordChange({ patterns: prevPatterns });
         }
       };
+
+      history.registerPatternHistory(
+        () => get().patterns,
+        (patterns) => _set({ patterns }),
+      );
+      history.onHistoryDepthChange((undoDepth, redoDepth) => _set({ undoDepth, redoDepth }));
 
       return {
       patterns: defaultPatterns,
@@ -305,7 +305,7 @@ export const useSequencerStore = create<SequencerStore>()(
           ),
         })),
 
-      setTrackVolume: (trackId, type, volume) =>
+      setTrackVolume: (trackId, type, volume) => history.coalesced(`volume:${trackId}`, () =>
         set((state) => ({
           patterns: state.patterns.map(p =>
             p.id !== state.activePatternId ? p : {
@@ -321,9 +321,9 @@ export const useSequencerStore = create<SequencerStore>()(
               }),
             }
           ),
-        })),
+        }))),
 
-      setTrackSends: (trackId, type, reverbSend, delaySend) =>
+      setTrackSends: (trackId, type, reverbSend, delaySend) => history.coalesced(`sends:${trackId}`, () =>
         set((state) => ({
           patterns: state.patterns.map(p =>
             p.id !== state.activePatternId ? p : {
@@ -339,7 +339,7 @@ export const useSequencerStore = create<SequencerStore>()(
               }),
             }
           ),
-        })),
+        }))),
 
       applyDrumKit: (kitId) =>
         set((state) => {
@@ -497,7 +497,7 @@ export const useSequencerStore = create<SequencerStore>()(
           ),
         })),
 
-      updateDrumSynthParams: (trackId, params) =>
+      updateDrumSynthParams: (trackId, params) => history.coalesced(`drum:${trackId}:${Object.keys(params).join(',')}`, () =>
         set((state) => ({
           patterns: state.patterns.map(p =>
             p.id !== state.activePatternId ? p : {
@@ -510,9 +510,9 @@ export const useSequencerStore = create<SequencerStore>()(
               ),
             }
           ),
-        })),
+        }))),
 
-      updateMelodicSynthParams: (trackId, params) =>
+      updateMelodicSynthParams: (trackId, params) => history.coalesced(`synth:${trackId}:${Object.keys(params).join(',')}`, () =>
         set((state) => ({
           patterns: state.patterns.map(p =>
             p.id !== state.activePatternId ? p : {
@@ -525,7 +525,7 @@ export const useSequencerStore = create<SequencerStore>()(
               ),
             }
           ),
-        })),
+        }))),
 
       setMelodicSynthType: (trackId, synthType) =>
         set((state) => ({
@@ -917,23 +917,9 @@ export const useSequencerStore = create<SequencerStore>()(
           ),
         })),
 
-      undo: () => {
-        if (_undoStack.length === 0) return;
-        _isUndoing = true;
-        const prev = _undoStack.pop()!;
-        _redoStack.push(structuredClone(get().patterns));
-        set({ patterns: prev, undoDepth: _undoStack.length, redoDepth: _redoStack.length });
-        _isUndoing = false;
-      },
+      undo: () => { if (history.undo()) announce('Undone'); },
 
-      redo: () => {
-        if (_redoStack.length === 0) return;
-        _isUndoing = true;
-        const next = _redoStack.pop()!;
-        _undoStack.push(structuredClone(get().patterns));
-        set({ patterns: next, undoDepth: _undoStack.length, redoDepth: _redoStack.length });
-        _isUndoing = false;
-      },
+      redo: () => { if (history.redo()) announce('Redone'); },
     };
     },
     {

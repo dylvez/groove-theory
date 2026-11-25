@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
-import { useClickOutside } from '../../hooks/useClickOutside';
+import { usePopover } from '../../hooks/usePopover';
+import { markWorkSaved } from '../../utils/workState';
+import { announce } from '../../utils/announce';
 import {
   listGrooves,
   saveGroove,
@@ -28,7 +30,7 @@ function formatSize(bytes: number): string {
 }
 
 export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
-  const ref = useClickOutside<HTMLDivElement>(onClose);
+  const ref = usePopover<HTMLDivElement>(onClose);
   const [name, setName] = useState('My Groove');
   const [saves, setSaves] = useState<GrooveSlotEntry[]>(() => listGrooves());
   const [justSaved, setJustSaved] = useState(false);
@@ -38,8 +40,10 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
     try {
       const groove = buildGrooveSnapshot(name.trim());
       saveGroove(groove);
+      markWorkSaved();
       setSaves(listGrooves());
       setJustSaved(true);
+      announce(`Saved ${groove.name}`);
       setTimeout(() => setJustSaved(false), 1500);
     } catch (err) {
       alert((err as Error).message);
@@ -49,6 +53,7 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
   const handleExportFile = useCallback(() => {
     const groove = buildGrooveSnapshot(name.trim() || 'My Groove');
     exportGrooveToFile(groove);
+    markWorkSaved();
   }, [name]);
 
   const handleExportPatternsFile = useCallback(() => {
@@ -57,11 +62,14 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
   }, [name]);
 
   const handleOverwrite = useCallback((id: string, existingName: string) => {
+    if (!window.confirm(`Replace the saved groove "${existingName}" with your current work?`)) return;
     try {
       deleteGroove(id);
       const groove = buildGrooveSnapshot(existingName);
       saveGroove(groove);
+      markWorkSaved();
       setSaves(listGrooves());
+      announce(`Saved over ${existingName}`);
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 1500);
     } catch (err) {
@@ -71,21 +79,23 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSave();
-    if (e.key === 'Escape') onClose();
   };
 
   return (
     <div
       ref={ref}
+      role="dialog"
+      aria-label="Save groove"
       className="absolute top-full mt-1.5 right-0 z-50 w-72 bg-bg-secondary border border-border rounded-lg shadow-xl"
     >
       {/* Save new */}
       <div className="p-3 border-b border-border">
-        <label className="text-[10px] text-text-secondary uppercase tracking-wider mb-1.5 block">
+        <label htmlFor="save-groove-name" className="text-[11px] text-text-secondary uppercase tracking-wider mb-1.5 block">
           Save current groove
         </label>
         <div className="flex gap-1.5">
           <input
+            id="save-groove-name"
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
@@ -93,16 +103,16 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
             placeholder="Groove name..."
             autoFocus
             className="flex-1 px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary
-              placeholder:text-text-muted focus:outline-none focus:border-accent-orange"
+              placeholder:text-text-muted focus:border-accent-orange"
           />
           <button
             onClick={handleSave}
             disabled={!name.trim()}
             className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors
-              bg-accent-green/20 text-accent-green border border-accent-green/30 hover:bg-accent-green/30
+              bg-accent-green/20 text-accent-green-fg border border-accent-green/30 hover:bg-accent-green/30
               disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {justSaved ? '✓' : 'Save'}
+            {justSaved ? 'Saved ✓' : 'Save'}
           </button>
         </div>
       </div>
@@ -114,7 +124,7 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
           className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-xs text-text-muted
             hover:bg-bg-cell hover:text-text-primary transition-colors cursor-pointer"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
             <path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14H2.75Z" />
             <path d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 6.78a.75.75 0 0 1 1.06-1.06l1.97 1.969Z" />
           </svg>
@@ -125,34 +135,33 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
           className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-xs text-text-muted
             hover:bg-bg-cell hover:text-text-primary transition-colors cursor-pointer"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
             <path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14H2.75Z" />
             <path d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 6.78a.75.75 0 0 1 1.06-1.06l1.97 1.969Z" />
           </svg>
-          Export as .patterns file <span className="text-text-muted/60 ml-auto">(no song)</span>
+          Export as .patterns file <span className="text-text-muted ml-auto">(no song)</span>
         </button>
       </div>
 
       {/* Existing saves */}
       {saves.length > 0 && (
         <div className="max-h-48 overflow-y-auto">
-          <div className="px-3 pt-2 pb-1">
-            <span className="text-[10px] text-text-secondary uppercase tracking-wider">Overwrite existing</span>
-          </div>
+          <h2 className="px-3 pt-2 pb-1 text-[11px] font-normal text-text-secondary uppercase tracking-wider">Save over an existing groove</h2>
           {saves.map(entry => (
             <button
               key={entry.id}
               onClick={() => handleOverwrite(entry.id, entry.name)}
+              aria-label={`Save over ${entry.name}`}
               className="flex items-center justify-between w-full px-3 py-1.5 text-left text-xs
-                hover:bg-bg-cell transition-colors cursor-pointer group"
+                hover:bg-bg-cell focus-visible:bg-bg-cell transition-colors cursor-pointer group"
             >
               <div className="flex flex-col min-w-0">
                 <span className="text-text-primary truncate">{entry.name}</span>
-                <span className="text-[10px] text-text-muted">
+                <span className="text-[11px] text-text-muted">
                   {timeAgo(entry.savedAt)} · {formatSize(entry.sizeBytes)}
                 </span>
               </div>
-              <span className="text-text-muted opacity-0 group-hover:opacity-100 text-[10px] shrink-0 ml-2">
+              <span aria-hidden="true" className="text-text-muted opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-[11px] shrink-0 ml-2">
                 overwrite
               </span>
             </button>

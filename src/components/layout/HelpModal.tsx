@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { useUIStore } from '../../store/useUIStore';
+import { focusableIn } from '../../hooks/usePopover';
 
 interface HelpModalProps {
   onClose: () => void;
@@ -14,15 +16,41 @@ interface HelpSection {
 export function HelpModal({ onClose }: HelpModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState('sequencer');
 
+  // Modal dialog: focus moves in, Tab stays inside, Escape closes, and focus
+  // goes back to the Help button afterwards
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    searchRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && panelRef.current) {
+        const items = focusableIn(panelRef.current);
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || !panelRef.current.contains(active))) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (active === last || !panelRef.current.contains(active))) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('keydown', onKey, true);
+      opener?.focus?.();
+    };
   }, [onClose]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -325,7 +353,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li>Click <strong>Open Song</strong> to browse preset songs and beat presets.</li>
               <li><strong>Preset songs</strong> — full arrangements with drums, bass, and melodies (e.g. Midnight in Tokyo, Solar Flare, Carnival de Luna, Neon Dystopia).</li>
               <li><strong>Beat presets</strong> — drum-only patterns to use as starting points (e.g. Classic Rock, Boom-Bap, Dance Floor).</li>
-              <li>You can also import a <code className="text-accent-cyan">.song</code> file from disk.</li>
+              <li>You can also import a <code className="text-accent-cyan-fg">.song</code> file from disk.</li>
             </ul>
           </Sub>
           <Sub title="Song Playback">
@@ -346,7 +374,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
         <>
           <Sub title="Header Controls">
             <ul className="list-disc pl-4 space-y-1">
-              <li><Kbd>Save</Kbd> — save the groove to your browser's local storage, or download as a <code className="text-accent-cyan">.groove</code> file to share.</li>
+              <li><Kbd>Save</Kbd> — save the groove to your browser's local storage, or download as a <code className="text-accent-cyan-fg">.groove</code> file to share.</li>
               <li><Kbd>Open</Kbd> — load a previously saved groove from storage, browse preset songs and beat presets, or import a file.</li>
               <li><Kbd>New</Kbd> — start fresh with a blank project (clears all patterns and song blocks).</li>
             </ul>
@@ -360,9 +388,9 @@ export function HelpModal({ onClose }: HelpModalProps) {
           </Sub>
           <Sub title="File Formats">
             <ul className="list-disc pl-4 space-y-1">
-              <li><code className="text-accent-cyan">.groove</code> — full project: all patterns, tracks, sound settings, song arrangement, BPM, and swing.</li>
-              <li><code className="text-accent-cyan">.patterns</code> — pattern bank only (drums + synths, no song arrangement).</li>
-              <li><code className="text-accent-cyan">.song</code> — song arrangement and structure.</li>
+              <li><code className="text-accent-cyan-fg">.groove</code> — full project: all patterns, tracks, sound settings, song arrangement, BPM, and swing.</li>
+              <li><code className="text-accent-cyan-fg">.patterns</code> — pattern bank only (drums + synths, no song arrangement).</li>
+              <li><code className="text-accent-cyan-fg">.song</code> — song arrangement and structure.</li>
             </ul>
           </Sub>
         </>
@@ -377,7 +405,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <p>Export your work in three professional formats from the header buttons.</p>
           <Sub title="MIDI">
             <ul className="list-disc pl-4 space-y-1">
-              <li>Exports the active pattern (or full song) as a standard <code className="text-accent-cyan">.mid</code> file.</li>
+              <li>Exports the active pattern (or full song) as a standard <code className="text-accent-cyan-fg">.mid</code> file.</li>
               <li>Drums are mapped to General MIDI percussion (channel 10).</li>
               <li>Each synth track gets its own MIDI track with correct pitches.</li>
               <li>Tempo and time signature are embedded in the file.</li>
@@ -432,9 +460,9 @@ export function HelpModal({ onClose }: HelpModalProps) {
       content: (
         <>
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 items-center">
-            <Kbd>Space</Kbd> <span>Play / Stop playback</span>
+            <Kbd>Space</Kbd> <span>Play / Stop playback (anywhere outside a text field)</span>
             <Kbd>1 – 4</Kbd> <span>Select pattern A – D</span>
-            <Kbd>⌘/Ctrl + Z</Kbd> <span>Undo the last sequencer change</span>
+            <Kbd>⌘/Ctrl + Z</Kbd> <span>Undo the last change to the patterns or the song</span>
             <Kbd>⌘/Ctrl + Shift + Z</Kbd> <span>Redo</span>
             <Kbd>⌘/Ctrl + C</Kbd> <span>Copy the active pattern</span>
             <Kbd>⌘/Ctrl + V</Kbd> <span>Paste into the active pattern</span>
@@ -443,8 +471,24 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <Kbd>Right-click</Kbd> <span>Edit a synth step (note, octave, length)</span>
             <Kbd>R</Kbd> <span>Toggle recording (when a track is armed)</span>
             <Kbd>Z</Kbd> / <Kbd>X</Kbd> <span>Live keys octave down / up</span>
-            <Kbd>Escape</Kbd> <span>Disarm live keys / close this help</span>
+            <Kbd>Escape</Kbd> <span>Close a menu or panel / disarm live keys / close this help</span>
           </div>
+          <Sub title="Using the grid with a keyboard">
+            <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 items-center">
+              <Kbd>Tab</Kbd> <span>Move into the grid (one stop), then on to the next control</span>
+              <Kbd>Arrow keys</Kbd> <span>Move between steps and tracks</span>
+              <Kbd>Home</Kbd> / <Kbd>End</Kbd> <span>First / last step of the track</span>
+              <Kbd>Enter</Kbd> <span>Turn a drum step on or off · open the note editor on a synth step</span>
+              <Kbd>Shift + Enter</Kbd> <span>Cycle the velocity of an active step</span>
+              <Kbd>Delete</Kbd> <span>Clear the step</span>
+            </div>
+            <p className="mt-2">Each position is read as bar.beat.subdivision, for example “2.3.1” is bar 2, beat 3, first sixteenth.</p>
+            <p className="mt-1">Song blocks: Tab to a block’s letter and press Enter for its options — move left or right, set the loop range, mute, relabel or remove.</p>
+            <p className="mt-1">The dividers between the panels can be focused and moved with the arrow keys.</p>
+          </Sub>
+          <Sub title="Single-key shortcuts">
+            <SingleKeyToggle />
+          </Sub>
         </>
       ),
     },
@@ -456,8 +500,8 @@ export function HelpModal({ onClose }: HelpModalProps) {
         <>
           <p>Have a question, feature request, or found a bug?</p>
           <ul className="list-disc pl-4 space-y-1 mt-2">
-            <li>Email: <a href="mailto:groovetheoryapp@gmail.com" className="text-accent-cyan hover:underline">groovetheoryapp@gmail.com</a></li>
-            <li>GitHub: <a href="https://github.com/dylvez/groove-theory/issues" target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:underline">Open an issue</a></li>
+            <li>Email: <a href="mailto:groovetheoryapp@gmail.com" className="text-accent-cyan-fg underline">groovetheoryapp@gmail.com</a></li>
+            <li>GitHub: <a href="https://github.com/dylvez/groove-theory/issues" target="_blank" rel="noopener noreferrer" className="text-accent-cyan-fg underline">Open an issue<span className="sr-only"> (opens in a new tab)</span></a></li>
           </ul>
         </>
       ),
@@ -471,7 +515,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <p>Groove Theory is a free, open-source music workstation that runs entirely in your browser.</p>
           <Sub title="Open Source">
             <ul className="list-disc pl-4 space-y-1">
-              <li>Source code: <a href="https://github.com/dylvez/groove-theory" target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:underline">github.com/dylvez/groove-theory</a></li>
+              <li>Source code: <a href="https://github.com/dylvez/groove-theory" target="_blank" rel="noopener noreferrer" className="text-accent-cyan-fg underline">github.com/dylvez/groove-theory<span className="sr-only"> (opens in a new tab)</span></a></li>
               <li>Licensed under the <strong>MIT License</strong> — you are free to use, copy, modify, and distribute this software.</li>
               <li>Contributions, forks, and pull requests are welcome.</li>
             </ul>
@@ -502,8 +546,11 @@ export function HelpModal({ onClose }: HelpModalProps) {
 
   const scrollTo = (id: string) => {
     setActiveId(id);
-    const el = contentRef.current?.querySelector(`[data-section="${id}"]`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const el = contentRef.current?.querySelector<HTMLElement>(`[data-section="${id}"]`);
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    // Move focus to the section so screen reader and keyboard users land there
+    el?.focus({ preventScroll: true });
   };
 
   return (
@@ -513,17 +560,21 @@ export function HelpModal({ onClose }: HelpModalProps) {
     >
       <div
         ref={panelRef}
-        className="bg-bg-secondary border border-border rounded-xl shadow-2xl w-[92vw] max-w-3xl max-h-[85vh] flex flex-col overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="help-title"
+        className="bg-bg-secondary border border-border-control rounded-xl shadow-2xl w-[92vw] max-w-3xl max-h-[85vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
-          <h2 className="text-sm font-bold text-text-primary">Groove Theory Guide</h2>
+          <h2 id="help-title" className="text-sm font-bold text-text-primary">Groove Theory Guide</h2>
           <button
             onClick={onClose}
-            className="text-text-muted hover:text-text-primary transition-colors cursor-pointer p-1 -mr-1"
+            aria-label="Close help"
+            className="w-7 h-7 flex items-center justify-center rounded text-text-muted hover:text-text-primary transition-colors cursor-pointer -mr-1"
             title="Close"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
               <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
             </svg>
           </button>
@@ -532,11 +583,13 @@ export function HelpModal({ onClose }: HelpModalProps) {
         {/* Search */}
         <div className="px-5 py-2.5 border-b border-border/50 shrink-0">
           <div className="relative">
-            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <svg aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.45 4.39l3.58 3.58a.75.75 0 1 1-1.06 1.06l-3.58-3.58A7 7 0 0 1 2 9Z" clipRule="evenodd" />
             </svg>
             <input
-              type="text"
+              ref={searchRef}
+              type="search"
+              aria-label="Search help"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search help..."
@@ -544,10 +597,11 @@ export function HelpModal({ onClose }: HelpModalProps) {
             />
             {search && (
               <button
-                onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary cursor-pointer"
+                onClick={() => { setSearch(''); searchRef.current?.focus(); }}
+                aria-label="Clear search"
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary cursor-pointer"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
                 </svg>
               </button>
@@ -559,18 +613,19 @@ export function HelpModal({ onClose }: HelpModalProps) {
         <div className="flex min-h-0 flex-1">
           {/* TOC sidebar */}
           {!search && (
-            <nav className="w-44 shrink-0 border-r border-border/50 overflow-y-auto py-2 hidden sm:block">
+            <nav aria-label="Help topics" className="w-44 shrink-0 border-r border-border/50 overflow-y-auto py-2 hidden sm:block">
               {sections.map(s => (
                 <button
                   key={s.id}
                   onClick={() => scrollTo(s.id)}
+                  aria-current={activeId === s.id ? 'true' : undefined}
                   className={`w-full text-left px-4 py-1.5 text-[11px] cursor-pointer transition-colors truncate ${
                     activeId === s.id
-                      ? 'text-accent-orange bg-accent-orange/10 border-r-2 border-accent-orange'
+                      ? 'text-accent-orange-fg bg-accent-orange/10 border-r-2 border-accent-orange'
                       : 'text-text-secondary hover:text-text-primary hover:bg-bg-cell/50'
                   }`}
                 >
-                  <span className="mr-1.5">{s.icon}</span>
+                  <span aria-hidden="true" className="mr-1.5">{s.icon}</span>
                   {s.title}
                 </button>
               ))}
@@ -580,6 +635,8 @@ export function HelpModal({ onClose }: HelpModalProps) {
           {/* Content */}
           <div
             ref={contentRef}
+            tabIndex={0}
+            aria-label="Help content"
             className="overflow-y-auto flex-1 px-5 py-4 text-xs text-text-secondary leading-relaxed space-y-6"
             onScroll={() => {
               if (search) return;
@@ -596,16 +653,19 @@ export function HelpModal({ onClose }: HelpModalProps) {
               }
             }}
           >
+            <p className="sr-only" role="status">
+              {search ? `${filtered.length} topic${filtered.length === 1 ? '' : 's'} found` : ''}
+            </p>
             {filtered.length === 0 && (
               <p className="text-text-muted text-center py-8">No results for "{search}"</p>
             )}
             {filtered.map(s => (
-              <div key={s.id} data-section={s.id}>
-                <h3 className="text-xs font-semibold text-accent-orange mb-2 flex items-center gap-1.5">
-                  <span>{s.icon}</span> {s.title}
+              <section key={s.id} data-section={s.id} tabIndex={-1} aria-labelledby={`help-${s.id}`} className="focus:outline-none">
+                <h3 id={`help-${s.id}`} className="text-xs font-semibold text-accent-orange-fg mb-2 flex items-center gap-1.5">
+                  <span aria-hidden="true">{s.icon}</span> {s.title}
                 </h3>
                 {s.content}
-              </div>
+              </section>
             ))}
           </div>
         </div>
@@ -625,7 +685,7 @@ function Sub({ title, children }: { title: string; children: React.ReactNode }) 
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="px-1 py-0.5 bg-bg-cell border border-border rounded text-[10px] text-text-primary font-mono">
+    <kbd className="px-1 py-0.5 bg-bg-cell border border-border rounded text-[11px] text-text-primary font-mono">
       {children}
     </kbd>
   );
@@ -642,4 +702,23 @@ function getTextContent(node: React.ReactNode): string {
     return getTextContent((node as any).props.children);
   }
   return '';
+}
+
+function SingleKeyToggle() {
+  const on = useUIStore(s => s.singleKeyShortcuts);
+  const setOn = useUIStore(s => s.setSingleKeyShortcuts);
+  return (
+    <label className="flex items-start gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={on}
+        onChange={e => setOn(e.target.checked)}
+        className="mt-0.5 w-4 h-4 accent-accent-orange cursor-pointer"
+      />
+      <span>
+        Use single-key shortcuts (<Kbd>1</Kbd>–<Kbd>4</Kbd>, <Kbd>[</Kbd> <Kbd>]</Kbd>, <Kbd>R</Kbd>, and letter keys playing the Harmony piano).
+        Turn this off if you use speech input or keep triggering them by accident. Space, ⌘/Ctrl shortcuts and armed live keys still work.
+      </span>
+    </label>
+  );
 }

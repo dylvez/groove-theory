@@ -3,6 +3,9 @@ import { useSequencerStore } from '../store/useSequencerStore';
 import { useTransportStore } from '../store/useTransportStore';
 import { useTheoryStore } from '../store/useTheoryStore';
 import { useSongStore } from '../store/useSongStore';
+import { useMixerStore, type MixerSettings } from '../store/useMixerStore';
+import { withUndoGroup } from '../store/history';
+import { markWorkSaved } from './workState';
 
 const INDEX_KEY = 'groove-theory-saves-index';
 const SAVE_PREFIX = 'groove-theory-save-';
@@ -130,6 +133,16 @@ export function buildGrooveSnapshot(name: string): SavedGroove {
   const transport = useTransportStore.getState();
   const theory = useTheoryStore.getState();
   const song = useSongStore.getState();
+  const m = useMixerStore.getState();
+  const mixer: MixerSettings = {
+    masterVolume: m.masterVolume,
+    reverbDecay: m.reverbDecay,
+    reverbLevel: m.reverbLevel,
+    delayTime: m.delayTime,
+    delayFeedback: m.delayFeedback,
+    delayLevel: m.delayLevel,
+    compressor: m.compressor,
+  };
 
   return {
     version: CURRENT_VERSION,
@@ -146,6 +159,7 @@ export function buildGrooveSnapshot(name: string): SavedGroove {
     chordInversion: theory.chordInversion,
     progression: theory.progression,
     songBlocks: song.blocks.length > 0 ? song.blocks : undefined,
+    mixer,
   };
 }
 
@@ -158,8 +172,11 @@ export function applyGroove(groove: SavedGroove): void {
   useTransportStore.getState().stop();
   useSongStore.getState().stopSong();
 
-  // Load patterns (undo subscription captures snapshot automatically)
-  useSequencerStore.getState().loadPatterns(groove.patterns, groove.activePatternId);
+  // Patterns + song arrangement replace together as one undo step
+  withUndoGroup(() => {
+    useSequencerStore.getState().loadPatterns(groove.patterns, groove.activePatternId);
+    useSongStore.getState().loadBlocks(groove.songBlocks ?? []);
+  });
 
   // Load transport
   useTransportStore.getState().setBpm(groove.bpm);
@@ -177,8 +194,11 @@ export function applyGroove(groove: SavedGroove): void {
     progression: groove.progression,
   });
 
-  // Load song arrangement (backward compatible — older grooves won't have songBlocks)
-  useSongStore.getState().loadBlocks(groove.songBlocks ?? []);
+  // Mixer: saves without one (older saves, presets) get the default sound
+  if (groove.mixer) useMixerStore.getState().setMixer(groove.mixer);
+  else useMixerStore.getState().resetMixer();
+
+  markWorkSaved();
 }
 
 // ---------------------------------------------------------------------------
