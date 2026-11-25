@@ -64,9 +64,16 @@ export function usePopover<T extends HTMLElement>(
       if (opener && opener.isConnected) opener.focus({ preventScroll: true });
     };
 
+    // A modal dialog opened from inside this popover (a delete confirmation,
+    // say) owns the pointer and keyboard until it closes
+    const modalAbove = () => {
+      const el = ref.current;
+      return Array.from(document.querySelectorAll('[aria-modal="true"]')).some(m => !el || !m.contains(el));
+    };
+
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node;
-      if (!ref.current || ref.current.contains(target)) return;
+      if (!ref.current || ref.current.contains(target) || modalAbove()) return;
       if (opener && opener.contains(target)) return;
       // The button that toggles this popover handles its own click (Safari doesn't
       // focus buttons on click, so `opener` can be null)
@@ -76,7 +83,7 @@ export function usePopover<T extends HTMLElement>(
 
     const onKeyDown = (e: KeyboardEvent) => {
       const el = ref.current;
-      if (!el) return;
+      if (!el || modalAbove()) return;
       if (e.key === 'Escape') {
         if (openStack[openStack.length - 1] !== id) return;
         // Escape belongs to the popover, not to global shortcuts underneath

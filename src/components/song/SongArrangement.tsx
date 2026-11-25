@@ -12,11 +12,15 @@ import {
 } from '../../utils/grooveStorage';
 import { OpenSongDropdown } from './OpenSongDropdown';
 import { announce } from '../../utils/announce';
+import { showPrompt } from '../../utils/dialogs';
 import type { Pattern } from '../../types/sequencer';
 
 const PX_PER_BAR = 40;
 const MIN_BLOCK_WIDTH = 60;
-const BLOCK_GAP = 8; // gap-2 = 8px
+/** Space before each block: the insert target while editing, an empty spacer while playing */
+const BLOCK_GAP = 24;
+/** Left padding of the timeline (px-6) */
+const TIMELINE_PAD = 24;
 
 function getBlockWidth(pattern: Pattern | undefined, repeats: number): number {
   if (!pattern) return MIN_BLOCK_WIDTH;
@@ -160,10 +164,14 @@ export function SongArrangement() {
 
   const hasLoop = loopStart !== null && loopEnd !== null;
 
-  const handleSaveSong = useCallback(() => {
-    const name = window.prompt('Song arrangement name:', 'My Song');
+  const handleSaveSong = useCallback(async () => {
+    const name = await showPrompt('Save the song arrangement to a file', {
+      label: 'Song name',
+      defaultValue: 'My Song',
+      confirmLabel: 'Save file',
+    });
     if (!name) return;
-    const snapshot = buildSongSnapshot(name.trim());
+    const snapshot = buildSongSnapshot(name);
     exportSongToFile(snapshot);
   }, []);
 
@@ -190,7 +198,7 @@ export function SongArrangement() {
   // Playback cursor position
   const cursorX = useMemo(() => {
     if (songState !== 'playing') return null;
-    let x = 0;
+    let x = BLOCK_GAP;
     for (let i = 0; i < currentBlockIndex; i++) {
       if (blockData[i]) {
         x += blockData[i].widthPx + BLOCK_GAP;
@@ -389,7 +397,7 @@ export function SongArrangement() {
       {/* Block Timeline */}
       <div
         ref={timelineRef}
-        className="flex-1 overflow-y-hidden overflow-x-auto px-4 sm:px-6 py-2 bg-bg-secondary/30 relative"
+        className="flex-1 overflow-y-hidden overflow-x-auto px-6 py-2 bg-bg-secondary/30 relative"
         onDragEnd={handleDragEnd}
       >
         <div className="flex items-start gap-0 pt-5" style={{ minHeight: 40 }}>
@@ -401,8 +409,9 @@ export function SongArrangement() {
 
           {blockData.map(({ block, pattern, widthPx }, idx) => (
             <React.Fragment key={block.id}>
-              {/* Insertion zone before each block */}
-              {songState !== 'playing' && (
+              {/* Insertion zone before each block; while playing, a spacer of
+                  the same width so nothing shifts */}
+              {songState !== 'playing' ? (
                 <InsertionZone
                   index={idx}
                   isOpen={insertAtIndex === idx}
@@ -410,6 +419,8 @@ export function SongArrangement() {
                   onInsert={handleInsert}
                   patterns={patterns}
                 />
+              ) : (
+                <div aria-hidden="true" className="shrink-0" style={{ width: BLOCK_GAP }} />
               )}
               <div
                 className={`transition-transform shrink-0 relative ${dragOverIndex === idx ? 'translate-x-1' : ''}`}
@@ -506,7 +517,7 @@ export function SongArrangement() {
             aria-hidden="true"
             className="absolute top-0 bottom-0 w-0.5 bg-accent-teal pointer-events-none z-10"
             style={{
-              transform: `translateX(${cursorX + 16}px)`,
+              transform: `translateX(${cursorX + TIMELINE_PAD}px)`,
               boxShadow: '0 0 6px #28d7d4',
             }}
           />
@@ -572,12 +583,13 @@ function InsertionZone({
   return (
     <button
       type="button"
-      className="group/insert w-1 hover:w-5 focus-visible:w-6 shrink-0 self-stretch flex items-center justify-center cursor-pointer transition-all"
+      className="group/insert shrink-0 self-stretch flex items-center justify-center cursor-pointer"
+      style={{ width: BLOCK_GAP }}
       onClick={onToggle}
       title="Insert block here"
       aria-label={`Insert a block at position ${index + 1}`}
     >
-      <div className="w-px h-full bg-transparent group-hover/insert:bg-accent-orange/40 transition-colors relative">
+      <div className="w-px h-full bg-transparent group-hover/insert:bg-accent-orange/40 group-focus-visible/insert:bg-accent-orange/40 transition-colors relative">
         <div aria-hidden="true" className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center opacity-0 group-hover/insert:opacity-100 group-focus-visible/insert:opacity-100 transition-opacity">
           <span className="w-4 h-4 rounded-full bg-accent-orange/20 text-accent-orange-fg text-[11px] font-bold flex items-center justify-center">
             +

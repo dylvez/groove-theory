@@ -1,10 +1,19 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { focusableIn } from './usePopover';
 
+/** Open modals, newest last. Only the newest one handles keys. */
+const modalStack: symbol[] = [];
+
+/** True while any modal dialog is open; app-wide shortcuts stand down then. */
+export function isModalOpen(): boolean {
+  return modalStack.length > 0;
+}
+
 /**
  * Modal dialog behaviour: focus moves in on open (to `initialFocus`, else the
  * first control), Tab cycles inside, Escape closes, and focus returns to
- * whatever had it before.
+ * whatever had it before. Modals can stack (a confirm over a dialog); only the
+ * top one responds to the keyboard.
  */
 export function useModal<T extends HTMLElement>(
   onClose: () => void,
@@ -18,12 +27,14 @@ export function useModal<T extends HTMLElement>(
   );
 
   useEffect(() => {
+    const id = Symbol('modal');
+    modalStack.push(id);
     const root = ref.current;
     (initialFocus?.current ?? (root ? focusableIn(root)[0] : null))?.focus();
 
     const onKey = (e: KeyboardEvent) => {
       const el = ref.current;
-      if (!el) return;
+      if (!el || modalStack[modalStack.length - 1] !== id) return;
       if (e.key === 'Escape') {
         e.stopPropagation();
         closeRef.current();
@@ -40,8 +51,17 @@ export function useModal<T extends HTMLElement>(
     };
     document.addEventListener('keydown', onKey, true);
     return () => {
+      const i = modalStack.indexOf(id);
+      if (i >= 0) modalStack.splice(i, 1);
       document.removeEventListener('keydown', onKey, true);
-      if (opener?.isConnected) opener.focus();
+      if (opener?.isConnected) { opener.focus(); return; }
+      // The opener is gone (say, a list item that was just deleted): land in
+      // the menu or dialog it belonged to rather than at the top of the page
+      requestAnimationFrame(() => {
+        if (document.activeElement && document.activeElement !== document.body) return;
+        const host = document.querySelector<HTMLElement>('[role="dialog"], [role="alertdialog"]');
+        if (host) focusableIn(host)[0]?.focus();
+      });
     };
     // Runs once per open
     // eslint-disable-next-line react-hooks/exhaustive-deps

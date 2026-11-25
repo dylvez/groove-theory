@@ -45,10 +45,12 @@ export function PianoKeyboard({ startOctave = 3, numOctaves = 3 }: PianoKeyboard
     onClick: (e: React.MouseEvent) => { if (e.detail === 0) playNote(noteStr); },
   });
 
+  // Letter keys play this piano only while it's on screen
+  const panelOpen = useUIStore(s => s.sidePanelOpen);
   useKeyboardInput({
     baseOctave: startOctave + 1,
     onNoteOn: playNote,
-    enabled: armedTrackId === null && singleKeyShortcuts,
+    enabled: armedTrackId === null && singleKeyShortcuts && panelOpen,
   });
 
   // Build key layout

@@ -33,7 +33,8 @@ export function SequencerGrid() {
   const activePattern = patterns.find(p => p.id === activePatternId) || patterns[0];
   const drumKitId = activePattern?.kitId ?? 'classic';
 
-  const studioTab = useUIStore(s => s.studioTab);
+  // The Drums / Synth bar matching the side panel's tab is tinted, so only while it's showing
+  const studioTab = useUIStore(s => (s.sidePanelOpen ? s.studioTab : null));
   const isCompact = (activePattern?.stepResolution ?? '16n') === '32n';
   const stepsPerMeasure = (() => {
     const beats = (activePattern?.timeSignature ?? '4/4') === '3/4' ? 3 : 4;

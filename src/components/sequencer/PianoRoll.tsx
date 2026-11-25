@@ -402,7 +402,7 @@ const PianoRollRow = memo(function PianoRollRow({
   const note = midiToNote(midi);
   const spoken = spokenNote(note);
   const black = note.includes('#');
-  const cellW = compact ? 'w-4' : 'w-9';
+  const cellW = compact ? 'w-6' : 'w-9';
 
   return (
     <div role="group" aria-label={`${spoken}${isRoot ? ', root' : inScale ? '' : ', outside the scale'}`} className="flex items-center gap-1">
@@ -468,7 +468,7 @@ function Playhead({ left, compact, stepsPerMeasure }: { left: number; compact: b
   const songPlaying = useSongStore(s => s.songState) === 'playing';
   const playing = useTransportStore(s => s.state) === 'playing' || songPlaying;
   if (!playing) return null;
-  const w = compact ? 16 : 36;
+  const w = compact ? 24 : 36;
   const gap = compact ? 2 : 4;
   const x = left + step * (w + gap) + Math.floor(step / stepsPerMeasure) * 8;
   return (

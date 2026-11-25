@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useUIStore } from '../../store/useUIStore';
-import { focusableIn } from '../../hooks/usePopover';
+import { useModal } from '../../hooks/useModal';
 
 interface HelpModalProps {
   onClose: () => void;
@@ -14,44 +14,14 @@ interface HelpSection {
 }
 
 export function HelpModal({ onClose }: HelpModalProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState('sequencer');
 
-  // Modal dialog: focus moves in, Tab stays inside, Escape closes, and focus
-  // goes back to the Help button afterwards
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    searchRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-        return;
-      }
-      if (e.key === 'Tab' && panelRef.current) {
-        const items = focusableIn(panelRef.current);
-        if (items.length === 0) return;
-        const first = items[0];
-        const last = items[items.length - 1];
-        const active = document.activeElement;
-        if (e.shiftKey && (active === first || !panelRef.current.contains(active))) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && (active === last || !panelRef.current.contains(active))) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener('keydown', onKey, true);
-    return () => {
-      document.removeEventListener('keydown', onKey, true);
-      opener?.focus?.();
-    };
-  }, [onClose]);
+  // Modal dialog: focus moves to the search box, Tab stays inside, Escape
+  // closes, and focus goes back to the Help button afterwards
+  const panelRef = useModal<HTMLDivElement>(onClose, searchRef);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
@@ -193,10 +163,12 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <li><Kbd>Loop</Kbd> — toggle pattern looping on or off.</li>
             <li><Kbd>Follow</Kbd> — while a pattern or song plays, the grid scrolls a page at a time to keep the playing step in view. Turn it off to scroll freely. Track names stay pinned on the left as the grid scrolls.</li>
             <li><Kbd>4/4</Kbd> / <Kbd>3/4</Kbd> — switch between common and waltz time.</li>
-            <li><Kbd>2</Kbd> / <Kbd>4</Kbd> bars — set how many bars each pattern contains.</li>
+            <li><Kbd>1</Kbd> / <Kbd>2</Kbd> / <Kbd>4</Kbd> / <Kbd>8</Kbd> bars — set how many bars each pattern contains.</li>
             <li><Kbd>1/16</Kbd> / <Kbd>1/32</Kbd> — step resolution. 1/32 doubles the grid for rolls and fast hats.</li>
             <li><Kbd>Undo</Kbd> / <Kbd>Redo</Kbd> — step backwards and forwards through sequencer changes (up to 50).</li>
             <li><Kbd>⋯</Kbd> next to the pattern buttons opens the <strong>pattern menu</strong>: copy to another slot, copy/paste, shift left/right, humanize velocities, fill empty bars, or clear.</li>
+            <li><Kbd>Side panel</Kbd> (top right) — hide the Beats and Harmony panel to give the grid the full width, and bring it back the same way. The <Kbd>\</Kbd> key does the same.</li>
+            <li><Kbd>Layout</Kbd> (top right) — preset sizes for the side panel, the song section and the track name column. You can also drag the coloured dividers, or focus one and use the arrow keys.</li>
           </ul>
         </>
       ),
@@ -488,6 +460,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <Kbd>⌘/Ctrl + C</Kbd> <span>Copy the active pattern</span>
             <Kbd>⌘/Ctrl + V</Kbd> <span>Paste into the active pattern</span>
             <Kbd>[</Kbd> / <Kbd>]</Kbd> <span>Shift the pattern one step left / right</span>
+            <Kbd>\</Kbd> <span>Show / hide the Beats and Harmony side panel</span>
             <Kbd>Shift + click</Kbd> <span>Cycle a step's velocity</span>
             <Kbd>Right-click</Kbd> <span>Edit a synth step (note, octave, length)</span>
             <Kbd>R</Kbd> <span>Toggle recording (when a track is armed)</span>
@@ -747,7 +720,7 @@ function SingleKeyToggle() {
         className="mt-0.5 w-4 h-4 accent-accent-orange cursor-pointer"
       />
       <span>
-        Use single-key shortcuts (<Kbd>1</Kbd>–<Kbd>8</Kbd>, <Kbd>[</Kbd> <Kbd>]</Kbd>, <Kbd>R</Kbd>, and letter keys playing the Harmony piano).
+        Use single-key shortcuts (<Kbd>1</Kbd>–<Kbd>8</Kbd>, <Kbd>[</Kbd> <Kbd>]</Kbd>, <Kbd>\</Kbd>, <Kbd>R</Kbd>, and letter keys playing the Harmony piano).
         Turn this off if you use speech input or keep triggering them by accident. Space, ⌘/Ctrl shortcuts and armed live keys still work.
       </span>
     </label>

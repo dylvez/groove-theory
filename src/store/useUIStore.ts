@@ -13,7 +13,7 @@ interface UIStore {
   recording: boolean;
   /** Octave offset for live keyboard playing */
   liveOctave: number;
-  /** Single-character shortcuts (1–8, [ ], R, and the piano's letter keys). Can be turned off in Help. */
+  /** Single-character shortcuts (1–8, [ ], \, R, and the piano's letter keys). Can be turned off in Help. */
   singleKeyShortcuts: boolean;
   setSingleKeyShortcuts: (on: boolean) => void;
   /** Scroll the grid to keep the playing step in view */
@@ -25,6 +25,13 @@ interface UIStore {
   /** A parsed MIDI file waiting in the import dialog (null when closed) */
   midiImport: (MidiFileData & { fileName: string }) | null;
   setMidiImport: (file: (MidiFileData & { fileName: string }) | null) => void;
+  /** Beats / Harmony side panel shown */
+  sidePanelOpen: boolean;
+  setSidePanelOpen: (open: boolean) => void;
+  sidePanelWidth: number;
+  setSidePanelWidth: (w: number) => void;
+  songHeight: number;
+  setSongHeight: (h: number) => void;
   setStudioTab: (tab: StudioTab) => void;
   setTrackHeaderWidth: (w: number) => void;
   setArmedTrack: (id: string | null) => void;
@@ -34,8 +41,18 @@ interface UIStore {
 }
 
 export const DEFAULT_HEADER_WIDTH = 240;
-const MIN_HEADER_WIDTH = 120;
-const MAX_HEADER_WIDTH = 300;
+export const MIN_HEADER_WIDTH = 120;
+export const MAX_HEADER_WIDTH = 300;
+
+export const MIN_PANEL_WIDTH = 280;
+export const MAX_PANEL_WIDTH = 700;
+export const DEFAULT_PANEL_WIDTH = 280;
+
+export const MIN_SONG_HEIGHT = 60;
+export const MAX_SONG_HEIGHT = 400;
+export const DEFAULT_SONG_HEIGHT = 180;
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export const useUIStore = create<UIStore>()(persist((set) => ({
   studioTab: 'beats',
@@ -51,8 +68,14 @@ export const useUIStore = create<UIStore>()(persist((set) => ({
   setHelpOpen: (open) => set({ helpOpen: open }),
   midiImport: null,
   setMidiImport: (file) => set({ midiImport: file }),
+  sidePanelOpen: true,
+  setSidePanelOpen: (open) => set({ sidePanelOpen: open }),
+  sidePanelWidth: DEFAULT_PANEL_WIDTH,
+  setSidePanelWidth: (w) => set({ sidePanelWidth: clamp(w, MIN_PANEL_WIDTH, MAX_PANEL_WIDTH) }),
+  songHeight: DEFAULT_SONG_HEIGHT,
+  setSongHeight: (h) => set({ songHeight: clamp(h, MIN_SONG_HEIGHT, MAX_SONG_HEIGHT) }),
   setStudioTab: (tab) => set({ studioTab: tab }),
-  setTrackHeaderWidth: (w) => set({ trackHeaderWidth: Math.max(MIN_HEADER_WIDTH, Math.min(MAX_HEADER_WIDTH, w)) }),
+  setTrackHeaderWidth: (w) => set({ trackHeaderWidth: clamp(w, MIN_HEADER_WIDTH, MAX_HEADER_WIDTH) }),
   setArmedTrack: (id) => set((s) => ({ armedTrackId: id, recording: id === null ? false : s.recording })),
   toggleRecording: () => set((s) => ({ recording: !s.recording })),
   setRecording: (on) => set({ recording: on }),
@@ -72,5 +95,8 @@ export const useUIStore = create<UIStore>()(persist((set) => ({
     trackHeaderWidth: s.trackHeaderWidth,
     studioTab: s.studioTab,
     followPlayhead: s.followPlayhead,
+    sidePanelOpen: s.sidePanelOpen,
+    sidePanelWidth: s.sidePanelWidth,
+    songHeight: s.songHeight,
   }),
 }));

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { usePopover } from '../../hooks/usePopover';
 import { markWorkSaved } from '../../utils/workState';
 import { announce } from '../../utils/announce';
+import { showAlert, showConfirm } from '../../utils/dialogs';
 import {
   listGrooves,
   saveGroove,
@@ -35,7 +36,7 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
   const [saves, setSaves] = useState<GrooveSlotEntry[]>(() => listGrooves());
   const [justSaved, setJustSaved] = useState(false);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!name.trim()) return;
     try {
       const groove = buildGrooveSnapshot(name.trim());
@@ -46,7 +47,7 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
       announce(`Saved ${groove.name}`);
       setTimeout(() => setJustSaved(false), 1500);
     } catch (err) {
-      alert((err as Error).message);
+      await showAlert('Couldn’t save', (err as Error).message);
     }
   }, [name]);
 
@@ -61,8 +62,13 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
     exportPatternsToFile(data);
   }, [name]);
 
-  const handleOverwrite = useCallback((id: string, existingName: string) => {
-    if (!window.confirm(`Replace the saved groove "${existingName}" with your current work?`)) return;
+  const handleOverwrite = useCallback(async (id: string, existingName: string) => {
+    const ok = await showConfirm(
+      `Save over "${existingName}"?`,
+      'The saved groove will be replaced with your current work. Its old version can’t be brought back.',
+      { confirmLabel: 'Save over it', danger: true },
+    );
+    if (!ok) return;
     try {
       deleteGroove(id);
       const groove = buildGrooveSnapshot(existingName);
@@ -73,7 +79,7 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 1500);
     } catch (err) {
-      alert((err as Error).message);
+      await showAlert('Couldn’t save', (err as Error).message);
     }
   }, []);
 

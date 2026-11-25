@@ -50,7 +50,7 @@ export function StepCell({
       onClick={(e) => { if (e.detail === 0) onActivate(stepIndex, e.shiftKey); }}
       onContextMenu={(e) => e.preventDefault()}
       title={active ? `Velocity ${Math.round(velocity * 100)}% — shift+click to change` : 'Click or drag to add hits'}
-      className={`${compact ? 'w-4 h-8' : 'w-9 h-9'} rounded-md border transition-all duration-75 cursor-pointer select-none relative ${isBarStart ? 'ml-2' : ''} ${
+      className={`${compact ? 'w-6 h-8' : 'w-9 h-9'} rounded-md border transition-all duration-75 cursor-pointer select-none relative ${isBarStart ? 'ml-2' : ''} ${
         isCurrent ? 'ring-2 ring-white/70' : ''
       } ${
         active

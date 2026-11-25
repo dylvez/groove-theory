@@ -3,6 +3,7 @@ import { usePopover } from '../../hooks/usePopover';
 import { withUndoGroup } from '../../store/history';
 import { hasUnsavedWork } from '../../utils/workState';
 import { announce } from '../../utils/announce';
+import { showAlert, showConfirm } from '../../utils/dialogs';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useTransportStore } from '../../store/useTransportStore';
 import { useUIStore } from '../../store/useUIStore';
@@ -12,8 +13,11 @@ import { exportPatternToWav, exportPatternToMp3, exportSongToWav, exportSongToMp
 import { SaveGrooveDropdown } from '../transport/SaveGrooveDropdown';
 import { OpenGrooveDropdown } from '../transport/OpenGrooveDropdown';
 import { HelpModal } from './HelpModal';
+import { LayoutControls } from './LayoutControls';
 
 type ExportDropdownType = 'midi' | 'wav' | 'mp3' | null;
+
+const EXPORT_FAILED = 'Something went wrong while making the audio file. Please try again.';
 
 function ExportDropdown({
   type,
@@ -95,10 +99,13 @@ export function Header() {
     setSaveOpen(false);
   }, []);
 
-  const handleNewGroove = useCallback(() => {
-    if (hasUnsavedWork() && !window.confirm(
-      'Start a new groove? This clears every pattern and the song arrangement, and your current work hasn\'t been saved.\n\nYou can get it back with Undo (Ctrl+Z or ⌘Z).'
-    )) return;
+  const handleNewGroove = useCallback(async () => {
+    if (hasUnsavedWork() && !(await showConfirm(
+      'Start a new groove?',
+      'This clears every pattern and the song arrangement, and your current work hasn’t been saved.\n\n' +
+      'Undo (Ctrl+Z or ⌘Z) brings it back.',
+      { confirmLabel: 'Start new' },
+    ))) return;
     withUndoGroup(() => {
       clearAllPatterns();
       clearSong();
@@ -120,7 +127,7 @@ export function Header() {
       await exportPatternToWav(pattern, bpm);
     } catch (e) {
       console.error('WAV export failed:', e);
-      alert('WAV export failed — check console for details.');
+      void showAlert('WAV export failed', EXPORT_FAILED);
     } finally {
       setExporting(null);
     }
@@ -134,7 +141,7 @@ export function Header() {
       await exportPatternToMp3(pattern, bpm);
     } catch (e) {
       console.error('MP3 export failed:', e);
-      alert('MP3 export failed — check console for details.');
+      void showAlert('MP3 export failed', EXPORT_FAILED);
     } finally {
       setExporting(null);
     }
@@ -152,7 +159,7 @@ export function Header() {
       await exportSongToWav(songBlocks, patterns, bpm);
     } catch (e) {
       console.error('WAV song export failed:', e);
-      alert('WAV song export failed — check console for details.');
+      void showAlert('WAV song export failed', EXPORT_FAILED);
     } finally {
       setExporting(null);
     }
@@ -165,7 +172,7 @@ export function Header() {
       await exportSongToMp3(songBlocks, patterns, bpm);
     } catch (e) {
       console.error('MP3 song export failed:', e);
-      alert('MP3 song export failed — check console for details.');
+      void showAlert('MP3 song export failed', EXPORT_FAILED);
     } finally {
       setExporting(null);
     }
@@ -198,8 +205,9 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 flex flex-wrap items-center gap-y-2 px-4 sm:px-6 py-2 min-h-[53px] bg-bg-secondary border-b border-border shrink-0">
-      {/* Logo + Title — width matches track header so buttons align with grid */}
-      <div className="flex items-center gap-2.5 shrink-0" style={{ width: trackHeaderWidth + 16 }}>
+      {/* Logo + Title — width matches track header so buttons align with grid,
+          but never so narrow that the title is covered */}
+      <div className="flex items-center gap-2.5 shrink-0 pr-3" style={{ minWidth: trackHeaderWidth + 16 }}>
         <img
           src={`${import.meta.env.BASE_URL}images/logo.png`}
           alt=""
@@ -441,6 +449,8 @@ export function Header() {
             <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
           </svg>
         </a>
+        <div aria-hidden="true" className="w-px h-5 bg-border/50 mx-2" />
+        <LayoutControls />
       </div>
 
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}

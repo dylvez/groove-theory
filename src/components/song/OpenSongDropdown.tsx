@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { usePopover } from '../../hooks/usePopover';
 import { confirmReplaceWork } from '../../utils/workState';
+import { showAlert } from '../../utils/dialogs';
 import { announce } from '../../utils/announce';
 import {
   applyGroove,
@@ -20,10 +21,10 @@ export function OpenSongDropdown({
 }) {
   const ref = usePopover<HTMLDivElement>(onClose);
 
-  const handleLoadPreset = useCallback((presetId: string) => {
+  const handleLoadPreset = useCallback(async (presetId: string) => {
     const preset = PRESET_GROOVES.find(p => p.id === presetId);
     if (!preset) return;
-    if (!confirmReplaceWork(`Opening the preset "${preset.name}"`)) return;
+    if (!(await confirmReplaceWork(`Opening the preset "${preset.name}"`))) return;
     applyGroove(structuredClone(preset.groove));
     announce(`Opened preset ${preset.name}`);
     onClose();
@@ -32,13 +33,13 @@ export function OpenSongDropdown({
   const handleImportFile = useCallback(async () => {
     try {
       const data = await importSongFromFile();
-      if (!confirmReplaceWork(`Importing the song "${data.name}"`)) return;
+      if (!(await confirmReplaceWork(`Importing the song "${data.name}"`))) return;
       applySongArrangement(data);
       announce(`Imported song ${data.name}`);
       onClose();
     } catch (err) {
       const msg = (err as Error).message;
-      if (msg !== 'No file selected') alert(msg);
+      if (msg !== 'No file selected') await showAlert('Couldn’t import this song', msg);
     }
   }, [onClose]);
 

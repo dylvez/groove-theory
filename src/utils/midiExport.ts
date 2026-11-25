@@ -2,6 +2,7 @@ import MidiWriter from 'midi-writer-js';
 import type { Pattern } from '../types';
 import { stepNotes } from './melodicNotes';
 import type { SongBlock } from '../store/useSongStore';
+import { showAlert } from './dialogs';
 
 /**
  * General MIDI percussion mapping (channel 10).
@@ -119,7 +120,7 @@ function buildAndDownload(
   filename: string,
 ): void {
   if (sequence.length === 0) {
-    alert('Nothing to export — no patterns in the sequence.');
+    void showAlert('Nothing to export', 'The song has no pattern blocks yet.');
     return;
   }
   const timeSignature = sequence[0].pattern.timeSignature;
@@ -144,7 +145,7 @@ function buildAndDownload(
   tracks.push(...melodicTracks.values());
 
   if (tracks.length === 0) {
-    alert('Nothing to export — all tracks are empty or muted.');
+    void showAlert('Nothing to export', 'Every track is empty or muted.');
     return;
   }
 

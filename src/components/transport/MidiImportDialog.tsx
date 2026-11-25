@@ -54,9 +54,9 @@ export function MidiImportDialog({ file }: { file: MidiFileData & { fileName: st
   const togglePart = (id: string) =>
     setPartIds(ids => (ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]));
 
-  const doImport = () => {
+  const doImport = async () => {
     if (!preview) return;
-    if (!confirmReplaceWork(`Importing "${file.fileName}"`)) return;
+    if (!(await confirmReplaceWork(`Importing "${file.fileName}"`))) return;
     useSongStore.getState().stopSong();
     useTransportStore.getState().stop();
     withUndoGroup(() => {

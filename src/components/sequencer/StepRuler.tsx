@@ -54,7 +54,7 @@ export function StepRuler({ numSteps, stepsPerMeasure, compact = false }: StepRu
           return (
             <div
               key={i}
-              className={`${compact ? 'w-4' : 'w-9'} h-4 flex items-end justify-center relative ${isBarStart ? 'ml-2' : ''}`}
+              className={`${compact ? 'w-6' : 'w-9'} h-4 flex items-end justify-center relative ${isBarStart ? 'ml-2' : ''}`}
             >
               {isBeatStart ? (
                 <span className={`text-[11px] font-semibold leading-none ${

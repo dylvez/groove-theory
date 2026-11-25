@@ -1,6 +1,7 @@
 import { useSequencerStore } from '../store/useSequencerStore';
 import { useSongStore } from '../store/useSongStore';
 import { useTransportStore } from '../store/useTransportStore';
+import { showConfirm } from './dialogs';
 
 /**
  * Tracks whether the current work differs from what was last saved or loaded,
@@ -60,13 +61,15 @@ export function hasUnsavedWork(): boolean {
 }
 
 /**
- * Ask before replacing unsaved work. Returns true when it's fine to go ahead.
+ * Ask before replacing unsaved work. Resolves to true when it's fine to go ahead.
  * `what` completes the sentence "… will replace your current work".
  */
-export function confirmReplaceWork(what: string): boolean {
+export async function confirmReplaceWork(what: string): Promise<boolean> {
   if (!hasUnsavedWork()) return true;
-  return window.confirm(
+  return showConfirm(
+    'Replace your unsaved work?',
     `${what} will replace your current work, which hasn't been saved.\n\n` +
-    'You can get it back afterwards with Undo (Ctrl+Z or ⌘Z), but tempo and swing are not restored.\n\nContinue?'
+    'Undo (Ctrl+Z or ⌘Z) brings it back afterwards, but not its tempo and swing.',
+    { confirmLabel: 'Replace it' },
   );
 }

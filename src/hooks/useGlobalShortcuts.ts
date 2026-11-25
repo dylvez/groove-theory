@@ -6,6 +6,8 @@ import { useUIStore } from '../store/useUIStore';
 import { AudioEngine } from '../audio/AudioEngine';
 import { PATTERN_IDS, patternLetter } from '../constants/patterns';
 import { announce } from '../utils/announce';
+import { toggleSidePanel } from '../utils/sidePanel';
+import { isModalOpen } from './useModal';
 
 function isTypingTarget(t: EventTarget | null): boolean {
   return t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement
@@ -19,16 +21,17 @@ function isTypingTarget(t: EventTarget | null): boolean {
  *   ⌘/Ctrl+Z         undo · ⌘/Ctrl+Shift+Z (or ⌘/Ctrl+Y) redo
  *   ⌘/Ctrl+C / V     copy / paste pattern
  *   [ / ]            shift pattern left / right one step
+ *   \                show / hide the Beats and Harmony side panel
  *   R                toggle record (when a track is armed)
  *   Escape           disarm live keys
  *
- * The single-character ones (1–4, [ ], R) can be switched off in Help, for
+ * The single-character ones (1–8, [ ], \, R) can be switched off in Help, for
  * speech-input users and anyone who triggers them by accident (WCAG 2.1.4).
  */
 export function useGlobalShortcuts() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (isTypingTarget(e.target)) return;
+      if (isTypingTarget(e.target) || isModalOpen()) return;
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
       const seq = useSequencerStore.getState();
@@ -79,6 +82,7 @@ export function useGlobalShortcuts() {
         if (id) { e.preventDefault(); seq.setActivePattern(id); announce(`Pattern ${patternLetter(id)}`); }
         return;
       }
+      if (key === '\\') { e.preventDefault(); toggleSidePanel(); return; }
       if (key === '[') { e.preventDefault(); seq.shiftPattern(-1); announce('Shifted left'); return; }
       if (key === ']') { e.preventDefault(); seq.shiftPattern(1); announce('Shifted right'); return; }
 

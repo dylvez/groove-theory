@@ -242,7 +242,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
     }
   };
 
-  const cellW = compact ? 'w-4' : 'w-9';
+  const cellW = compact ? 'w-6' : 'w-9';
   const cellH = compact ? 'h-8' : 'h-9';
 
   return (

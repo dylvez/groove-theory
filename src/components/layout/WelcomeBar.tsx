@@ -37,9 +37,9 @@ export function WelcomeBar({ onDismiss }: { onDismiss: () => void }) {
     playSong();
   }, [playSong, stopSong]);
 
-  const loadDemo = (id: string) => {
+  const loadDemo = async (id: string) => {
     const preset = demos.find(d => d.id === id);
-    if (!preset || !confirmReplaceWork(`Opening the demo "${preset.name}"`)) return;
+    if (!preset || !(await confirmReplaceWork(`Opening the demo "${preset.name}"`))) return;
     stopSong();
     applyGroove(structuredClone(preset.groove));
     setDemoId(id);

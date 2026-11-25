@@ -5,6 +5,7 @@ import { AudioEngine } from '../audio/AudioEngine';
 import { useUIStore } from '../store/useUIStore';
 import { useSequencerStore } from '../store/useSequencerStore';
 import { useTransportStore } from '../store/useTransportStore';
+import { isModalOpen } from './useModal';
 
 function isTypingTarget(t: EventTarget | null): boolean {
   return t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement
@@ -35,7 +36,7 @@ export function useLiveKeys() {
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.repeat || isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.repeat || isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey || isModalOpen()) return;
       const key = e.key.toLowerCase();
       const ui = useUIStore.getState();
 

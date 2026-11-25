@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
-import { usePopover } from '../../hooks/usePopover';
+import { usePopover, focusableIn } from '../../hooks/usePopover';
 import { confirmReplaceWork } from '../../utils/workState';
 import { announce } from '../../utils/announce';
+import { showAlert, showConfirm } from '../../utils/dialogs';
 import {
   listGrooves,
   loadGroove,
@@ -31,12 +32,12 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
   const ref = usePopover<HTMLDivElement>(onClose);
   const [saves, setSaves] = useState<GrooveSlotEntry[]>(() => listGrooves());
 
-  const handleLoad = useCallback((id: string, name: string) => {
-    if (!confirmReplaceWork(`Opening "${name}"`)) return;
+  const handleLoad = useCallback(async (id: string, name: string) => {
+    if (!(await confirmReplaceWork(`Opening "${name}"`))) return;
     const groove = loadGroove(id);
     if (!groove) {
-      alert('Could not load groove — data may be corrupted.');
       setSaves(listGrooves()); // refresh in case self-heal removed it
+      await showAlert(`Couldn't open "${name}"`, 'Its saved data looks damaged, so it can’t be loaded.');
       return;
     }
     applyGroove(groove);
@@ -44,17 +45,28 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
     onClose();
   }, [onClose]);
 
-  const handleDelete = useCallback((id: string, name: string) => {
-    if (!window.confirm(`Delete saved groove "${name}"? This can't be undone.`)) return;
+  const handleDelete = useCallback(async (id: string, name: string) => {
+    const ok = await showConfirm(
+      `Delete "${name}"?`,
+      'This removes the saved groove from this browser. It can’t be undone.',
+      { confirmLabel: 'Delete', danger: true },
+    );
+    if (!ok) return;
     deleteGroove(id);
     setSaves(listGrooves());
     announce(`Deleted ${name}`);
-  }, []);
+    // The Delete button that had focus is gone now; stay in the menu
+    requestAnimationFrame(() => {
+      if (ref.current && (!document.activeElement || document.activeElement === document.body)) {
+        focusableIn(ref.current)[0]?.focus();
+      }
+    });
+  }, [ref]);
 
-  const handleLoadPreset = useCallback((presetId: string) => {
+  const handleLoadPreset = useCallback(async (presetId: string) => {
     const preset = PRESET_GROOVES.find(p => p.id === presetId);
     if (!preset) return;
-    if (!confirmReplaceWork(`Opening the preset "${preset.name}"`)) return;
+    if (!(await confirmReplaceWork(`Opening the preset "${preset.name}"`))) return;
     applyGroove(structuredClone(preset.groove));
     announce(`Opened preset ${preset.name}`);
     onClose();
@@ -69,14 +81,17 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
       onClose();
       setMidiImport({ ...data, fileName: picked.fileName });
     } catch (err) {
-      alert(err instanceof MidiImportError ? err.message : 'Could not read this MIDI file.');
+      await showAlert(
+        `Couldn't import "${picked.fileName}"`,
+        err instanceof MidiImportError ? err.message : 'The file couldn’t be read as MIDI.',
+      );
     }
   }, [onClose, setMidiImport]);
 
   const handleImportFile = useCallback(async () => {
     try {
       const result = await importAnyFile();
-      if (!confirmReplaceWork(`Importing "${result.data.name}"`)) return;
+      if (!(await confirmReplaceWork(`Importing "${result.data.name}"`))) return;
       switch (result.type) {
         case 'groove':
           applyGroove(result.data);
@@ -92,7 +107,7 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
       onClose();
     } catch (err) {
       const msg = (err as Error).message;
-      if (msg !== 'No file selected') alert(msg);
+      if (msg !== 'No file selected') await showAlert('Couldn’t import this file', msg);
     }
   }, [onClose]);
 
