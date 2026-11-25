@@ -60,7 +60,10 @@ export function useLiveKeys() {
       const transport = useTransportStore.getState();
       if (ui.recording && transport.state === 'playing') {
         step = engine.getCurrentStep(pattern.numSteps, pattern.stepResolution);
-        useSequencerStore.getState().setMelodicStep(track.id, step, note, { velocity: 0.85, length: 1 });
+        // Keys held together record as a chord (a Mono Synth keeps one note)
+        useSequencerStore.getState().addMelodicNote(track.id, step, note, {
+          velocity: 0.85, length: 1, mono: track.synthType === 'monoSynth',
+        });
       }
       heldMap.set(key, { note, step });
     };
@@ -81,7 +84,7 @@ export function useLiveKeys() {
         let len = nowStep - entry.step;
         if (len < 0) len += pattern.numSteps;
         len = Math.max(1, Math.min(pattern.numSteps, len));
-        if (len > 1) useSequencerStore.getState().setMelodicStepLength(track.id, entry.step, len);
+        if (len > 1) useSequencerStore.getState().setMelodicNoteLength(track.id, entry.step, entry.note, len);
       }
     };
 

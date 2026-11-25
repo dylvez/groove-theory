@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useUIStore } from '../../store/useUIStore';
+import { useUIStore, DEFAULT_HEADER_WIDTH } from '../../store/useUIStore';
 
 interface TrackHeaderProps {
   name: string;
@@ -20,6 +20,9 @@ interface TrackHeaderProps {
   onToggleArm?: () => void;
   /** Small caption under the name (e.g. synth preset) */
   subtitle?: string;
+  /** Synth tracks: the name opens and closes the piano roll */
+  pianoRollOpen?: boolean;
+  onTogglePianoRoll?: () => void;
 }
 
 export function HeaderResizeHandle() {
@@ -65,7 +68,7 @@ export function HeaderResizeHandle() {
     <div
       aria-hidden="true"
       onMouseDown={handleResizeStart}
-      onDoubleClick={() => setTrackHeaderWidth(216)}
+      onDoubleClick={() => setTrackHeaderWidth(DEFAULT_HEADER_WIDTH)}
       className="shrink-0 w-2 self-stretch cursor-col-resize flex items-center justify-center group"
     >
       <div className="w-0.5 h-full rounded bg-border/30 group-hover:bg-accent-orange transition-colors" />
@@ -76,7 +79,7 @@ export function HeaderResizeHandle() {
 export function TrackHeader({
   name, color, muted, solo,
   onMute, onSolo, onRemove, onRename, onOpenSettings, settingsOpen, onFill,
-  onAudition, armed, onToggleArm, subtitle,
+  onAudition, armed, onToggleArm, subtitle, pianoRollOpen, onTogglePianoRoll,
 }: TrackHeaderProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(name);
@@ -122,6 +125,23 @@ export function TrackHeader({
         />
       ) : (
         <div className="flex flex-col min-w-0 leading-tight">
+          {onTogglePianoRoll ? (
+            <button
+              type="button"
+              onClick={onTogglePianoRoll}
+              aria-expanded={!!pianoRollOpen}
+              aria-label={`${name}${muted ? ' (muted)' : ''} piano roll`}
+              title={pianoRollOpen ? 'Close the piano roll' : 'Open the piano roll to draw notes and chords'}
+              className={`flex items-center gap-0.5 min-h-6 -ml-0.5 px-0.5 rounded text-sm font-medium cursor-pointer hover:bg-bg-cell min-w-0 ${
+                muted ? 'text-text-muted line-through' : 'text-text-primary'
+              }`}
+            >
+              <span className="truncate">{name}</span>
+              <svg aria-hidden="true" viewBox="0 0 12 12" fill="currentColor" className={`w-2 h-2 shrink-0 text-text-muted transition-transform ${pianoRollOpen ? 'rotate-90' : ''}`}>
+                <path d="M4 2l5 4-5 4V2z" />
+              </svg>
+            </button>
+          ) : (
           <span
             onDoubleClick={() => {
               if (onRename) {
@@ -141,6 +161,7 @@ export function TrackHeader({
             {muted && <span className="sr-only">(muted) </span>}
             {name}
           </span>
+          )}
           {subtitle && (
             <span className="text-[11px] text-text-muted truncate leading-none">{subtitle}</span>
           )}

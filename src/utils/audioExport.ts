@@ -1,5 +1,6 @@
 import * as Tone from 'tone';
 import type { Pattern } from '../types';
+import { stepNotes } from './melodicNotes';
 import type { SongBlock } from '../store/useSongStore';
 import { Mixer } from '../audio/Mixer';
 import { DrumEngine } from '../audio/DrumEngine';
@@ -74,15 +75,16 @@ async function renderBlocksOffline(blocks: RenderBlock[], bpm: number): Promise<
           synths.ensureSynth(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
 
           for (let step = 0; step < pattern.numSteps; step++) {
-            const mStep = track.steps[step];
-            if (!mStep.active || !mStep.note) continue;
+            const notes = stepNotes(track.steps[step]);
+            if (notes.length === 0) continue;
             const swingOffset = step % 2 === 1 ? swing * secsPerStep * 0.5 : 0;
             const time = timeOffset + step * secsPerStep + swingOffset;
-            const note = mStep.note;
-            const vel = mStep.velocity;
-            const duration = Math.max(0.03, (mStep.length ?? 1) * secsPerStep - 0.01);
             const id = track.id;
-            transport.schedule((t) => synths.playNote(id, note, duration, t, vel), time);
+            for (const n of notes) {
+              const duration = Math.max(0.03, Math.max(1, n.length) * secsPerStep - 0.01);
+              const { note, velocity } = n;
+              transport.schedule((t) => synths.playNote(id, note, duration, t, velocity), time);
+            }
           }
         }
 

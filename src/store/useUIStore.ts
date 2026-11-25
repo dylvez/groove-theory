@@ -23,12 +23,13 @@ interface UIStore {
   setLiveOctave: (o: number) => void;
 }
 
+export const DEFAULT_HEADER_WIDTH = 240;
 const MIN_HEADER_WIDTH = 120;
 const MAX_HEADER_WIDTH = 300;
 
 export const useUIStore = create<UIStore>()(persist((set) => ({
   studioTab: 'beats',
-  trackHeaderWidth: 216,
+  trackHeaderWidth: DEFAULT_HEADER_WIDTH,
   armedTrackId: null,
   recording: false,
   liveOctave: 4,
@@ -42,7 +43,13 @@ export const useUIStore = create<UIStore>()(persist((set) => ({
   setLiveOctave: (o) => set({ liveOctave: Math.max(1, Math.min(7, o)) }),
 }), {
   name: 'groove-theory-ui',
-  version: 1,
+  version: 2,
+  // v2: the default name column grew from 216 to 240 px for the piano-roll toggle
+  migrate: (persisted, version) => {
+    const s = (persisted ?? {}) as Partial<UIStore>;
+    if (version < 2 && s.trackHeaderWidth === 216) s.trackHeaderWidth = DEFAULT_HEADER_WIDTH;
+    return s as UIStore;
+  },
   // Only preferences — not transient state like the armed track
   partialize: (s) => ({ singleKeyShortcuts: s.singleKeyShortcuts, trackHeaderWidth: s.trackHeaderWidth, studioTab: s.studioTab }),
 }));

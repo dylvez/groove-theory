@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { AudioEngine } from '../audio/AudioEngine';
 import { useTransportStore } from '../store/useTransportStore';
 import { useSequencerStore } from '../store/useSequencerStore';
+import { stepNotes } from '../utils/melodicNotes';
 
 export function useSequencerPlayback() {
   const engine = AudioEngine.getInstance();
@@ -47,10 +48,7 @@ export function useSequencerPlayback() {
               const isMuted = track.muted || (hasSolo && !track.solo);
               return track.steps.map(step => ({
                 trackId: track.id,
-                note: step.note,
-                active: step.active,
-                velocity: step.velocity,
-                length: step.length ?? 1,
+                notes: stepNotes(step),
                 muted: isMuted,
                 synthType: track.synthType,
                 synthParams: track.synthParams,

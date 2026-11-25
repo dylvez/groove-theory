@@ -84,6 +84,16 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li>The <strong>ruler</strong> above the grid shows bar.beat numbers and the playhead.</li>
             </ul>
           </Sub>
+          <Sub title="Piano Roll (chords and longer notes)">
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Click a <strong>synth track’s name</strong> to open its piano roll under the track. Rows are pitches, columns line up with the steps above.</li>
+              <li><strong>Click</strong> an empty cell to add a note; <strong>drag right</strong> to make it longer. Click a note to remove it, <strong>Shift+click</strong> to change its velocity.</li>
+              <li>Several notes on the same step make a <strong>chord</strong>. In the lane, a chord shows its lowest note and “+2”, “+3”… for the rest.</li>
+              <li><strong>New note length</strong> sets how long clicked notes are. <strong>▼ / ▲</strong> move the two-octave view; the numbers show how many notes sit outside it.</li>
+              <li><strong>Scale notes only</strong> hides rows outside the key chosen in the Harmony tab. Rows that already hold notes always stay visible.</li>
+              <li>A Mono Synth plays one note at a time, so adding a note replaces the one on that step.</li>
+            </ul>
+          </Sub>
           <Sub title="Adding & Removing Tracks">
             <ul className="list-disc pl-4 space-y-1">
               <li><Kbd>+ Add Drum</Kbd> — pick from kick, snare, hi-hat, open HH, crash, ride, rim, clap, and toms.</li>
@@ -111,7 +121,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <Sub title="Header Buttons">
             <ul className="list-disc pl-4 space-y-1">
               <li><strong>Gear icon</strong> — open the sound settings panel for that track.</li>
-              <li><strong>Track name</strong> — double-click to rename it. On drum tracks, a single click <strong>auditions</strong> the sound.</li>
+              <li><strong>Track name</strong> — on drum tracks, click to <strong>audition</strong> the sound and double-click to rename. On synth tracks, click to open the <strong>piano roll</strong>. Every track can also be renamed in its ⚙ sound settings.</li>
               <li><Kbd>●</Kbd> <strong>Arm</strong> (synth tracks) — play this synth live from your computer keyboard. See <em>Live Keys</em>.</li>
               <li><Kbd>M</Kbd> <strong>Mute</strong> — silence the track (turns red when muted).</li>
               <li><Kbd>S</Kbd> <strong>Solo</strong> — hear only this track (turns amber when active).</li>
@@ -337,8 +347,8 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <Sub title="Rearranging">
             <ul className="list-disc pl-4 space-y-1">
               <li><strong>Drag and drop</strong> blocks to reorder them.</li>
-              <li>Hover between blocks to reveal insertion zones.</li>
-              <li>Right-click a block for options (remove, change pattern, set repeats).</li>
+              <li>Hover between blocks to reveal insertion zones, or use <strong>Insert before / after</strong> in a block’s options.</li>
+              <li>Click a block’s letter, or right-click the block, for options (move, insert, remove, change pattern, set repeats, loop range).</li>
             </ul>
           </Sub>
           <Sub title="Loop Range">
@@ -483,6 +493,16 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <Kbd>Delete</Kbd> <span>Clear the step</span>
             </div>
             <p className="mt-2">Each position is read as bar.beat.subdivision, for example “2.3.1” is bar 2, beat 3, first sixteenth.</p>
+          </Sub>
+          <Sub title="Using the piano roll with a keyboard">
+            <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 items-center">
+              <Kbd>Arrow keys</Kbd> <span>Move between pitches (up / down) and steps (left / right)</span>
+              <Kbd>Enter</Kbd> <span>Add a note of the chosen length, or remove the note under the cursor</span>
+              <Kbd>Shift + ← / →</Kbd> <span>Make the note shorter / longer</span>
+              <Kbd>Shift + ↑ / ↓</Kbd> <span>Move the note to the next row up / down</span>
+              <Kbd>Shift + Enter</Kbd> <span>Cycle the note’s velocity</span>
+              <Kbd>Delete</Kbd> <span>Remove the note</span>
+            </div>
             <p className="mt-1">Song blocks: Tab to a block’s letter and press Enter for its options — move left or right, set the loop range, mute, relabel or remove.</p>
             <p className="mt-1">The dividers between the panels can be focused and moved with the arrow keys.</p>
           </Sub>

@@ -1,5 +1,6 @@
 import MidiWriter from 'midi-writer-js';
 import type { Pattern } from '../types';
+import { stepNotes } from './melodicNotes';
 import type { SongBlock } from '../store/useSongStore';
 
 /**
@@ -82,18 +83,20 @@ function addPatternEvents(
     if (mTrack.muted || (melodicHasSolo && !mTrack.solo)) continue;
     let track: MidiTrack | null = null;
     for (let step = 0; step < pattern.numSteps; step++) {
-      const mStep = mTrack.steps[step];
-      if (!mStep.active || !mStep.note) continue;
+      const notes = stepNotes(mTrack.steps[step]);
+      if (notes.length === 0) continue;
       if (!track) track = melodicTracks.get(mTrack.name) ?? getMelodicTrack(mTrack.name);
-      const len = Math.max(1, mStep.length ?? 1);
-      track.addEvent(new MidiWriter.NoteEvent({
-        pitch: [mStep.note],
-        duration: `T${len * tps}`,
-        velocity: midiVelocity(mStep.velocity),
-        startTick: startTick + step * tps,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any));
-      counters.melodic++;
+      // One event per note so each keeps its own length and velocity
+      for (const n of notes) {
+        track.addEvent(new MidiWriter.NoteEvent({
+          pitch: [n.note],
+          duration: `T${Math.max(1, n.length) * tps}`,
+          velocity: midiVelocity(n.velocity),
+          startTick: startTick + step * tps,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any));
+        counters.melodic++;
+      }
     }
   }
 

@@ -3,6 +3,8 @@ import { beginUndoGroup, endUndoGroup } from '../../store/history';
 import { useGridFocusStore, stepPosition, velocityName } from '../../store/useGridFocusStore';
 import { usePopover } from '../../hooks/usePopover';
 import { spokenNote } from '../../utils/noteHelpers';
+import { stepNotes, stepLength } from '../../utils/melodicNotes';
+import { PianoRoll } from './PianoRoll';
 import type { MelodicTrack as MelodicTrackType, NoteWithOctave, MelodicSynthParams, SynthType } from '../../types';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useTheoryStore } from '../../store/useTheoryStore';
@@ -64,6 +66,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
   const [activePopup, setActivePopup] = useState<number | null>(null);
   const [popupOctave, setPopupOctave] = useState(track.octave);
   const [showSettings, setShowSettings] = useState(false);
+  const [showRoll, setShowRoll] = useState(false);
 
   // Last note placed on this track — used for drag painting
   const lastNoteRef = useRef<NoteWithOctave | null>(null);
@@ -82,7 +85,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
     const map = new Map<number, { color: string; velocity: number; last: boolean }>();
     track.steps.forEach((s, i) => {
       if (!s.active) return;
-      const len = Math.max(1, s.length ?? 1);
+      const len = stepLength(s);
       for (let k = 1; k < len && i + k < track.steps.length; k++) {
         if (track.steps[i + k].active) break;
         map.set(i + k, { color: trackColor, velocity: s.velocity, last: k === len - 1 });
@@ -241,6 +244,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
   const cellH = compact ? 'h-8' : 'h-9';
 
   return (
+    <div className="flex flex-col gap-1">
     <div className="flex items-center gap-1 relative">
       <TrackHeader
         name={track.name}
@@ -257,6 +261,8 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
         armed={armed}
         onToggleArm={handleToggleArm}
         subtitle={presetName ?? undefined}
+        pianoRollOpen={showRoll}
+        onTogglePianoRoll={() => setShowRoll(v => !v)}
       />
       <HeaderResizeHandle />
       <div
@@ -272,10 +278,13 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
           const isBarStart = i % stepsPerMeasure === 0 && i > 0;
           const octaveDigit = step.note?.match(/\d+$/)?.[0];
           const tail = !step.active ? tails.get(i) : undefined;
-          const len = Math.max(1, step.length ?? 1);
+          const len = stepLength(step);
+          const chord = stepNotes(step);
           const hasTail = step.active && len > 1 && i + 1 < track.steps.length && !track.steps[i + 1].active;
           const position = stepPosition(i, stepsPerMeasure, stepsPerBeat);
-          const label = step.active && step.note
+          const label = chord.length > 1
+            ? `${track.name} ${position}: chord ${chord.map(n => spokenNote(n.note)).join(', ')}`
+            : step.active && step.note
             ? `${track.name} ${position}: ${spokenNote(step.note)}, ${len} step${len > 1 ? 's' : ''} long, ${velocityName(step.velocity)}`
             : tail ? `${track.name} ${position}: held note` : `${track.name} ${position}: empty`;
           const textColor = step.active ? readableTextOn(trackColor, velocityOpacity(step.velocity)) : undefined;
@@ -297,7 +306,9 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
                 onClick={(e) => { if (e.detail === 0) handleActivate(i, e.shiftKey); }}
                 onContextMenu={(e) => e.preventDefault()}
                 title={
-                  step.active
+                  chord.length > 1
+                    ? `Chord: ${chord.map(n => n.note).join(' ')}\nEdit chords in the piano roll (click the track name) · click to clear`
+                    : step.active
                     ? `${step.note} · ${len} step${len > 1 ? 's' : ''} · vel ${Math.round(step.velocity * 100)}%\nClick to clear · right-click to edit · shift+click for velocity`
                     : tail ? 'Held note — right-click the note to change its length' : 'Click to pick a note · drag to paint · right-click to edit'
                 }
@@ -325,7 +336,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
                 {!compact && step.note ? (
                   <span aria-hidden="true" className="flex flex-col items-center leading-none">
                     <span>{step.note.replace(/\d+$/, '')}</span>
-                    <span className="text-[11px] font-normal">{octaveDigit}</span>
+                    <span className="text-[11px] font-normal">{chord.length > 1 ? `+${chord.length - 1}` : octaveDigit}</span>
                   </span>
                 ) : ''}
               </button>
@@ -338,6 +349,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
                   octave={popupOctave}
                   onOctave={setPopupOctave}
                   currentNote={step.note}
+                  chordNotes={chord.length > 1 ? chord.map(n => n.note) : undefined}
                   active={step.active}
                   length={len}
                   onSelect={(note) => handleNoteSelect(i, note)}
@@ -372,6 +384,16 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
         />
       )}
     </div>
+    {showRoll && (
+      <PianoRoll
+        track={track}
+        color={trackColor}
+        stepsPerMeasure={stepsPerMeasure}
+        compact={compact}
+        onClose={() => setShowRoll(false)}
+      />
+    )}
+    </div>
   );
 }
 
@@ -381,6 +403,8 @@ interface NoteEditorProps {
   octave: number;
   onOctave: (o: number) => void;
   currentNote: NoteWithOctave | null;
+  /** Set when the step holds a chord: picking a note here replaces it */
+  chordNotes?: NoteWithOctave[];
   active: boolean;
   length: number;
   onSelect: (note: NoteWithOctave) => void;
@@ -391,7 +415,7 @@ interface NoteEditorProps {
 
 /** Floating editor for one synth step: octave, scale note, length. */
 function NoteEditor({
-  title, scaleNotes, octave, onOctave, currentNote, active, length, onSelect, onLength, onClear, onClose,
+  title, scaleNotes, octave, onOctave, currentNote, chordNotes, active, length, onSelect, onLength, onClear, onClose,
 }: NoteEditorProps) {
   const ref = usePopover<HTMLDivElement>(onClose);
   const headingId = useId();
@@ -414,6 +438,11 @@ function NoteEditor({
           ×
         </button>
       </div>
+      {chordNotes && (
+        <p className="text-[11px] text-accent-amber-fg mb-2 max-w-44">
+          Chord: {chordNotes.join(' ')}. Picking a note here replaces it with one note — edit chords in the piano roll.
+        </p>
+      )}
       {/* Octave selector */}
       <div role="group" aria-label="Octave" className="flex gap-1 mb-2">
         {[2, 3, 4, 5, 6].map(oct => (

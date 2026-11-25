@@ -6,6 +6,7 @@ import { DEFAULT_DRUM_PARAMS, DEFAULT_MELODIC_PARAMS, getDrumKit, getSynthPreset
 import { createDefaultPattern, createEmptyDrumTrack, createEmptyMelodicTrack, getStepsPerMeasure } from '../utils/patternHelpers';
 import * as history from './history';
 import { announce } from '../utils/announce';
+import { stepNotes, stepFromNotes, transposeStep, noteToMidi } from '../utils/melodicNotes';
 
 // Undo history lives in ./history (shared with the song arrangement).
 // Don't record anything until persisted state has been rehydrated.
@@ -26,6 +27,28 @@ function nextVelocity(current: number): number {
     if (d < best) { best = d; closest = i; }
   });
   return VELOCITY_LEVELS[(closest + 1) % VELOCITY_LEVELS.length];
+}
+
+/** Replace one synth step in the active pattern */
+function mapMelodicStep(
+  state: { patterns: Pattern[]; activePatternId: string },
+  trackId: string,
+  stepIndex: number,
+  fn: (s: MelodicStep, numSteps: number) => MelodicStep,
+): { patterns: Pattern[] } {
+  return {
+    patterns: state.patterns.map(p =>
+      p.id !== state.activePatternId ? p : {
+        ...p,
+        melodicTracks: p.melodicTracks.map(t =>
+          t.id !== trackId ? t : {
+            ...t,
+            steps: t.steps.map((s, i) => (i === stepIndex ? fn(s, p.numSteps) : s)),
+          }
+        ),
+      }
+    ),
+  };
 }
 
 function rotate<T>(arr: T[], by: number): T[] {
@@ -52,8 +75,17 @@ interface SequencerStore {
   /** Cycle an active drum step through velocity levels */
   cycleDrumVelocity: (trackId: string, stepIndex: number) => void;
   setMelodicStep: (trackId: string, stepIndex: number, note: NoteWithOctave | null, opts?: { velocity?: number; length?: number }) => void;
+  /** Length for every note on the step */
   setMelodicStepLength: (trackId: string, stepIndex: number, length: number) => void;
+  /** Cycle velocity for every note on the step */
   cycleMelodicVelocity: (trackId: string, stepIndex: number) => void;
+  /** Add the note if absent, remove it if present. `mono` replaces any other notes on the step. */
+  toggleMelodicNote: (trackId: string, stepIndex: number, note: NoteWithOctave, opts?: { length?: number; velocity?: number; mono?: boolean }) => void;
+  /** Add (or update) one note on a step, keeping the others */
+  addMelodicNote: (trackId: string, stepIndex: number, note: NoteWithOctave, opts?: { length?: number; velocity?: number; mono?: boolean }) => void;
+  removeMelodicNote: (trackId: string, stepIndex: number, note: NoteWithOctave) => void;
+  setMelodicNoteLength: (trackId: string, stepIndex: number, note: NoteWithOctave, length: number) => void;
+  cycleMelodicNoteVelocity: (trackId: string, stepIndex: number, note: NoteWithOctave) => void;
   toggleMelodicStep: (trackId: string, stepIndex: number) => void;
   muteTrack: (trackId: string, type: 'drum' | 'melodic') => void;
   soloTrack: (trackId: string, type: 'drum' | 'melodic') => void;
@@ -75,6 +107,8 @@ interface SequencerStore {
   updateMelodicSynthParams: (trackId: string, params: Partial<MelodicSynthParams>) => void;
   setMelodicSynthType: (trackId: string, synthType: SynthType) => void;
   setDrumSteps: (trackId: string, steps: StepValue[]) => void;
+  /** Replace every step of a synth track at once (e.g. writing a chord progression) */
+  setMelodicSteps: (trackId: string, steps: MelodicStep[]) => void;
   setMelodicOctave: (trackId: string, octave: number) => void;
   setTimeSignature: (ts: TimeSignature) => void;
   setStepResolution: (resolution: StepResolution) => void;
@@ -203,9 +237,9 @@ export const useSequencerStore = create<SequencerStore>()(
               melodicTracks: p.melodicTracks.map(t =>
                 t.id !== trackId ? t : {
                   ...t,
+                  // Sets a single note: any chord on the step is replaced
                   steps: t.steps.map((s, i) =>
                     i !== stepIndex ? s : {
-                      ...s,
                       active: note !== null,
                       note,
                       velocity: opts?.velocity ?? s.velocity,
@@ -219,37 +253,62 @@ export const useSequencerStore = create<SequencerStore>()(
         })),
 
       setMelodicStepLength: (trackId, stepIndex, length) =>
-        set((state) => ({
-          patterns: state.patterns.map(p =>
-            p.id !== state.activePatternId ? p : {
-              ...p,
-              melodicTracks: p.melodicTracks.map(t =>
-                t.id !== trackId ? t : {
-                  ...t,
-                  steps: t.steps.map((s, i) =>
-                    i !== stepIndex ? s : { ...s, length: Math.max(1, Math.min(p.numSteps, Math.round(length))) }
-                  ),
-                }
-              ),
-            }
-          ),
+        set((state) => mapMelodicStep(state, trackId, stepIndex, (s, numSteps) => {
+          const L = Math.max(1, Math.min(numSteps, Math.round(length)));
+          if (!s.active) return { ...s, length: L };
+          return stepFromNotes(s, stepNotes(s).map(n => ({ ...n, length: L })));
         })),
 
       cycleMelodicVelocity: (trackId, stepIndex) =>
-        set((state) => ({
-          patterns: state.patterns.map(p =>
-            p.id !== state.activePatternId ? p : {
-              ...p,
-              melodicTracks: p.melodicTracks.map(t =>
-                t.id !== trackId ? t : {
-                  ...t,
-                  steps: t.steps.map((s, i) =>
-                    i !== stepIndex || !s.active ? s : { ...s, velocity: nextVelocity(s.velocity) }
-                  ),
-                }
-              ),
-            }
-          ),
+        set((state) => mapMelodicStep(state, trackId, stepIndex, (s) => {
+          if (!s.active) return s;
+          const v = nextVelocity(s.velocity);
+          return stepFromNotes(s, stepNotes(s).map(n => ({ ...n, velocity: v })));
+        })),
+
+      toggleMelodicNote: (trackId, stepIndex, note, opts) =>
+        set((state) => mapMelodicStep(state, trackId, stepIndex, (s, numSteps) => {
+          const midi = noteToMidi(note);
+          const notes = stepNotes(s);
+          if (notes.some(n => noteToMidi(n.note) === midi)) {
+            return stepFromNotes(s, notes.filter(n => noteToMidi(n.note) !== midi));
+          }
+          const added = {
+            note,
+            velocity: opts?.velocity ?? 0.8,
+            length: Math.max(1, Math.min(numSteps - stepIndex, opts?.length ?? 1)),
+          };
+          return stepFromNotes(s, opts?.mono ? [added] : [...notes, added]);
+        })),
+
+      addMelodicNote: (trackId, stepIndex, note, opts) =>
+        set((state) => mapMelodicStep(state, trackId, stepIndex, (s, numSteps) => {
+          const midi = noteToMidi(note);
+          const others = opts?.mono ? [] : stepNotes(s).filter(n => noteToMidi(n.note) !== midi);
+          return stepFromNotes(s, [...others, {
+            note,
+            velocity: opts?.velocity ?? 0.8,
+            length: Math.max(1, Math.min(numSteps - stepIndex, opts?.length ?? 1)),
+          }]);
+        })),
+
+      removeMelodicNote: (trackId, stepIndex, note) =>
+        set((state) => mapMelodicStep(state, trackId, stepIndex, (s) => {
+          const midi = noteToMidi(note);
+          return stepFromNotes(s, stepNotes(s).filter(n => noteToMidi(n.note) !== midi));
+        })),
+
+      setMelodicNoteLength: (trackId, stepIndex, note, length) => history.coalesced(`note-length:${trackId}:${stepIndex}:${note}`, () =>
+        set((state) => mapMelodicStep(state, trackId, stepIndex, (s, numSteps) => {
+          const midi = noteToMidi(note);
+          const L = Math.max(1, Math.min(numSteps - stepIndex, Math.round(length)));
+          return stepFromNotes(s, stepNotes(s).map(n => (noteToMidi(n.note) === midi ? { ...n, length: L } : n)));
+        }))),
+
+      cycleMelodicNoteVelocity: (trackId, stepIndex, note) =>
+        set((state) => mapMelodicStep(state, trackId, stepIndex, (s) => {
+          const midi = noteToMidi(note);
+          return stepFromNotes(s, stepNotes(s).map(n => (noteToMidi(n.note) === midi ? { ...n, velocity: nextVelocity(n.velocity) } : n)));
         })),
 
       toggleMelodicStep: (trackId, stepIndex) =>
@@ -376,6 +435,8 @@ export const useSequencerStore = create<SequencerStore>()(
                 melodicTracks: p.melodicTracks.map(t => {
                   if (t.id !== trackId) return t;
                   const octave = preset.octave ?? t.octave;
+                  // Move existing notes by the octave change, keeping their shape
+                  const shift = (octave - t.octave) * 12;
                   return {
                     ...t,
                     synthType: preset.synthType,
@@ -383,11 +444,7 @@ export const useSequencerStore = create<SequencerStore>()(
                     reverbSend: preset.reverbSend ?? 0,
                     delaySend: preset.delaySend ?? 0,
                     octave,
-                    steps: octave === t.octave ? t.steps : t.steps.map(s => {
-                      if (!s.active || !s.note) return s;
-                      const noteName = s.note.replace(/\d+$/, '');
-                      return { ...s, note: `${noteName}${octave}` as NoteWithOctave };
-                    }),
+                    steps: shift === 0 ? t.steps : t.steps.map(s => transposeStep(s, shift)),
                   };
                 }),
               }
@@ -539,6 +596,21 @@ export const useSequencerStore = create<SequencerStore>()(
           ),
         })),
 
+      setMelodicSteps: (trackId, steps) =>
+        set((state) => ({
+          patterns: state.patterns.map(p =>
+            p.id !== state.activePatternId ? p : {
+              ...p,
+              melodicTracks: p.melodicTracks.map(t =>
+                t.id !== trackId ? t : {
+                  ...t,
+                  steps: Array.from({ length: p.numSteps }, (_, i) => steps[i] ?? { active: false, note: null, velocity: 0.8 }),
+                }
+              ),
+            }
+          ),
+        })),
+
       setDrumSteps: (trackId, steps) =>
         set((state) => ({
           patterns: state.patterns.map(p =>
@@ -560,11 +632,8 @@ export const useSequencerStore = create<SequencerStore>()(
                 t.id !== trackId ? t : {
                   ...t,
                   octave,
-                  steps: t.steps.map(s => {
-                    if (!s.active || !s.note) return s;
-                    const noteName = s.note.replace(/\d+$/, '');
-                    return { ...s, note: `${noteName}${octave}` as NoteWithOctave };
-                  }),
+                  // Move notes by the octave change, keeping melodies and chords intact
+                  steps: t.steps.map(s => transposeStep(s, (octave - t.octave) * 12)),
                 }
               ),
             }
@@ -909,8 +978,10 @@ export const useSequencerStore = create<SequencerStore>()(
                 ...t,
                 steps: t.steps.map(s => {
                   if (!s.active) return s;
-                  const jitter = (Math.random() - 0.5) * 2 * amount;
-                  return { ...s, velocity: Math.max(0.25, Math.min(1, +(s.velocity + jitter).toFixed(2))) };
+                  return stepFromNotes(s, stepNotes(s).map(n => {
+                    const jitter = (Math.random() - 0.5) * 2 * amount;
+                    return { ...n, velocity: Math.max(0.25, Math.min(1, +(n.velocity + jitter).toFixed(2))) };
+                  }));
                 }),
               })),
             }

@@ -2,7 +2,7 @@ import * as Tone from 'tone';
 import { DrumEngine } from './DrumEngine';
 import { SynthEngine } from './SynthEngine';
 import { Mixer } from './Mixer';
-import type { DrumSynthParams, MelodicSynthParams, SynthType, StepResolution } from '../types';
+import type { NoteEvent, DrumSynthParams, MelodicSynthParams, SynthType, StepResolution } from '../types';
 import type { MixerSettings } from '../store/useMixerStore';
 import { useMixerStore } from '../store/useMixerStore';
 
@@ -19,11 +19,8 @@ export interface DrumStepData {
 
 export interface MelodicStepData {
   trackId: string;
-  note: string | null;
-  active: boolean;
-  velocity: number;
-  /** Note length in steps */
-  length: number;
+  /** Every note starting on this step (empty when the step is off) */
+  notes: NoteEvent[];
   muted: boolean;
   synthType: SynthType;
   synthParams: MelodicSynthParams;
@@ -135,11 +132,12 @@ export class AudioEngine {
           this.synthEngine.ensureSynth(t0.trackId, t0.synthType, t0.synthParams, t0.volume, t0.reverbSend, t0.delaySend);
         }
         const stepData = track[step];
-        if (stepData && stepData.active && stepData.note && !stepData.muted) {
-          const len = Math.max(1, stepData.length || 1);
-          // Slight gap so identical consecutive notes re-articulate cleanly
-          const duration = Math.max(0.03, len * stepDuration - 0.01);
-          this.synthEngine.playNote(stepData.trackId, stepData.note, duration, triggerTime, stepData.velocity);
+        if (stepData && !stepData.muted) {
+          for (const n of stepData.notes) {
+            // Slight gap so identical consecutive notes re-articulate cleanly
+            const duration = Math.max(0.03, Math.max(1, n.length) * stepDuration - 0.01);
+            this.synthEngine.playNote(stepData.trackId, n.note, duration, triggerTime, n.velocity);
+          }
         }
       }
 

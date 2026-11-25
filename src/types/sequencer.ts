@@ -81,12 +81,28 @@ export interface DrumTrack {
   delaySend?: number;
 }
 
+/** One note that starts on a step */
+export interface NoteEvent {
+  note: NoteWithOctave;
+  velocity: number;
+  /** Length in steps (≥1) */
+  length: number;
+}
+
+/**
+ * A synth step. `note` / `velocity` / `length` describe the step's lowest
+ * note; `more` holds any further notes starting on the same step (a chord),
+ * each with its own length and velocity. Read and write chords through
+ * utils/melodicNotes rather than these fields directly.
+ */
 export interface MelodicStep {
   active: boolean;
   note: NoteWithOctave | null;
   velocity: number;
   /** Note length in steps (optional, default 1) */
   length?: number;
+  /** Further notes on this step, above `note` (optional; absent for single notes) */
+  more?: NoteEvent[];
 }
 
 export interface MelodicTrack {
