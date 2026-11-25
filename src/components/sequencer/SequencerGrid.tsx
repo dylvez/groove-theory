@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTransportStore } from '../../store/useTransportStore';
+import { useSongStore } from '../../store/useSongStore';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useGridFocusStore } from '../../store/useGridFocusStore';
@@ -43,6 +45,49 @@ export function SequencerGrid() {
   const [drumsCollapsed, setDrumsCollapsed] = useState(false);
   const [synthsCollapsed, setSynthsCollapsed] = useState(false);
   const setGridFocus = useGridFocusStore(s => s.setGridFocus);
+  const followPlayhead = useUIStore(s => s.followPlayhead);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // Follow the playhead: when the playing step leaves the visible area, turn
+  // the page so it sits near the left edge (and jump back to the start when
+  // the loop wraps). Never while the mouse button is down, so a drag-paint
+  // or a manual scroll isn't fought.
+  useEffect(() => {
+    if (!followPlayhead) return;
+    let pointerDown = false;
+    const down = () => { pointerDown = true; };
+    const up = () => { pointerDown = false; };
+    window.addEventListener('pointerdown', down, true);
+    window.addEventListener('pointerup', up, true);
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // While a smooth page turn is still moving, positions are mid-animation;
+    // checking then would cut the turn short (e.g. the jump back to step 1)
+    let animatingUntil = 0;
+    const unsubscribe = useTransportStore.subscribe((s, prev) => {
+      if (s.currentStep === prev.currentStep || pointerDown) return;
+      if (performance.now() < animatingUntil) return;
+      const playing = s.state === 'playing' || useSongStore.getState().songState === 'playing';
+      const scroller = scrollerRef.current;
+      if (!playing || !scroller) return;
+      const cell = scroller.querySelector<HTMLElement>(`[data-cell][data-step="${s.currentStep}"]`);
+      if (!cell) return;
+      const sr = scroller.getBoundingClientRect();
+      const cr = cell.getBoundingClientRect();
+      // Cells hidden under the pinned track headers count as off-screen too
+      const header = scroller.querySelector<HTMLElement>('[data-sticky-header]');
+      const visibleLeft = header ? header.getBoundingClientRect().right : sr.left;
+      if (cr.right <= sr.right - 4 && cr.left >= visibleLeft) return;
+      const left = s.currentStep === 0 ? 0 : scroller.scrollLeft + (cr.left - visibleLeft) - 8;
+      const smooth = !reduceMotion.matches;
+      scroller.scrollTo({ left, behavior: smooth ? 'smooth' : 'auto' });
+      if (smooth) animatingUntil = performance.now() + 600;
+    });
+    return () => {
+      unsubscribe();
+      window.removeEventListener('pointerdown', down, true);
+      window.removeEventListener('pointerup', up, true);
+    };
+  }, [followPlayhead]);
   const setDrumStep = useSequencerStore(s => s.setDrumStep);
   const setMelodicStep = useSequencerStore(s => s.setMelodicStep);
 
@@ -147,10 +192,15 @@ export function SequencerGrid() {
         Shift+Enter changes velocity. Delete clears a step. Space plays and stops.
       </p>
       <div
-        className="px-6 py-3 flex flex-col gap-3 overflow-auto min-h-0 flex-1"
+        ref={scrollerRef}
+        className="py-3 overflow-auto min-h-0 flex-1"
         onKeyDown={handleGridKeyDown}
         onFocus={handleGridFocus}
       >
+        {/* As wide as the widest row, so pinned headers have room to stay put.
+            The side padding lives here, not on the scroller, so pinned
+            headers can reach the scroller's edge and cover cells behind them. */}
+        <div className="flex flex-col gap-3 w-max min-w-full px-6">
         <StepRuler numSteps={activePattern.numSteps} stepsPerMeasure={stepsPerMeasure} compact={isCompact} />
 
         {/* Drums section */}
@@ -160,6 +210,8 @@ export function SequencerGrid() {
               ? 'bg-accent-amber/20 text-accent-amber-fg border border-accent-amber/40'
               : 'bg-bg-tertiary text-text-secondary border border-transparent'
           }`}>
+            {/* Pinned to the left while the grid scrolls sideways */}
+            <div className="sticky left-3 flex items-center gap-2">
             <h3 className="flex items-center">
             <button
               onClick={() => setDrumsCollapsed(!drumsCollapsed)}
@@ -190,9 +242,10 @@ export function SequencerGrid() {
                 ))}
               </select>
             </label>
-            <span className="text-[11px] font-normal normal-case tracking-normal ml-auto">
+            <span className="text-[11px] font-normal normal-case tracking-normal ml-3">
               {activePattern.drumTracks.length} {activePattern.drumTracks.length === 1 ? 'track' : 'tracks'}
             </span>
+            </div>
           </div>
 
           {!drumsCollapsed && (
@@ -208,7 +261,7 @@ export function SequencerGrid() {
               ))}
 
               {/* Add drum button */}
-              <div className="relative flex items-center gap-2">
+              <div className="sticky left-0 w-fit flex items-center gap-2">
                 <button
                   onClick={() => { setShowDrumPicker(!showDrumPicker); setShowSynthPicker(false); }}
                   aria-expanded={showDrumPicker}
@@ -247,15 +300,16 @@ export function SequencerGrid() {
 
         {/* Synth section */}
         <div>
-          <h3>
+          <div className={`w-full flex items-center px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
+            studioTab === 'harmony'
+              ? 'bg-accent-purple/20 text-accent-purple-fg border border-accent-purple/40'
+              : 'bg-bg-tertiary text-text-secondary border border-transparent'
+          }`}>
+          <h3 className="sticky left-3">
           <button
             onClick={() => setSynthsCollapsed(!synthsCollapsed)}
             aria-expanded={!synthsCollapsed}
-            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider cursor-pointer transition-colors ${
-              studioTab === 'harmony'
-                ? 'bg-accent-purple/20 text-accent-purple-fg border border-accent-purple/40'
-                : 'bg-bg-tertiary text-text-secondary border border-transparent'
-            }`}
+            className="flex items-center gap-2 min-h-6 cursor-pointer uppercase font-semibold tracking-wider"
           >
             <svg
               aria-hidden="true"
@@ -266,11 +320,12 @@ export function SequencerGrid() {
               <path d="M4 2l5 4-5 4V2z" />
             </svg>
             Synth
-            <span className="text-[11px] font-normal normal-case tracking-normal ml-auto">
+            <span className="text-[11px] font-normal normal-case tracking-normal ml-3">
               <span className="sr-only">, </span>{activePattern.melodicTracks.length} {activePattern.melodicTracks.length === 1 ? 'track' : 'tracks'}
             </span>
           </button>
           </h3>
+          </div>
 
           {!synthsCollapsed && (
             <div className="flex flex-col gap-2 mt-2">
@@ -285,7 +340,7 @@ export function SequencerGrid() {
               ))}
 
               {/* Add synth button */}
-              <div className="relative flex items-center gap-2">
+              <div className="sticky left-0 w-fit flex items-center gap-2">
                 <button
                   onClick={() => { setShowSynthPicker(!showSynthPicker); setShowDrumPicker(false); }}
                   aria-expanded={showSynthPicker}
@@ -335,6 +390,7 @@ export function SequencerGrid() {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
     </section>

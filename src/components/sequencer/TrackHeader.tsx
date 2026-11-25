@@ -23,6 +23,8 @@ interface TrackHeaderProps {
   /** Synth tracks: the name opens and closes the piano roll */
   pianoRollOpen?: boolean;
   onTogglePianoRoll?: () => void;
+  /** Floating panel anchored to the header (sound settings), so it opens in view even when the grid is scrolled */
+  panel?: React.ReactNode;
 }
 
 export function HeaderResizeHandle() {
@@ -40,11 +42,11 @@ export function HeaderResizeHandle() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragging.current) return;
-      const gridEl = document.querySelector('[data-sequencer-grid]');
-      if (!gridEl) return;
-      const gridRect = gridEl.getBoundingClientRect();
-      const newWidth = e.clientX - gridRect.left - 24; // subtract px-6 padding
-      setTrackHeaderWidth(newWidth);
+      // Measure from a (pinned) track header so this works when the grid is scrolled
+      const header = document.querySelector('[data-sticky-header]');
+      if (!header) return;
+      const left = header.getBoundingClientRect().left + 4; // header has -mx-1
+      setTrackHeaderWidth(e.clientX - left);
     };
 
     const handleMouseUp = () => {
@@ -79,7 +81,7 @@ export function HeaderResizeHandle() {
 export function TrackHeader({
   name, color, muted, solo,
   onMute, onSolo, onRemove, onRename, onOpenSettings, settingsOpen, onFill,
-  onAudition, armed, onToggleArm, subtitle, pianoRollOpen, onTogglePianoRoll,
+  onAudition, armed, onToggleArm, subtitle, pianoRollOpen, onTogglePianoRoll, panel,
 }: TrackHeaderProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(name);
@@ -94,8 +96,11 @@ export function TrackHeader({
   };
 
   return (
+    // Pinned to the left edge while the grid scrolls sideways; needs an opaque
+    // background so the cells pass underneath it
     <div
-      className={`flex items-center gap-1.5 shrink-0 rounded-md px-1 -mx-1 transition-colors ${armed ? 'bg-accent-red/10' : ''}`}
+      data-sticky-header=""
+      className={`sticky left-0 z-20 flex items-center gap-1.5 shrink-0 px-1 -mx-1 transition-colors ${armed ? 'bg-[#251418]' : 'bg-bg-primary'}`}
       style={{ width: trackHeaderWidth + 8 }}
     >
       <button
@@ -225,6 +230,7 @@ export function TrackHeader({
           </button>
         )}
       </div>
+      {panel}
     </div>
   );
 }

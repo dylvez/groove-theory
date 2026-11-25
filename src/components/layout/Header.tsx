@@ -81,7 +81,8 @@ export function Header() {
 
   const [saveOpen, setSaveOpen] = useState(false);
   const [openOpen, setOpenOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const helpOpen = useUIStore(s => s.helpOpen);
+  const setHelpOpen = useUIStore(s => s.setHelpOpen);
   const [exporting, setExporting] = useState<'wav' | 'mp3' | null>(null);
   const [exportDropdown, setExportDropdown] = useState<ExportDropdownType>(null);
 

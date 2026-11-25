@@ -1,5 +1,6 @@
 import { useTransportStore } from '../../store/useTransportStore';
 import { useUIStore } from '../../store/useUIStore';
+import { useSongStore } from '../../store/useSongStore';
 
 interface StepRulerProps {
   numSteps: number;
@@ -16,14 +17,15 @@ export function StepRuler({ numSteps, stepsPerMeasure, compact = false }: StepRu
   const trackHeaderWidth = useUIStore(s => s.trackHeaderWidth);
   const setTrackHeaderWidth = useUIStore(s => s.setTrackHeaderWidth);
   const currentStep = useTransportStore(s => s.currentStep);
-  const isPlaying = useTransportStore(s => s.state) === 'playing';
+  const songPlaying = useSongStore(s => s.songState) === 'playing';
+  const isPlaying = useTransportStore(s => s.state) === 'playing' || songPlaying;
   const stepsPerBeat = compact ? 8 : 4;
 
   return (
     <div className="flex items-end gap-1 select-none">
       {/* Spacer: header width + gap + resize handle + gap. Its right edge holds
           the keyboard-operable version of the track-name column resize handle. */}
-      <div className="shrink-0 relative self-stretch" style={{ width: trackHeaderWidth + 4 + 8 }}>
+      <div className="shrink-0 sticky left-0 z-20 bg-bg-primary self-stretch" style={{ width: trackHeaderWidth + 4 + 8 }}>
         <div
           role="separator"
           tabIndex={0}

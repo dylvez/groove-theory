@@ -8,6 +8,10 @@ import { useSequencerPlayback } from '../../hooks/useSequencerPlayback';
 import { useSongPlayback } from '../../hooks/useSongPlayback';
 import { useGlobalShortcuts } from '../../hooks/useGlobalShortcuts';
 import { useLiveKeys } from '../../hooks/useLiveKeys';
+import { WelcomeBar } from './WelcomeBar';
+import { PRESET_GROOVES } from '../../constants/presetGrooves';
+import { applyGroove } from '../../utils/grooveStorage';
+import { isFirstVisit, welcomePending, setWelcomeState, claimDemoLoad, DEMO_PRESET_ID } from '../../utils/firstRun';
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -77,7 +81,7 @@ function StudioView() {
   }, []);
 
   return (
-    <div ref={containerRef} className="flex flex-1 overflow-hidden">
+    <div ref={containerRef} className="flex flex-1 min-h-0 overflow-hidden">
       {/* Sequencer side */}
       <div ref={sequencerColRef} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <TransportBar />
@@ -157,10 +161,24 @@ export function AppShell() {
   useGlobalShortcuts();
   useLiveKeys();
 
+  // First visit: start with a demo song instead of an empty grid
+  const [showWelcome, setShowWelcome] = useState(welcomePending);
+  useEffect(() => {
+    if (!isFirstVisit || !claimDemoLoad()) return;
+    const demo = PRESET_GROOVES.find(p => p.id === DEMO_PRESET_ID);
+    if (demo) applyGroove(structuredClone(demo.groove));
+    setWelcomeState('shown');
+  }, []);
+  const dismissWelcome = useCallback(() => {
+    setWelcomeState('dismissed');
+    setShowWelcome(false);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">
       <Header />
-      <main className="flex flex-1 min-h-0 overflow-hidden">
+      <main className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        {showWelcome && <WelcomeBar onDismiss={dismissWelcome} />}
         <StudioView />
       </main>
     </div>

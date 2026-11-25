@@ -115,6 +115,22 @@ export function DrumTrack({ track, onRemove, stepsPerMeasure = 16, compact = fal
         settingsOpen={showSettings}
         onFill={() => fillDrumTrack(track.id)}
         onAudition={handleAudition}
+        panel={showSettings && (
+        <DrumSettingsPanel
+          name={track.name}
+          onRename={(newName) => renameTrack(track.id, 'drum', newName)}
+          synthParams={track.synthParams}
+          volume={track.volume}
+          reverbSend={track.reverbSend ?? 0}
+          delaySend={track.delaySend ?? 0}
+          onChange={handleParamChange}
+          onVolumeChange={handleVolumeChange}
+          onSendsChange={handleSendsChange}
+          onReset={handleReset}
+          onAudition={handleAudition}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
       />
       <HeaderResizeHandle />
       <div
@@ -139,22 +155,6 @@ export function DrumTrack({ track, onRemove, stepsPerMeasure = 16, compact = fal
           />
         ))}
       </div>
-      {showSettings && (
-        <DrumSettingsPanel
-          name={track.name}
-          onRename={(newName) => renameTrack(track.id, 'drum', newName)}
-          synthParams={track.synthParams}
-          volume={track.volume}
-          reverbSend={track.reverbSend ?? 0}
-          delaySend={track.delaySend ?? 0}
-          onChange={handleParamChange}
-          onVolumeChange={handleVolumeChange}
-          onSendsChange={handleSendsChange}
-          onReset={handleReset}
-          onAudition={handleAudition}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
     </div>
   );
 }

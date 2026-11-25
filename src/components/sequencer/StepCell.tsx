@@ -1,4 +1,5 @@
 import { useTransportStore } from '../../store/useTransportStore';
+import { useSongStore } from '../../store/useSongStore';
 import { useGridFocusStore, stepPosition, velocityName } from '../../store/useGridFocusStore';
 import { velocityAlpha } from '../../utils/stepDisplay';
 
@@ -24,7 +25,9 @@ export function StepCell({
   onPointerDown, onPointerEnter, onActivate,
 }: StepCellProps) {
   const currentStep = useTransportStore(s => s.currentStep);
-  const isPlaying = useTransportStore(s => s.state) === 'playing';
+  // The song player drives the same step counter, so show the playhead for both
+  const songPlaying = useSongStore(s => s.songState) === 'playing';
+  const isPlaying = useTransportStore(s => s.state) === 'playing' || songPlaying;
   const isTabStop = useGridFocusStore(s => s.trackId === trackId && s.step === stepIndex);
   const isCurrent = isPlaying && currentStep === stepIndex;
   const stepsPerBeat = compact ? 8 : 4;

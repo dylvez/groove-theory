@@ -9,6 +9,7 @@ import type { MelodicTrack as MelodicTrackType, NoteWithOctave, MelodicSynthPara
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useTheoryStore } from '../../store/useTheoryStore';
 import { useTransportStore } from '../../store/useTransportStore';
+import { useSongStore } from '../../store/useSongStore';
 import { useUIStore } from '../../store/useUIStore';
 import { AudioEngine } from '../../audio/AudioEngine';
 import { DEFAULT_MELODIC_PARAMS, SYNTH_PRESETS } from '../../constants';
@@ -57,7 +58,8 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
   const rootNote = useTheoryStore(s => s.rootNote);
   const selectedScale = useTheoryStore(s => s.selectedScale);
   const currentStep = useTransportStore(s => s.currentStep);
-  const isPlaying = useTransportStore(s => s.state) === 'playing';
+  const songPlaying = useSongStore(s => s.songState) === 'playing';
+  const isPlaying = useTransportStore(s => s.state) === 'playing' || songPlaying;
   const armedTrackId = useUIStore(s => s.armedTrackId);
   const setArmedTrack = useUIStore(s => s.setArmedTrack);
   const armed = armedTrackId === track.id;
@@ -263,6 +265,27 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
         subtitle={presetName ?? undefined}
         pianoRollOpen={showRoll}
         onTogglePianoRoll={() => setShowRoll(v => !v)}
+        panel={showSettings && (
+        <MelodicSettingsPanel
+          name={track.name}
+          onRename={(newName) => renameTrack(track.id, 'melodic', newName)}
+          synthType={track.synthType}
+          synthParams={track.synthParams}
+          volume={track.volume}
+          octave={track.octave}
+          reverbSend={track.reverbSend ?? 0}
+          delaySend={track.delaySend ?? 0}
+          onParamChange={handleParamChange}
+          onVolumeChange={handleVolumeChange}
+          onSendsChange={handleSendsChange}
+          onSynthTypeChange={handleSynthTypeChange}
+          onPresetChange={handlePresetChange}
+          onOctaveChange={(o) => setMelodicOctave(track.id, o)}
+          onReset={handleReset}
+          onAudition={handleAudition}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
       />
       <HeaderResizeHandle />
       <div
@@ -362,27 +385,6 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
           );
         })}
       </div>
-      {showSettings && (
-        <MelodicSettingsPanel
-          name={track.name}
-          onRename={(newName) => renameTrack(track.id, 'melodic', newName)}
-          synthType={track.synthType}
-          synthParams={track.synthParams}
-          volume={track.volume}
-          octave={track.octave}
-          reverbSend={track.reverbSend ?? 0}
-          delaySend={track.delaySend ?? 0}
-          onParamChange={handleParamChange}
-          onVolumeChange={handleVolumeChange}
-          onSendsChange={handleSendsChange}
-          onSynthTypeChange={handleSynthTypeChange}
-          onPresetChange={handlePresetChange}
-          onOctaveChange={(o) => setMelodicOctave(track.id, o)}
-          onReset={handleReset}
-          onAudition={handleAudition}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
     </div>
     {showRoll && (
       <PianoRoll

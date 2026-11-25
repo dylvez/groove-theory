@@ -15,6 +15,12 @@ interface UIStore {
   /** Single-character shortcuts (1–4, [ ], R, and the piano's letter keys). Can be turned off in Help. */
   singleKeyShortcuts: boolean;
   setSingleKeyShortcuts: (on: boolean) => void;
+  /** Scroll the grid to keep the playing step in view */
+  followPlayhead: boolean;
+  setFollowPlayhead: (on: boolean) => void;
+  /** Help guide open (lifted here so the welcome bar can open it) */
+  helpOpen: boolean;
+  setHelpOpen: (open: boolean) => void;
   setStudioTab: (tab: StudioTab) => void;
   setTrackHeaderWidth: (w: number) => void;
   setArmedTrack: (id: string | null) => void;
@@ -35,6 +41,10 @@ export const useUIStore = create<UIStore>()(persist((set) => ({
   liveOctave: 4,
   singleKeyShortcuts: true,
   setSingleKeyShortcuts: (on) => set({ singleKeyShortcuts: on }),
+  followPlayhead: true,
+  setFollowPlayhead: (on) => set({ followPlayhead: on }),
+  helpOpen: false,
+  setHelpOpen: (open) => set({ helpOpen: open }),
   setStudioTab: (tab) => set({ studioTab: tab }),
   setTrackHeaderWidth: (w) => set({ trackHeaderWidth: Math.max(MIN_HEADER_WIDTH, Math.min(MAX_HEADER_WIDTH, w)) }),
   setArmedTrack: (id) => set((s) => ({ armedTrackId: id, recording: id === null ? false : s.recording })),
@@ -51,5 +61,10 @@ export const useUIStore = create<UIStore>()(persist((set) => ({
     return s as UIStore;
   },
   // Only preferences — not transient state like the armed track
-  partialize: (s) => ({ singleKeyShortcuts: s.singleKeyShortcuts, trackHeaderWidth: s.trackHeaderWidth, studioTab: s.studioTab }),
+  partialize: (s) => ({
+    singleKeyShortcuts: s.singleKeyShortcuts,
+    trackHeaderWidth: s.trackHeaderWidth,
+    studioTab: s.studioTab,
+    followPlayhead: s.followPlayhead,
+  }),
 }));

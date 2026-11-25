@@ -46,6 +46,8 @@ export function TransportBar() {
   const toggleRecording = useUIStore(s => s.toggleRecording);
   const liveOctave = useUIStore(s => s.liveOctave);
   const setLiveOctave = useUIStore(s => s.setLiveOctave);
+  const followPlayhead = useUIStore(s => s.followPlayhead);
+  const setFollowPlayhead = useUIStore(s => s.setFollowPlayhead);
   const patterns = useSequencerStore(s => s.patterns);
   const activePatternId = useSequencerStore(s => s.activePatternId);
   const setActivePattern = useSequencerStore(s => s.setActivePattern);
@@ -321,6 +323,20 @@ export function TransportBar() {
         }`}
       >
         LOOP
+      </button>
+
+      {/* Follow playhead */}
+      <button
+        onClick={() => setFollowPlayhead(!followPlayhead)}
+        aria-pressed={followPlayhead}
+        title={followPlayhead ? 'The grid scrolls to keep the playing step in view — click to stop following' : 'Keep the playing step in view while playing'}
+        className={`px-2 py-1 min-h-7 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 ${
+          followPlayhead
+            ? 'bg-accent-blue/20 text-accent-blue-fg border border-accent-blue/40'
+            : 'bg-bg-cell text-text-muted border border-border-control'
+        }`}
+      >
+        FOLLOW
       </button>
 
       {/* Right cluster: FX + meter */}

@@ -4,6 +4,7 @@ import { NOTE_NAMES } from '../../constants/notes';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useTheoryStore } from '../../store/useTheoryStore';
 import { useTransportStore } from '../../store/useTransportStore';
+import { useSongStore } from '../../store/useSongStore';
 import { useUIStore } from '../../store/useUIStore';
 import { beginUndoGroup, endUndoGroup } from '../../store/history';
 import { stepPosition, velocityName } from '../../store/useGridFocusStore';
@@ -281,8 +282,8 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
         Shift+Enter changes velocity, Delete removes it.
       </p>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-2" style={{ paddingLeft: 4 }}>
+      {/* Toolbar — pinned to the left while the grid scrolls sideways */}
+      <div className="sticky left-1 w-fit max-w-[min(100%,1100px)] flex flex-wrap items-center gap-x-4 gap-y-2 mb-2" style={{ paddingLeft: 4 }}>
         <h4 id={headingId} className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
           Piano roll · {track.name}
         </h4>
@@ -342,7 +343,7 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
         <button
           onClick={onClose}
           aria-label={`Close ${track.name} piano roll`}
-          className="ml-auto w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary hover:bg-bg-cell cursor-pointer"
+          className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary hover:bg-bg-cell cursor-pointer"
         >
           ×
         </button>
@@ -406,7 +407,7 @@ const PianoRollRow = memo(function PianoRollRow({
   return (
     <div role="group" aria-label={`${spoken}${isRoot ? ', root' : inScale ? '' : ', outside the scale'}`} className="flex items-center gap-1">
       {/* Pitch label — mouse users can press it to hear the note */}
-      <div aria-hidden="true" className="shrink-0 flex items-center justify-end gap-1.5 pr-1" style={{ width: labelWidth }}>
+      <div aria-hidden="true" className="shrink-0 sticky left-0 z-10 bg-[#16161d] self-stretch flex items-center justify-end gap-1.5 pr-1" style={{ width: labelWidth }}>
         <span
           onMouseDown={() => onAudition(note)}
           className={`text-[11px] font-mono cursor-pointer select-none ${
@@ -464,7 +465,8 @@ const PianoRollRow = memo(function PianoRollRow({
 /** Column highlight that follows playback across all rows */
 function Playhead({ left, compact, stepsPerMeasure }: { left: number; compact: boolean; stepsPerMeasure: number }) {
   const step = useTransportStore(s => s.currentStep);
-  const playing = useTransportStore(s => s.state) === 'playing';
+  const songPlaying = useSongStore(s => s.songState) === 'playing';
+  const playing = useTransportStore(s => s.state) === 'playing' || songPlaying;
   if (!playing) return null;
   const w = compact ? 16 : 36;
   const gap = compact ? 2 : 4;
