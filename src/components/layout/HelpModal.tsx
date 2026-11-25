@@ -102,7 +102,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <ul className="list-disc pl-4 space-y-1">
               <li><strong>Gear icon</strong> — open the sound settings panel for that track.</li>
               <li><strong>Track name</strong> — on drum tracks, click to <strong>audition</strong> the sound and double-click to rename. On synth tracks, click to open the <strong>piano roll</strong>. Every track can also be renamed in its ⚙ sound settings.</li>
-              <li><Kbd>●</Kbd> <strong>Arm</strong> (synth tracks) — play this synth live from your computer keyboard. See <em>Live Keys</em>.</li>
+              <li><Kbd>●</Kbd> <strong>Arm</strong> (synth tracks) — play this synth live from your computer keyboard. See <em>Live Keys, MIDI &amp; Recording</em>.</li>
               <li><Kbd>M</Kbd> <strong>Mute</strong> — silence the track (turns red when muted).</li>
               <li><Kbd>S</Kbd> <strong>Solo</strong> — hear only this track (turns amber when active).</li>
               <li><strong>&times;</strong> — remove the track entirely.</li>
@@ -169,7 +169,8 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <ul className="list-disc pl-4 space-y-1">
             <li><Kbd>Play / Stop</Kbd> — the one Play button for the app (also <Kbd>Space</Kbd>). The <strong>Pattern / Song</strong> switch next to it picks what it plays: <strong>Pattern</strong> loops the pattern you're editing, <strong>Song</strong> plays the song arrangement from the start. Switching while it plays changes over straight away.</li>
             <li><Kbd>BPM</Kbd> — set tempo from 40 to 300 using the input field or slider, or click <Kbd>Tap</Kbd> in time with a beat.</li>
-            <li><Kbd>●</Kbd> <strong>Record</strong> — with a synth track armed, writes what you play on the keyboard into the grid. See <em>Live Keys</em>.</li>
+            <li><Kbd>●</Kbd> <strong>Record</strong> — with a synth track armed, writes what you play on the keyboard into the grid. See <em>Live Keys, MIDI &amp; Recording</em>.</li>
+            <li><Kbd>LIVE</Kbd> — scale lock, the computer keys' octave, and connecting a MIDI keyboard.</li>
             <li><Kbd>Swing</Kbd> — add rhythmic feel from 0% (straight) to 75% (heavy triplet swing).</li>
             <li><Kbd>Loop</Kbd> — loop the pattern, or play it once. (The song has its own loop range.)</li>
             <li><Kbd>Follow</Kbd> — while a pattern or song plays, the grid scrolls a page at a time to keep the playing step in view. Turn it off to scroll freely. Track names stay pinned on the left as the grid scrolls.</li>
@@ -436,11 +437,11 @@ export function HelpModal({ onClose }: HelpModalProps) {
     },
     {
       id: 'live-keys',
-      title: 'Live Keys & Recording',
+      title: 'Live Keys, MIDI & Recording',
       icon: '\u{1F3B9}',
       content: (
         <>
-          <p>Play any synth track from your computer keyboard, and record what you play straight into the grid.</p>
+          <p>Play any synth track from your computer keyboard or a MIDI keyboard, and record what you play straight into the grid. The <Kbd>LIVE</Kbd> button in the transport holds the settings below.</p>
           <Sub title="Playing">
             <ul className="list-disc pl-4 space-y-1">
               <li>Click <Kbd>●</Kbd> on a synth track's header to <strong>arm</strong> it. The transport shows a <strong>Keys</strong> badge with the current octave.</li>
@@ -449,10 +450,26 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li>Press <Kbd>Escape</Kbd> or click <Kbd>●</Kbd> again to disarm. While nothing is armed, the keys play the theory panel's piano instead.</li>
             </ul>
           </Sub>
+          <Sub title="Scale Lock">
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Turn on <strong>Scale lock</strong> under <Kbd>LIVE</Kbd> to keep what you play into the armed track in the key chosen in the Harmony tab. A lock shows on the LIVE button while it's on.</li>
+              <li>Computer keys: the home row <Kbd>A</Kbd> <Kbd>S</Kbd> <Kbd>D</Kbd> <Kbd>F</Kbd> <Kbd>G</Kbd> <Kbd>H</Kbd> <Kbd>J</Kbd> <Kbd>K</Kbd> <Kbd>L</Kbd> <Kbd>;</Kbd> plays the scale upwards from its root, so there are no wrong notes. The top row is silent. The LIVE panel shows which note each key plays.</li>
+              <li>MIDI keyboard: a note outside the key plays the nearest note in it.</li>
+            </ul>
+          </Sub>
+          <Sub title="MIDI Keyboard">
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Plug in a USB or Bluetooth MIDI keyboard, open <Kbd>LIVE</Kbd> and press <strong>Connect MIDI keyboard</strong>. The browser asks for permission the first time; after that it reconnects by itself.</li>
+              <li>Works in Chrome, Edge and Firefox. Safari can't use MIDI keyboards.</li>
+              <li>It plays the armed synth track, with how hard you play setting the velocity. Recording works the same as with the computer keys.</li>
+              <li>With several keyboards connected, <strong>Listen to</strong> picks one. The panel shows the last note received, so you can check it's getting through.</li>
+              <li>The sustain pedal, pitch bend and knobs aren't used yet.</li>
+            </ul>
+          </Sub>
           <Sub title="Recording">
             <ul className="list-disc pl-4 space-y-1">
               <li>Start playback, then press <Kbd>●</Kbd> in the transport (or <Kbd>R</Kbd>) to enable <strong>REC</strong>.</li>
-              <li>Every key press is quantized to the nearest step and written into the armed track. Hold a key and the note's <strong>length</strong> follows.</li>
+              <li>Every note you play is quantized to the nearest step and written into the armed track. Hold a key and the note's <strong>length</strong> follows. Notes played together record as a chord.</li>
               <li>Recording loops — keep playing to layer more notes, and use Undo if you fumble.</li>
             </ul>
           </Sub>
@@ -466,7 +483,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
       content: (
         <>
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 items-center">
-            <Kbd>Space</Kbd> <span>Play / Stop the pattern or the song, whichever the Play switch is set to (anywhere outside a text field)</span>
+            <Kbd>Space</Kbd> <span>Play / Stop the pattern or the song, whichever the Play switch is set to. Works anywhere except in a text field or an open panel, where Space presses the focused control.</span>
             <Kbd>1 – 8</Kbd> <span>Select pattern A – H</span>
             <Kbd>⌘/Ctrl + Z</Kbd> <span>Undo the last change to the patterns, the song, or the tempo and swing</span>
             <Kbd>⌘/Ctrl + Shift + Z</Kbd> <span>Redo</span>

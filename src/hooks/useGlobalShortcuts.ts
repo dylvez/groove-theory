@@ -14,7 +14,8 @@ function isTypingTarget(t: EventTarget | null): boolean {
 
 /**
  * App-wide keyboard shortcuts:
- *   Space            play / stop (the pattern or the song, as the Play switch says)
+ *   Space            play / stop (the pattern or the song, as the Play switch says);
+ *                    inside an open panel it presses the focused control instead
  *   1 … 8            select pattern A–H
  *   ⌘/Ctrl+Z         undo · ⌘/Ctrl+Shift+Z (or ⌘/Ctrl+Y) redo
  *   ⌘/Ctrl+C / V     copy / paste pattern
@@ -59,6 +60,8 @@ export function useGlobalShortcuts() {
       if (mod) return;
 
       if (e.code === 'Space') {
+        // In an open panel, or on a switch or checkbox, Space works the control
+        if (e.target instanceof Element && e.target.closest('[role="dialog"], [role="switch"], [role="checkbox"], [role="radio"], input[type="checkbox"], input[type="radio"]')) return;
         e.preventDefault();
         togglePlayback();
         return;

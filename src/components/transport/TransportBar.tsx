@@ -12,6 +12,7 @@ import { PatternMenu } from './PatternMenu';
 import { MixerPanel } from './MixerPanel';
 import { TapTempo } from './TapTempo';
 import { LevelMeter } from './LevelMeter';
+import { LiveInputControl } from './LiveInputControl';
 
 function IconButton({ onClick, disabled, title, label, children, active, accent = 'text-text-muted' }: {
   onClick: () => void;
@@ -272,6 +273,9 @@ export function TransportBar() {
       >
         <span aria-hidden="true">●</span>
       </button>
+
+      {/* Scale lock, octave and MIDI keyboard */}
+      <LiveInputControl />
 
       {/* Live keys indicator */}
       {armedTrack && (

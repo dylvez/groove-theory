@@ -17,6 +17,15 @@ interface UIStore {
   recording: boolean;
   /** Octave offset for live keyboard playing */
   liveOctave: number;
+  /** Keep live notes in the key chosen in Harmony (computer keys and MIDI) */
+  scaleLock: boolean;
+  setScaleLock: (on: boolean) => void;
+  /** The user turned the MIDI keyboard on; reconnects on the next visit if the browser allows */
+  midiEnabled: boolean;
+  setMidiEnabled: (on: boolean) => void;
+  /** Which MIDI input to listen to ('all' = every connected one) */
+  midiInputId: string;
+  setMidiInputId: (id: string) => void;
   /** Single-character shortcuts (1–8, [ ], \, R, and the piano's letter keys). Can be turned off in Help. */
   singleKeyShortcuts: boolean;
   setSingleKeyShortcuts: (on: boolean) => void;
@@ -66,6 +75,12 @@ export const useUIStore = create<UIStore>()(persist((set) => ({
   armedTrackId: null,
   recording: false,
   liveOctave: 4,
+  scaleLock: false,
+  setScaleLock: (on) => set({ scaleLock: on }),
+  midiEnabled: false,
+  setMidiEnabled: (on) => set({ midiEnabled: on }),
+  midiInputId: 'all',
+  setMidiInputId: (id) => set({ midiInputId: id }),
   singleKeyShortcuts: true,
   setSingleKeyShortcuts: (on) => set({ singleKeyShortcuts: on }),
   followPlayhead: true,
@@ -105,5 +120,8 @@ export const useUIStore = create<UIStore>()(persist((set) => ({
     sidePanelWidth: s.sidePanelWidth,
     songHeight: s.songHeight,
     playMode: s.playMode,
+    scaleLock: s.scaleLock,
+    midiEnabled: s.midiEnabled,
+    midiInputId: s.midiInputId,
   }),
 }));

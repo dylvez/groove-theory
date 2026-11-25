@@ -8,6 +8,7 @@ import { useSequencerPlayback } from '../../hooks/useSequencerPlayback';
 import { useSongPlayback } from '../../hooks/useSongPlayback';
 import { useGlobalShortcuts } from '../../hooks/useGlobalShortcuts';
 import { useLiveKeys } from '../../hooks/useLiveKeys';
+import { reconnectMidi } from '../../audio/midiInput';
 import { WelcomeBar } from './WelcomeBar';
 import { MidiImportDialog } from '../transport/MidiImportDialog';
 import { DialogHost } from '../common/DialogHost';
@@ -162,6 +163,8 @@ export function AppShell() {
   useSongPlayback();
   useGlobalShortcuts();
   useLiveKeys();
+  // A MIDI keyboard the user connected before comes back without asking
+  useEffect(() => { reconnectMidi(); }, []);
 
   // First visit: start with a demo song instead of an empty grid
   const [showWelcome, setShowWelcome] = useState(welcomePending);

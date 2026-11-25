@@ -97,6 +97,18 @@ html, body, #root {
     outline: 2px solid CanvasText;
     outline-offset: -2px;
   }
+  /* Switches: the knob is a coloured dot, and filled with Highlight when on */
+  [role="switch"] > span {
+    background: CanvasText !important;
+    forced-color-adjust: none;
+  }
+  [role="switch"][aria-checked="true"] {
+    background: Highlight !important;
+    forced-color-adjust: none;
+  }
+  [role="switch"][aria-checked="true"] > span {
+    background: HighlightText !important;
+  }
   .step-active {
     background: Highlight !important;
     forced-color-adjust: none;
