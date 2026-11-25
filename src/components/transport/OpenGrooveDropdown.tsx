@@ -12,6 +12,8 @@ import {
   applySongArrangement,
 } from '../../utils/grooveStorage';
 import { PRESET_GROOVES } from '../../constants/presetGrooves';
+import { useUIStore } from '../../store/useUIStore';
+import { parseMidi, pickMidiFile, MidiImportError } from '../../utils/midiImport';
 import type { GrooveSlotEntry } from '../../types';
 
 function timeAgo(iso: string): string {
@@ -57,6 +59,19 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
     announce(`Opened preset ${preset.name}`);
     onClose();
   }, [onClose]);
+
+  const setMidiImport = useUIStore(s => s.setMidiImport);
+  const handleImportMidi = useCallback(async () => {
+    const picked = await pickMidiFile();
+    if (!picked) return;
+    try {
+      const data = parseMidi(picked.buffer);
+      onClose();
+      setMidiImport({ ...data, fileName: picked.fileName });
+    } catch (err) {
+      alert(err instanceof MidiImportError ? err.message : 'Could not read this MIDI file.');
+    }
+  }, [onClose, setMidiImport]);
 
   const handleImportFile = useCallback(async () => {
     try {
@@ -169,6 +184,18 @@ export function OpenGrooveDropdown({ onClose }: { onClose: () => void }) {
             <path d="M8.75 1.75a.75.75 0 0 0-1.5 0v5.689L5.28 5.47a.75.75 0 0 0-1.06 1.06l3.25 3.25a.75.75 0 0 0 1.06 0l3.25-3.25a.75.75 0 0 0-1.06-1.06L8.75 7.439V1.75Z" />
           </svg>
           Import file <span className="text-text-muted ml-1">.groove / .patterns / .song</span>
+        </button>
+        <button
+          onClick={handleImportMidi}
+          aria-haspopup="dialog"
+          className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-xs text-text-muted
+            hover:bg-bg-cell hover:text-text-primary transition-colors cursor-pointer"
+        >
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+            <path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14H2.75Z" />
+            <path d="M8.75 1.75a.75.75 0 0 0-1.5 0v5.689L5.28 5.47a.75.75 0 0 0-1.06 1.06l3.25 3.25a.75.75 0 0 0 1.06 0l3.25-3.25a.75.75 0 0 0-1.06-1.06L8.75 7.439V1.75Z" />
+          </svg>
+          Import MIDI file <span className="text-text-muted ml-1">.mid</span>
         </button>
       </div>
     </div>

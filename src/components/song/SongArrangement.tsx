@@ -548,7 +548,7 @@ function InsertionZone({
 }) {
   if (isOpen) {
     return (
-      <div className="flex flex-col items-center justify-center gap-0.5 px-0.5 shrink-0 self-center">
+      <div role="group" aria-label={`Insert a pattern at position ${index + 1}`} className="grid grid-cols-4 gap-0.5 px-0.5 shrink-0 self-center">
         {PATTERN_IDS.map((pid) => {
           const name = patterns.find((p) => p.id === pid)?.name ?? '?';
           const c = PATTERN_COLORS[pid];

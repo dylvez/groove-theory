@@ -4,7 +4,7 @@ import { useTransportStore } from '../store/useTransportStore';
 import { useSongStore } from '../store/useSongStore';
 import { useUIStore } from '../store/useUIStore';
 import { AudioEngine } from '../audio/AudioEngine';
-import { PATTERN_IDS } from '../constants/patterns';
+import { PATTERN_IDS, patternLetter } from '../constants/patterns';
 import { announce } from '../utils/announce';
 
 function isTypingTarget(t: EventTarget | null): boolean {
@@ -15,7 +15,7 @@ function isTypingTarget(t: EventTarget | null): boolean {
 /**
  * App-wide keyboard shortcuts:
  *   Space            play / stop
- *   1 2 3 4          select pattern A–D
+ *   1 … 8            select pattern A–H
  *   ⌘/Ctrl+Z         undo · ⌘/Ctrl+Shift+Z (or ⌘/Ctrl+Y) redo
  *   ⌘/Ctrl+C / V     copy / paste pattern
  *   [ / ]            shift pattern left / right one step
@@ -74,9 +74,9 @@ export function useGlobalShortcuts() {
       if (key === 'escape' && ui.armedTrackId) { ui.setArmedTrack(null); announce('Live keys off'); return; }
       if (!ui.singleKeyShortcuts || e.altKey) return;
 
-      if (key >= '1' && key <= '4') {
+      if (key >= '1' && key <= String(PATTERN_IDS.length)) {
         const id = PATTERN_IDS[parseInt(key, 10) - 1];
-        if (id) { e.preventDefault(); seq.setActivePattern(id); announce(`Pattern ${'ABCD'[parseInt(key, 10) - 1]}`); }
+        if (id) { e.preventDefault(); seq.setActivePattern(id); announce(`Pattern ${patternLetter(id)}`); }
         return;
       }
       if (key === '[') { e.preventDefault(); seq.shiftPattern(-1); announce('Shifted left'); return; }

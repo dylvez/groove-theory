@@ -5,7 +5,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useSongStore } from '../../store/useSongStore';
 import { useAudioInit } from '../../audio/useAudioInit';
 import type { TimeSignature, StepResolution } from '../../types';
-import { PATTERN_COLORS, patternTextColor } from '../../constants/patterns';
+import { PATTERN_COLORS, PATTERN_BAR_OPTIONS, patternTextColor } from '../../constants/patterns';
 import { getStepsPerMeasure } from '../../utils/patternHelpers';
 import { PatternMenu } from './PatternMenu';
 import { MixerPanel } from './MixerPanel';
@@ -99,13 +99,14 @@ export function TransportBar() {
   const closeMixer = useCallback(() => setMixerOpen(false), []);
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 px-4 sm:px-6 py-2 bg-bg-tertiary border-b-2 border-border shrink-0">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-2 px-4 sm:px-6 py-2 bg-bg-tertiary border-b-2 border-border shrink-0">
       <h2 className="sr-only">Transport</h2>
       {/* Left section — width matches track headers for alignment */}
-      <div className="shrink-0" style={{ width: trackHeaderWidth + 4 }}>
-        <div className="inline-flex items-center gap-2 bg-accent-purple/10 rounded-lg px-2 py-1 border border-accent-purple/20">
-          <span id="pattern-label" className="text-xs text-text-secondary uppercase tracking-wider">Pattern</span>
-          <div role="group" aria-labelledby="pattern-label" className="flex gap-1">
+      {/* At least as wide as the track headers so controls line up with the grid; grows for eight slots */}
+      <div className="shrink-0" style={{ minWidth: trackHeaderWidth + 4 }}>
+        <div className="inline-flex items-center gap-1.5 bg-accent-purple/10 rounded-lg px-1.5 py-1 border border-accent-purple/20">
+          <span id="pattern-label" className="sr-only">Pattern</span>
+          <div role="group" aria-labelledby="pattern-label" className="flex gap-0.5">
             {patterns.map((p, idx) => {
               const color = PATTERN_COLORS[p.id] ?? '#f97316';
               return (
@@ -116,7 +117,7 @@ export function TransportBar() {
                   aria-pressed={p.id === activePatternId}
                   aria-label={`Pattern ${p.name}`}
                   aria-keyshortcuts={String(idx + 1)}
-                  className={`w-8 h-8 rounded-md text-sm font-bold flex items-center justify-center cursor-pointer transition-colors ${
+                  className={`w-6 h-8 rounded-md text-sm font-bold flex items-center justify-center cursor-pointer transition-colors ${
                     p.id === activePatternId
                       ? 'text-on-accent'
                       : 'hover:opacity-80'
@@ -165,16 +166,16 @@ export function TransportBar() {
       <div aria-hidden="true" className="w-px h-5 bg-border shrink-0" />
 
       {/* Measures toggle */}
-      <span id="bars-label" className="text-xs text-text-secondary uppercase tracking-wider hidden xl:block">Bars</span>
+      <span id="bars-label" className="text-xs text-text-secondary uppercase tracking-wider hidden 2xl:block">Bars</span>
       <div role="group" aria-label="Pattern length" className="flex gap-1">
-        {([2, 4] as const).map(m => (
+        {PATTERN_BAR_OPTIONS.map(m => (
           <button
             key={m}
             onClick={() => setMeasures(m)}
             title={`${m} bars`}
             aria-label={`${m} bars`}
             aria-pressed={currentMeasures === m}
-            className={`w-8 h-8 rounded-md text-sm font-bold flex items-center justify-center cursor-pointer transition-colors ${
+            className={`w-7 h-8 rounded-md text-sm font-bold flex items-center justify-center cursor-pointer transition-colors ${
               currentMeasures === m
                 ? 'bg-accent-purple/25 text-accent-purple-fg border border-accent-purple/40'
                 : 'bg-bg-cell text-text-secondary hover:bg-bg-cell-hover border border-transparent'

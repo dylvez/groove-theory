@@ -203,13 +203,14 @@ export function HelpModal({ onClose }: HelpModalProps) {
     },
     {
       id: 'patterns',
-      title: 'Patterns A–D',
+      title: 'Patterns A–H',
       icon: '\u{1F3B5}',
       content: (
         <>
-          <p>Four independent pattern slots let you build different sections of a song.</p>
+          <p>Eight independent pattern slots let you build different sections of a song.</p>
           <ul className="list-disc pl-4 space-y-1">
-            <li>Click <Kbd>A</Kbd> <Kbd>B</Kbd> <Kbd>C</Kbd> <Kbd>D</Kbd> (or press <Kbd>1</Kbd>–<Kbd>4</Kbd>) to switch patterns. Each is color-coded.</li>
+            <li>Click <Kbd>A</Kbd>–<Kbd>H</Kbd> (or press <Kbd>1</Kbd>–<Kbd>8</Kbd>) to switch patterns. Each is color-coded.</li>
+            <li><strong>Bars</strong> sets a pattern’s length: 1, 2, 4 or 8 bars.</li>
             <li>Use the <Kbd>⋯</Kbd> menu to <strong>copy a pattern into another slot</strong> — the fastest way to build a variation.</li>
             <li>Every pattern has its own drum tracks, synth tracks, time signature, and bar count.</li>
             <li>Each pattern maintains its own undo history.</li>
@@ -397,6 +398,15 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li>Loading a preset replaces all current patterns, tracks, and song arrangement.</li>
             </ul>
           </Sub>
+          <Sub title="Importing MIDI">
+            <ul className="list-disc pl-4 space-y-1">
+              <li><Kbd>Open</Kbd> → <strong>Import MIDI file</strong> reads a <code className="text-accent-cyan-fg">.mid</code> file. Choose which parts to bring in, the pattern length, and whether notes snap to 1/16 or 1/32.</li>
+              <li>The music is cut into patterns; sections that repeat exactly share a pattern, and the song arrangement plays them in order. Up to 8 different patterns fit — with 8-bar patterns that’s 64 bars of different music, plus any repeats.</li>
+              <li>Drums on MIDI channel 10 become drum tracks; other parts become synth tracks with a sound picked from their instrument (or their name). Chords and note lengths come through.</li>
+              <li>Limits: only 4/4 and 3/4 (6/8 is laid out as 3/4), one tempo for the whole song, and timing snaps to the grid. The dialog says what was changed or left out before you import.</li>
+              <li>Importing replaces all patterns and the song; Undo brings them back.</li>
+            </ul>
+          </Sub>
           <Sub title="File Formats">
             <ul className="list-disc pl-4 space-y-1">
               <li><code className="text-accent-cyan-fg">.groove</code> — full project: all patterns, tracks, sound settings, song arrangement, BPM, and swing.</li>
@@ -472,7 +482,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
         <>
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 items-center">
             <Kbd>Space</Kbd> <span>Play / Stop playback (anywhere outside a text field)</span>
-            <Kbd>1 – 4</Kbd> <span>Select pattern A – D</span>
+            <Kbd>1 – 8</Kbd> <span>Select pattern A – H</span>
             <Kbd>⌘/Ctrl + Z</Kbd> <span>Undo the last change to the patterns or the song</span>
             <Kbd>⌘/Ctrl + Shift + Z</Kbd> <span>Redo</span>
             <Kbd>⌘/Ctrl + C</Kbd> <span>Copy the active pattern</span>
@@ -737,7 +747,7 @@ function SingleKeyToggle() {
         className="mt-0.5 w-4 h-4 accent-accent-orange cursor-pointer"
       />
       <span>
-        Use single-key shortcuts (<Kbd>1</Kbd>–<Kbd>4</Kbd>, <Kbd>[</Kbd> <Kbd>]</Kbd>, <Kbd>R</Kbd>, and letter keys playing the Harmony piano).
+        Use single-key shortcuts (<Kbd>1</Kbd>–<Kbd>8</Kbd>, <Kbd>[</Kbd> <Kbd>]</Kbd>, <Kbd>R</Kbd>, and letter keys playing the Harmony piano).
         Turn this off if you use speech input or keep triggering them by accident. Space, ⌘/Ctrl shortcuts and armed live keys still work.
       </span>
     </label>

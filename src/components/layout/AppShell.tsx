@@ -9,6 +9,8 @@ import { useSongPlayback } from '../../hooks/useSongPlayback';
 import { useGlobalShortcuts } from '../../hooks/useGlobalShortcuts';
 import { useLiveKeys } from '../../hooks/useLiveKeys';
 import { WelcomeBar } from './WelcomeBar';
+import { MidiImportDialog } from '../transport/MidiImportDialog';
+import { useUIStore } from '../../store/useUIStore';
 import { PRESET_GROOVES } from '../../constants/presetGrooves';
 import { applyGroove } from '../../utils/grooveStorage';
 import { isFirstVisit, welcomePending, setWelcomeState, claimDemoLoad, DEMO_PRESET_ID } from '../../utils/firstRun';
@@ -169,6 +171,7 @@ export function AppShell() {
     if (demo) applyGroove(structuredClone(demo.groove));
     setWelcomeState('shown');
   }, []);
+  const midiImport = useUIStore(s => s.midiImport);
   const dismissWelcome = useCallback(() => {
     setWelcomeState('dismissed');
     setShowWelcome(false);
@@ -181,6 +184,7 @@ export function AppShell() {
         {showWelcome && <WelcomeBar onDismiss={dismissWelcome} />}
         <StudioView />
       </main>
+      {midiImport && <MidiImportDialog file={midiImport} />}
     </div>
   );
 }

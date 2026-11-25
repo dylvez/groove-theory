@@ -5,6 +5,7 @@ import { VELOCITY_LEVELS, DEFAULT_VELOCITY } from '../types';
 import { DEFAULT_DRUM_PARAMS, DEFAULT_MELODIC_PARAMS, getDrumKit, getSynthPreset } from '../constants';
 import { createDefaultPattern, createEmptyDrumTrack, createEmptyMelodicTrack, getStepsPerMeasure } from '../utils/patternHelpers';
 import * as history from './history';
+import { PATTERN_IDS, patternLetter, type PatternBars } from '../constants/patterns';
 import { announce } from '../utils/announce';
 import { stepNotes, stepFromNotes, transposeStep, noteToMidi } from '../utils/melodicNotes';
 
@@ -112,7 +113,7 @@ interface SequencerStore {
   setMelodicOctave: (trackId: string, octave: number) => void;
   setTimeSignature: (ts: TimeSignature) => void;
   setStepResolution: (resolution: StepResolution) => void;
-  setMeasures: (measures: 2 | 4) => void;
+  setMeasures: (measures: PatternBars) => void;
   loadPatterns: (patterns: Pattern[], activePatternId: string) => void;
   fillDrumTrack: (trackId: string) => void;
   fillMelodicTrack: (trackId: string) => void;
@@ -132,12 +133,17 @@ interface SequencerStore {
   redo: () => void;
 }
 
-const defaultPatterns: Pattern[] = [
-  createDefaultPattern('pattern-a', 'A'),
-  createDefaultPattern('pattern-b', 'B'),
-  createDefaultPattern('pattern-c', 'C'),
-  createDefaultPattern('pattern-d', 'D'),
-];
+const allDefaultPatterns = (): Pattern[] => PATTERN_IDS.map(id => createDefaultPattern(id, patternLetter(id)));
+
+/**
+ * Make sure every slot A–H exists, in order. Saves and presets made when
+ * there were only four slots get empty patterns for the rest.
+ */
+function withAllSlots(patterns: Pattern[]): Pattern[] {
+  return PATTERN_IDS.map(id => patterns.find(p => p.id === id) ?? createDefaultPattern(id, patternLetter(id)));
+}
+
+const defaultPatterns: Pattern[] = allDefaultPatterns();
 
 export const useSequencerStore = create<SequencerStore>()(
   persist(
@@ -473,12 +479,7 @@ export const useSequencerStore = create<SequencerStore>()(
 
       clearAllPatterns: () =>
         set(() => ({
-          patterns: [
-            createDefaultPattern('pattern-a', 'A'),
-            createDefaultPattern('pattern-b', 'B'),
-            createDefaultPattern('pattern-c', 'C'),
-            createDefaultPattern('pattern-d', 'D'),
-          ],
+          patterns: allDefaultPatterns(),
           activePatternId: 'pattern-a',
         })),
 
@@ -908,7 +909,7 @@ export const useSequencerStore = create<SequencerStore>()(
         }),
 
       loadPatterns: (patterns, activePatternId) =>
-        set({ patterns, activePatternId }),
+        set({ patterns: withAllSlots(patterns), activePatternId }),
 
       copyPatternTo: (targetPatternId) =>
         set((state) => {
@@ -995,7 +996,7 @@ export const useSequencerStore = create<SequencerStore>()(
     },
     {
       name: 'groove-theory-sequencer',
-      version: 6,
+      version: 7,
       // Exclude undoDepth from persistence (it's ephemeral)
       partialize: (state) => ({
         patterns: state.patterns,
@@ -1102,6 +1103,10 @@ export const useSequencerStore = create<SequencerStore>()(
             ...p,
             stepResolution: p.stepResolution ?? '16n',
           }));
+        }
+        if (version < 7) {
+          // Pattern slots went from A–D to A–H
+          state.patterns = withAllSlots(state.patterns as Pattern[]);
         }
         return state;
       },

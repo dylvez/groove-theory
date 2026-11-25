@@ -194,8 +194,9 @@ export function SongBlockContextMenu({ x, y, block, index, count, onClose }: Con
 
       {/* Replace With */}
       {showReplace ? (
-        <div role="group" aria-label="Replace with pattern" className="px-3 py-1.5 flex items-center gap-1">
+        <div role="group" aria-label="Replace with pattern" className="px-3 py-1.5 flex items-start gap-1">
           <span aria-hidden="true" className="text-text-muted mr-1">Replace:</span>
+          <div className="grid grid-cols-4 gap-1">
           {PATTERN_IDS.map((pid) => {
             const name = patterns.find((p) => p.id === pid)?.name ?? '?';
             const c = PATTERN_COLORS[pid];
@@ -211,6 +212,7 @@ export function SongBlockContextMenu({ x, y, block, index, count, onClose }: Con
               </button>
             );
           })}
+          </div>
         </div>
       ) : (
         <button
@@ -259,8 +261,9 @@ export function SongBlockContextMenu({ x, y, block, index, count, onClose }: Con
 
       {/* Insert (larger-target alternative to the thin insert strips between blocks) */}
       {([['before', index], ['after', index + 1]] as const).map(([where, at]) => (
-        <div key={where} role="group" aria-label={`Insert a block ${where} this one`} className="px-3 py-1.5 flex items-center gap-1">
+        <div key={where} role="group" aria-label={`Insert a block ${where} this one`} className="px-3 py-1.5 flex items-start gap-1">
           <span aria-hidden="true" className="text-text-muted mr-1 w-20">Insert {where}:</span>
+          <div className="grid grid-cols-4 gap-1">
           {PATTERN_IDS.map((pid) => {
             const name = patterns.find((p) => p.id === pid)?.name ?? '?';
             const c = PATTERN_COLORS[pid];
@@ -276,6 +279,7 @@ export function SongBlockContextMenu({ x, y, block, index, count, onClose }: Con
               </button>
             );
           })}
+          </div>
         </div>
       ))}
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { MidiFileData } from '../utils/midiImport';
 
 export type StudioTab = 'harmony' | 'beats';
 
@@ -12,7 +13,7 @@ interface UIStore {
   recording: boolean;
   /** Octave offset for live keyboard playing */
   liveOctave: number;
-  /** Single-character shortcuts (1–4, [ ], R, and the piano's letter keys). Can be turned off in Help. */
+  /** Single-character shortcuts (1–8, [ ], R, and the piano's letter keys). Can be turned off in Help. */
   singleKeyShortcuts: boolean;
   setSingleKeyShortcuts: (on: boolean) => void;
   /** Scroll the grid to keep the playing step in view */
@@ -21,6 +22,9 @@ interface UIStore {
   /** Help guide open (lifted here so the welcome bar can open it) */
   helpOpen: boolean;
   setHelpOpen: (open: boolean) => void;
+  /** A parsed MIDI file waiting in the import dialog (null when closed) */
+  midiImport: (MidiFileData & { fileName: string }) | null;
+  setMidiImport: (file: (MidiFileData & { fileName: string }) | null) => void;
   setStudioTab: (tab: StudioTab) => void;
   setTrackHeaderWidth: (w: number) => void;
   setArmedTrack: (id: string | null) => void;
@@ -45,6 +49,8 @@ export const useUIStore = create<UIStore>()(persist((set) => ({
   setFollowPlayhead: (on) => set({ followPlayhead: on }),
   helpOpen: false,
   setHelpOpen: (open) => set({ helpOpen: open }),
+  midiImport: null,
+  setMidiImport: (file) => set({ midiImport: file }),
   setStudioTab: (tab) => set({ studioTab: tab }),
   setTrackHeaderWidth: (w) => set({ trackHeaderWidth: Math.max(MIN_HEADER_WIDTH, Math.min(MAX_HEADER_WIDTH, w)) }),
   setArmedTrack: (id) => set((s) => ({ armedTrackId: id, recording: id === null ? false : s.recording })),

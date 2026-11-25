@@ -4,7 +4,7 @@ import * as history from './history';
 
 export interface SongBlock {
   id: string;
-  patternId: string; // "pattern-a" | "pattern-b" | "pattern-c" | "pattern-d"
+  patternId: string; // "pattern-a" … "pattern-h"
   repeats: number;   // 1–99
   muted: boolean;
   sectionLabel?: string;
