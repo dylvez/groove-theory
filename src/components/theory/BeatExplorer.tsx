@@ -14,6 +14,8 @@ import { useTransportStore } from '../../store/useTransportStore';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { AudioEngine } from '../../audio/AudioEngine';
 import { CollapsibleSection } from './CollapsibleSection';
+import { RhythmRing } from '../common/RhythmRing';
+import type { RingData } from '../../utils/rhythmRing';
 
 // ── Variation type ─────────────────────────────────────────────────────
 type Variation = 'basic' | 'variation' | 'fill';
@@ -129,6 +131,18 @@ export function BeatExplorer() {
   const isTripletBeat = selectedBeat.timeSignature === '4/4' && selectedBeat.subdivision === 24;
   const stepsPerBeat = isTripletBeat ? 3 : 4;
   const stepsPerBar = isTripletBeat ? 12 : selectedBeat.subdivision / 2;
+
+  // The groove's cover: its first bar as a rhythm ring
+  const coverRing = useMemo<RingData>(() => {
+    const slots = stepsPerBar;
+    const ring: RingData = { slots, kick: [], snare: [], hat: [], open: [], synth: [] };
+    for (const t of selectedBeat.tracks) {
+      const inst = String(t.instrument);
+      const into = /kick|tom-low/.test(inst) ? ring.kick : /snare|clap|rim|tom/.test(inst) ? ring.snare : /open|crash|ride/.test(inst) ? ring.open : ring.hat;
+      t.steps.slice(0, slots).forEach((on, i) => { if (on && !into.includes(i)) into.push(i); });
+    }
+    return ring;
+  }, [selectedBeat, stepsPerBar]);
 
   // ── Playback ─────────────────────────────────────────────────────────
   const stopBeat = useCallback(() => {
@@ -312,7 +326,7 @@ export function BeatExplorer() {
   return (
     <div className="flex flex-col gap-4">
       {/* ── 1. Beat Explorer (existing) ────────────────────────────────── */}
-      <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Beat Explorer</h3>
+      <h3 className="font-display text-[13px] font-bold uppercase tracking-[0.08em] text-text-primary">Beat Explorer</h3>
 
       {/* Beat selector */}
       <div className="flex flex-col gap-1">
@@ -324,7 +338,7 @@ export function BeatExplorer() {
             const beat = BEATS.find(b => b.name === e.target.value);
             if (beat) { setSelectedBeat(beat); setVariation('variation'); }
           }}
-          className="px-3 py-1.5 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-green"
+          className="px-3 py-1.5 bg-[#111118] border border-border-control rounded-md text-sm text-text-primary focus:outline-none focus:border-text-primary"
         >
           {BEATS.map(b => (
             <option key={b.name} value={b.name}>{b.name} ({b.timeSignature})</option>
@@ -332,32 +346,37 @@ export function BeatExplorer() {
         </select>
       </div>
 
-      {/* Beat name + buttons */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="text-lg font-bold text-text-primary">{selectedBeat.name}</div>
-        <button
-          onClick={isPlaying ? stopBeat : playBeat}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium border cursor-pointer transition-colors ${
-            isPlaying
-              ? 'bg-accent-red/20 text-accent-red-fg border-accent-red/30 hover:bg-accent-red/30'
-              : 'bg-accent-green/20 text-accent-green-fg border-accent-green/30 hover:bg-accent-green/30'
-          }`}
-        >
-          {isPlaying ? 'Stop' : 'Play'}
-        </button>
-        <button
-          onClick={applyToTrack}
-          disabled={!canApply}
-          className="px-3 py-1.5 rounded-md text-sm font-medium border cursor-pointer transition-colors bg-accent-green/20 text-accent-green-fg border-accent-green/30 hover:bg-accent-green/30 disabled:opacity-40 disabled:cursor-not-allowed"
-          title={applyTooltip}
-        >
-          Apply to Track
-        </button>
+      {/* Cover ring + beat name + buttons */}
+      <div className="flex items-center gap-3">
+        <div className="shrink-0 p-1.5 rounded-2xl bg-[#121219] border border-border">
+          <RhythmRing ring={coverRing} size={72} lit />
+        </div>
+        <div className="flex flex-col gap-2 min-w-0">
+          <div className="font-display text-lg font-bold leading-tight tracking-tight text-text-primary">{selectedBeat.name}</div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button onClick={isPlaying ? stopBeat : playBeat} className={`pill ${isPlaying ? '!border-text-primary !bg-[#2a2a3a] !text-white' : ''}`}>
+              {isPlaying ? (
+                <svg aria-hidden="true" width="10" height="10" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="1.5" fill="currentColor" /></svg>
+              ) : (
+                <svg aria-hidden="true" width="11" height="11" viewBox="0 0 12 12"><path d="M3 1.5v9L10.5 6z" fill="currentColor" /></svg>
+              )}
+              {isPlaying ? 'Stop' : 'Play'}
+            </button>
+            <button
+              onClick={applyToTrack}
+              disabled={!canApply}
+              className="pill !border-[#3ddc84] !text-[#a7f3c9] !bg-[rgb(61_220_132/0.12)] hover:!bg-[rgb(61_220_132/0.2)] font-semibold"
+              title={applyTooltip}
+            >
+              Apply to Track
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ── 2. About This Groove (Feature A) ───────────────────────────── */}
       <div>
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">About this groove</h4>
+        <h4 className="label-caps mb-1.5">About this groove</h4>
         <p className="text-xs text-text-secondary leading-relaxed">{selectedBeat.description}</p>
         {aboutGroove && (
           <p className="text-xs text-text-secondary leading-relaxed mt-2">{aboutGroove}</p>
@@ -367,19 +386,19 @@ export function BeatExplorer() {
       {/* ── 3. Songs with This Beat (Feature B) ────────────────────────── */}
       {songs && songs.length > 0 && (
         <div>
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">Songs with this beat</h4>
+          <h4 className="label-caps mb-1.5">Songs with this beat</h4>
           <p className="text-xs text-text-secondary leading-relaxed">
             {songs.map((song, i) => (
               <span key={i}>
                 {i > 0 && ' | '}
-                <a href={song.url} target="_blank" rel="noopener noreferrer" className="text-accent underline">
+                <a href={song.url} target="_blank" rel="noopener noreferrer" className="text-text-primary underline decoration-border-control underline-offset-2 hover:decoration-text-primary">
                   {song.title}
                 </a>
                 {' '}(
                 <span className="text-text-primary">{song.artist}</span>,{' '}
                 <button
                   onClick={() => { setBpm(song.bpm); announce(`Tempo set to ${song.bpm} BPM`); }}
-                  className="inline-flex items-center min-h-6 px-0.5 -my-1 text-accent-blue-fg font-bold underline decoration-dotted hover:decoration-solid cursor-pointer"
+                  className="inline-flex items-center min-h-6 px-0.5 -my-1 font-mono text-accent-blue-fg font-bold underline decoration-dotted hover:decoration-solid cursor-pointer"
                   title={`Set BPM to ${song.bpm}`}
                   aria-label={`${song.bpm} BPM — set the tempo to ${song.bpm}`}
                 >
@@ -394,28 +413,25 @@ export function BeatExplorer() {
 
       {/* ── 4. Tags row (existing) ─────────────────────────────────────── */}
       <div className="flex gap-1.5 flex-wrap">
-        <span className="px-2 py-0.5 rounded text-xs bg-accent-green/15 text-accent-green-fg border border-accent-green/20">
+        <span className="px-2.5 py-0.5 rounded-full text-xs bg-bg-cell text-text-secondary border border-border-soft">
           {selectedBeat.genre}
         </span>
-        <span className="px-2 py-0.5 rounded text-xs bg-bg-cell text-text-muted">
+        <span className="px-2.5 py-0.5 rounded-full text-xs font-mono bg-bg-cell text-text-secondary border border-border-soft">
           {selectedBeat.timeSignature}
         </span>
-        <span className="px-2 py-0.5 rounded text-xs bg-bg-cell text-text-muted">
+        <span className="px-2.5 py-0.5 rounded-full text-xs font-mono bg-bg-cell text-text-secondary border border-border-soft">
           {selectedBeat.suggestedBpm.min}–{selectedBeat.suggestedBpm.max} BPM
         </span>
       </div>
 
       {/* ── 5. Variation controls (Feature C) ──────────────────────────── */}
-      <div className="flex gap-1.5">
+      <div role="group" aria-label="Version of the beat" className="seg self-start">
         {(['basic', 'variation', 'fill'] as Variation[]).map(v => (
           <button
             key={v}
             onClick={() => setVariation(v)}
-            className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors border ${
-              variation === v
-                ? 'bg-accent-purple/25 text-accent-purple-fg border-accent-purple/40'
-                : 'bg-bg-cell text-text-secondary border-border hover:bg-bg-cell-hover'
-            }`}
+            aria-pressed={variation === v}
+            className="seg-item"
           >
             {v === 'basic' ? 'Basic' : v === 'variation' ? 'Variation' : 'Fill'}
           </button>
@@ -521,7 +537,7 @@ export function BeatExplorer() {
 
       {/* ── 8. Building Blocks (Feature E) ─────────────────────────────── */}
       <div className="flex flex-col gap-2">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Building Blocks</h4>
+        <h4 className="label-caps">Building Blocks</h4>
         <div className="flex flex-wrap gap-1.5">
           {BUILDING_BLOCKS.map(block => (
             <div key={block.name} className="relative group">
@@ -552,7 +568,7 @@ export function BeatExplorer() {
 
       {/* ── 9. Groove Builder (Feature F) ──────────────────────────────── */}
       <div className="flex flex-col gap-2">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Groove Builder</h4>
+        <h4 className="label-caps">Groove Builder</h4>
         {grooveBlocks.length === 0 ? (
           <p className="text-xs text-text-muted italic">
             Hover over or tab to a building block and press <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-accent-green text-on-accent text-[11px] font-bold leading-none align-text-bottom not-italic">+</span> to build a groove.
@@ -602,13 +618,13 @@ export function BeatExplorer() {
             <div className="flex gap-2 items-center">
               <button
                 onClick={() => grooveMerged && (isPlaying ? stopBeat() : playMergedPattern(grooveMerged))}
-                className="px-3 py-1 rounded-md bg-accent-cyan/20 text-accent-cyan-fg text-xs font-medium border border-accent-cyan/30 hover:bg-accent-cyan/30 cursor-pointer transition-colors"
+                className="pill"
               >
                 {isPlaying ? 'Stop' : 'Play Groove'}
               </button>
               <button
                 onClick={() => grooveMerged && applyMergedToTrack(grooveMerged)}
-                className="px-3 py-1 rounded-md bg-accent-green/20 text-accent-green-fg text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors"
+                className="pill pill-go"
               >
                 Apply to Track
               </button>
@@ -625,13 +641,13 @@ export function BeatExplorer() {
 
       {/* ── 10. Fill Helper (Feature G) ────────────────────────────────── */}
       <div className="flex flex-col gap-2">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Fill Helper</h4>
+        <h4 className="label-caps">Fill Helper</h4>
         {fillSuggestions.length === 0 ? (
           <p className="text-xs text-text-muted italic">Build a groove above to generate fill suggestions.</p>
         ) : (
           <div className="flex flex-col gap-2">
             {fillSuggestions.map(fill => (
-              <div key={fill.name} className="bg-bg-cell border border-border rounded-md p-2">
+              <div key={fill.name} className="bg-[#111118] border border-border-control rounded-md p-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-text-primary">{fill.name}</span>
                   <span className="text-[11px] text-text-muted">{fill.duration} · {fill.intensity}</span>
@@ -699,7 +715,7 @@ export function BeatExplorer() {
           aria-label="Kick Pattern"
                 value={customKick}
                 onChange={(e) => setCustomKick(e.target.value)}
-                className="w-full px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary focus:outline-none focus:border-accent-green"
+                className="w-full px-2 py-1.5 bg-[#111118] border border-border-control rounded-md text-xs text-text-primary focus:outline-none focus:border-text-primary"
               >
                 {CUSTOM_BEAT_OPTIONS.kick.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -712,7 +728,7 @@ export function BeatExplorer() {
           aria-label="Snare Pattern"
                 value={customSnare}
                 onChange={(e) => setCustomSnare(e.target.value)}
-                className="w-full px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary focus:outline-none focus:border-accent-green"
+                className="w-full px-2 py-1.5 bg-[#111118] border border-border-control rounded-md text-xs text-text-primary focus:outline-none focus:border-text-primary"
               >
                 {CUSTOM_BEAT_OPTIONS.snare.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -725,7 +741,7 @@ export function BeatExplorer() {
           aria-label="Hi-Hat Pattern"
                 value={customHihat}
                 onChange={(e) => setCustomHihat(e.target.value)}
-                className="w-full px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary focus:outline-none focus:border-accent-green"
+                className="w-full px-2 py-1.5 bg-[#111118] border border-border-control rounded-md text-xs text-text-primary focus:outline-none focus:border-text-primary"
               >
                 {CUSTOM_BEAT_OPTIONS.hihat.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -738,7 +754,7 @@ export function BeatExplorer() {
           aria-label="Accent"
                 value={customAccent}
                 onChange={(e) => setCustomAccent(e.target.value)}
-                className="w-full px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary focus:outline-none focus:border-accent-green"
+                className="w-full px-2 py-1.5 bg-[#111118] border border-border-control rounded-md text-xs text-text-primary focus:outline-none focus:border-text-primary"
               >
                 {CUSTOM_BEAT_OPTIONS.accent.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -791,7 +807,7 @@ export function BeatExplorer() {
             </button>
             <button
               onClick={() => applyMergedToTrack(customMerged)}
-              className="px-3 py-1 rounded-md bg-accent-green/20 text-accent-green-fg text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors"
+              className="pill pill-go"
             >
               Apply to Track
             </button>

@@ -1,7 +1,7 @@
 import { useTransportStore } from '../../store/useTransportStore';
 import { useSongStore } from '../../store/useSongStore';
 import { useGridFocusStore, stepPosition, velocityName } from '../../store/useGridFocusStore';
-import { velocityAlpha } from '../../utils/stepDisplay';
+import { velocityAlpha, glowLevel, hitShadow, PLAYHEAD_CELL } from '../../utils/stepDisplay';
 import { describeFx } from '../../utils/stepFx';
 import type { StepFx } from '../../types';
 import { FxMarks } from './StepFxControls';
@@ -27,11 +27,13 @@ interface StepCellProps {
   onEdit: (stepIndex: number, cell: HTMLElement) => void;
   /** The step editor is open for this cell */
   editing?: boolean;
+  /** Steps in the track, for the afterglow wrapping round the loop */
+  numSteps?: number;
 }
 
 export function StepCell({
   velocity, stepIndex, color, trackId, trackName, stepsPerMeasure = 16, compact = false,
-  onPointerDown, onPointerEnter, onActivate, fx, onEdit, editing = false,
+  onPointerDown, onPointerEnter, onActivate, fx, onEdit, editing = false, numSteps = 32,
 }: StepCellProps) {
   const currentStep = useTransportStore(s => s.currentStep);
   // The song player drives the same step counter, so show the playhead for both
@@ -39,6 +41,7 @@ export function StepCell({
   const isPlaying = useTransportStore(s => s.state) === 'playing' || songPlaying;
   const isTabStop = useGridFocusStore(s => s.trackId === trackId && s.step === stepIndex);
   const isCurrent = isPlaying && currentStep === stepIndex;
+  const glow = glowLevel(stepIndex, currentStep, isPlaying, numSteps);
   const stepsPerBeat = compact ? 8 : 4;
   const isBeatStart = stepIndex % stepsPerBeat === 0;
   const isBarStart = stepIndex % stepsPerMeasure === 0 && stepIndex > 0;
@@ -69,16 +72,16 @@ export function StepCell({
       title={active
         ? `Velocity ${Math.round(velocity * 100)}%${feel ? ` · ${feel}` : ''}\nShift+click for velocity · right-click for chance, repeats and timing`
         : 'Click or drag to add hits · right-click for chance, repeats and timing'}
-      className={`${compact ? 'w-6 h-8' : 'w-9 h-9'} rounded-md border transition-all duration-75 cursor-pointer select-none relative ${isBarStart ? 'ml-2' : ''} ${
-        isCurrent ? 'ring-2 ring-white/70' : ''
-      } ${
+      className={`${compact ? 'w-6 h-8' : 'w-9 h-9'} rounded-md border transition-[box-shadow,background-color] duration-150 ease-out cursor-pointer select-none relative ${isBarStart ? 'ml-2' : ''} ${
         active
-          ? 'step-active border-transparent shadow-inner'
+          ? `step-active border-transparent ${isCurrent ? 'z-10' : ''}`
           : isBeatStart
           ? 'bg-bg-cell-hover border-border-cell hover:border-border-control'
           : 'bg-bg-cell border-border-cell hover:border-border-control'
-      } ${isCurrent && active ? 'brightness-125' : ''}`}
-      style={active ? { backgroundColor: `${color}${velocityAlpha(velocity)}` } : undefined}
+      }`}
+      style={active
+        ? { backgroundColor: `${color}${velocityAlpha(velocity)}`, boxShadow: hitShadow(color, glow) }
+        : isCurrent ? PLAYHEAD_CELL : undefined}
     >
       {active && velocity < 0.5 && !compact && (
         <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white/80">·</span>

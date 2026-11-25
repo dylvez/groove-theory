@@ -34,7 +34,7 @@ export function ScaleExplorer() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Scale Explorer</h3>
+      <h3 className="font-display text-[13px] font-bold uppercase tracking-[0.08em] text-text-primary">Scale Explorer</h3>
 
       <div className="flex gap-3">
         {/* Root note selector */}
@@ -44,7 +44,7 @@ export function ScaleExplorer() {
           aria-label="Root"
             value={rootNote}
             onChange={(e) => { setRootNote(e.target.value as NoteName); setHighlightMode('scale'); }}
-            className="px-3 py-1.5 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-orange"
+            className="px-3 py-1.5 bg-[#111118] border border-border-control rounded-md text-sm text-text-primary focus:outline-none focus:border-text-primary"
           >
             {NOTE_NAMES.map(n => (
               <option key={n} value={n}>{formatNote(n)}</option>
@@ -62,7 +62,7 @@ export function ScaleExplorer() {
               const scale = SCALES.find(s => s.name === e.target.value);
               if (scale) { setSelectedScale(scale); setHighlightMode('scale'); }
             }}
-            className="px-3 py-1.5 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-orange"
+            className="px-3 py-1.5 bg-[#111118] border border-border-control rounded-md text-sm text-text-primary focus:outline-none focus:border-text-primary"
           >
             {SCALES.map(s => (
               <option key={s.name} value={s.name}>{s.name}</option>
@@ -74,7 +74,7 @@ export function ScaleExplorer() {
         <div className="flex flex-col gap-1 justify-end">
           <button
             onClick={playScale}
-            className="px-3 py-1.5 rounded-md bg-accent-blue/20 text-accent-blue-fg text-sm font-medium border border-accent-blue/30 hover:bg-accent-blue/30 cursor-pointer transition-colors"
+            className="pill"
           >
             Play Scale
           </button>
@@ -87,7 +87,7 @@ export function ScaleExplorer() {
           <button
             key={`${note}-${i}`}
             onClick={() => playNote(note)}
-            className="px-2.5 py-1 rounded-md bg-accent-blue/20 text-accent-blue-fg text-sm font-medium border border-accent-blue/30 hover:bg-accent-blue/30 cursor-pointer transition-colors"
+            className="pill"
           >
             {formatNote(note)}
           </button>

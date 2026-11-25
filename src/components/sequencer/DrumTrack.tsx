@@ -130,6 +130,7 @@ export function DrumTrack({ track, onRemove, stepsPerMeasure = 16, compact = fal
       <TrackHeader
         name={track.name}
         color={track.color}
+        soundsAt={(i) => (track.steps[i] ?? 0) > 0}
         muted={track.muted}
         solo={track.solo}
         onMute={() => muteTrack(track.id, 'drum')}
@@ -182,6 +183,7 @@ export function DrumTrack({ track, onRemove, stepsPerMeasure = 16, compact = fal
             fx={drumFx(track, i)}
             onEdit={openEditor}
             editing={editing?.index === i}
+            numSteps={track.steps.length}
           />
         ))}
         {editing && editing.index < track.steps.length && (
@@ -222,7 +224,7 @@ function DrumStepEditor({ title, left, velocity, fx, onVelocity, onFx, onClear, 
       ref={ref}
       role="dialog"
       aria-labelledby={headingId}
-      className="absolute top-full mt-1 z-50 w-60 bg-bg-secondary border border-border-control rounded-lg p-2 shadow-xl flex flex-col gap-2"
+      className="absolute top-full mt-1 z-50 w-60 bg-bg-secondary border border-border-soft rounded-xl p-2 shadow-xl flex flex-col gap-2"
       style={{ left }}
       onMouseDown={(e) => e.stopPropagation()}
     >
@@ -239,7 +241,7 @@ function DrumStepEditor({ title, left, velocity, fx, onVelocity, onFx, onClear, 
       </div>
       {!on && <p className="text-[11px] text-text-muted">This step is off. Choosing anything below adds a hit.</p>}
       <div>
-        <div id={`${headingId}-vel`} className="text-[11px] uppercase tracking-wider text-text-muted mb-1">Velocity</div>
+        <div id={`${headingId}-vel`} className="label-caps mb-1">Velocity</div>
         <div role="group" aria-labelledby={`${headingId}-vel`} className="flex gap-1">
           {VELOCITY_LEVELS.map(v => (
             <button
@@ -248,7 +250,7 @@ function DrumStepEditor({ title, left, velocity, fx, onVelocity, onFx, onClear, 
               onClick={() => onVelocity(v)}
               aria-pressed={closest === v}
               className={`h-6 min-w-6 px-1.5 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors border border-transparent ${
-                closest === v ? 'bg-accent-teal text-on-accent' : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
+                closest === v ? 'bg-text-primary text-bg-primary shadow-[0_0_12px_rgb(255_255_255/0.2)]' : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
               }`}
             >
               {Math.round(v * 100)}%

@@ -3,7 +3,7 @@ import type { StepFx } from '../../types';
 import { CHANCE_OPTIONS, REPEAT_OPTIONS, MAX_NUDGE, NUDGE_STEP, chanceLabel, cleanFx, nudgeLabel } from '../../utils/stepFx';
 
 const CHOICE = 'h-6 min-w-6 px-1.5 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors border border-transparent';
-const ON = 'bg-accent-teal text-on-accent';
+const ON = 'bg-text-primary text-bg-primary shadow-[0_0_12px_rgb(255_255_255/0.2)]';
 const OFF = 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover';
 
 /**
@@ -20,7 +20,7 @@ export function StepFxControls({ fx, onChange }: { fx: StepFx | undefined; onCha
   return (
     <div className="flex flex-col gap-2">
       <div>
-        <div id={`${id}-chance`} className="text-[11px] uppercase tracking-wider text-text-muted mb-1">Chance</div>
+        <div id={`${id}-chance`} className="label-caps mb-1">Chance</div>
         <div role="group" aria-labelledby={`${id}-chance`} className="flex gap-1">
           {CHANCE_OPTIONS.map(c => (
             <button
@@ -38,7 +38,7 @@ export function StepFxControls({ fx, onChange }: { fx: StepFx | undefined; onCha
       </div>
 
       <div>
-        <div id={`${id}-repeats`} className="text-[11px] uppercase tracking-wider text-text-muted mb-1">Repeats</div>
+        <div id={`${id}-repeats`} className="label-caps mb-1">Repeats</div>
         <div role="group" aria-labelledby={`${id}-repeats`} className="flex gap-1">
           {REPEAT_OPTIONS.map(r => (
             <button
@@ -57,7 +57,7 @@ export function StepFxControls({ fx, onChange }: { fx: StepFx | undefined; onCha
       </div>
 
       <div>
-        <label htmlFor={`${id}-nudge`} className="flex items-baseline justify-between text-[11px] uppercase tracking-wider text-text-muted mb-1">
+        <label htmlFor={`${id}-nudge`} className="flex items-baseline justify-between label-caps mb-1">
           <span>Timing</span>
           <span aria-hidden="true" className="normal-case tracking-normal text-text-secondary">{nudgeLabel(nudge)}</span>
         </label>
@@ -74,7 +74,7 @@ export function StepFxControls({ fx, onChange }: { fx: StepFx | undefined; onCha
             onDoubleClick={() => onChange({ nudge: 0 })}
             aria-valuetext={nudgeLabel(nudge)}
             title="Shift the step a little early or late. Double-click to put it back on the grid."
-            className="flex-1 h-6 accent-accent-teal cursor-pointer"
+            className="flex-1 h-6 accent-[#f4f4f8] cursor-pointer"
           />
           <span aria-hidden="true" className="text-[11px] text-text-muted">Late</span>
         </div>

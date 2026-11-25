@@ -96,7 +96,7 @@ export function MidiImportDialog({ file }: { file: MidiFileData & { fileName: st
           </p>
 
           <fieldset className="flex flex-col gap-1">
-            <legend className="text-[11px] uppercase tracking-wider text-text-muted mb-1">Parts to import</legend>
+            <legend className="label-caps mb-1">Parts to import</legend>
             {file.parts.map(p => (
               <label key={p.id} className="flex items-center gap-2 min-h-6 cursor-pointer">
                 <input
@@ -114,7 +114,7 @@ export function MidiImportDialog({ file }: { file: MidiFileData & { fileName: st
           </fieldset>
 
           <fieldset className="flex flex-wrap items-center gap-2">
-            <legend className="text-[11px] uppercase tracking-wider text-text-muted mb-1 w-full">Pattern length</legend>
+            <legend className="label-caps mb-1 w-full">Pattern length</legend>
             {LENGTHS.map(b => (
               <label key={b} className={`flex items-center gap-1.5 px-2 min-h-7 rounded-md border cursor-pointer ${bars === b ? 'border-accent-purple bg-accent-purple/15 text-text-primary' : 'border-border-control'}`}>
                 <input type="radio" name="midi-bars" checked={bars === b} onChange={() => setBars(b)} className="accent-accent-purple" />
@@ -125,7 +125,7 @@ export function MidiImportDialog({ file }: { file: MidiFileData & { fileName: st
           </fieldset>
 
           <fieldset className="flex flex-wrap items-center gap-2">
-            <legend className="text-[11px] uppercase tracking-wider text-text-muted mb-1 w-full">Snap notes to</legend>
+            <legend className="label-caps mb-1 w-full">Snap notes to</legend>
             {(['16n', '32n'] as StepResolution[]).map(r => (
               <label key={r} className={`flex items-center gap-1.5 px-2 min-h-7 rounded-md border cursor-pointer ${resolution === r ? 'border-accent-purple bg-accent-purple/15 text-text-primary' : 'border-border-control'}`}>
                 <input type="radio" name="midi-res" checked={resolution === r} onChange={() => setResolution(r)} className="accent-accent-purple" />

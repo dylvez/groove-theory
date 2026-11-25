@@ -13,7 +13,7 @@ export function AboutScale() {
 
   return (
     <div>
-      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
+      <h4 className="label-caps mb-1.5">
         About this scale
       </h4>
       <p className="text-xs text-text-secondary leading-relaxed">
@@ -21,7 +21,7 @@ export function AboutScale() {
       </p>
       {songs && songs.length > 0 && (
         <>
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mt-3 mb-1.5">
+          <h4 className="label-caps mt-3 mb-1.5">
             Songs in this {selectedScale.mode ? 'mode' : 'scale'}
           </h4>
           <p className="text-xs text-text-secondary leading-relaxed">

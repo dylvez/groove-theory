@@ -28,7 +28,7 @@ export function MixerPanel({ onClose }: MixerPanelProps) {
       ref={ref}
       role="dialog"
       aria-labelledby="mixer-heading"
-      className="absolute top-full right-0 mt-2 z-50 bg-bg-secondary border border-border-control rounded-lg p-3 shadow-xl w-80"
+      className="absolute top-full right-0 mt-2 z-50 bg-bg-secondary border border-border-soft rounded-xl p-3 shadow-xl w-80"
     >
       <div className="flex items-center justify-between mb-2">
         <h3 id="mixer-heading" className="text-xs font-bold text-text-secondary uppercase tracking-wider">Mixer & Effects</h3>
@@ -36,7 +36,7 @@ export function MixerPanel({ onClose }: MixerPanelProps) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <h4 className="text-[11px] font-normal uppercase tracking-widest text-text-muted">Master</h4>
+        <h4 className="label-caps">Master</h4>
         <ParamSlider label="Volume" value={m.masterVolume} min={-24} max={6} step={0.5} onChange={v => m.setMixer({ masterVolume: v })} format={v => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           <span aria-hidden="true" className="w-16 shrink-0">Glue</span>
@@ -56,12 +56,12 @@ export function MixerPanel({ onClose }: MixerPanelProps) {
         </div>
 
         <div className="border-t border-border/50 my-1" />
-        <h4 className="text-[11px] font-normal uppercase tracking-widest text-text-muted">Reverb bus</h4>
+        <h4 className="label-caps">Reverb bus</h4>
         <ParamSlider label="Size" value={m.reverbDecay} min={0.3} max={8} step={0.1} onChange={v => m.setMixer({ reverbDecay: v })} format={v => `${v.toFixed(1)} s`} />
         <ParamSlider label="Return" value={m.reverbLevel} min={0} max={1.5} step={0.01} onChange={v => m.setMixer({ reverbLevel: v })} format={pct} />
 
         <div className="border-t border-border/50 my-1" />
-        <h4 className="text-[11px] font-normal uppercase tracking-widest text-text-muted">Delay bus</h4>
+        <h4 className="label-caps">Delay bus</h4>
         <div role="group" aria-label="Delay time" className="flex items-center gap-2 text-xs text-text-secondary">
           <span aria-hidden="true" className="w-16 shrink-0">Time</span>
           <div className="flex gap-1">
@@ -71,7 +71,7 @@ export function MixerPanel({ onClose }: MixerPanelProps) {
                 onClick={() => m.setMixer({ delayTime: o.value })}
                 aria-pressed={m.delayTime === o.value}
                 className={`px-2 py-1 rounded text-[11px] font-semibold cursor-pointer transition-colors ${
-                  m.delayTime === o.value ? 'bg-accent-cyan text-on-accent' : 'bg-bg-cell text-text-muted hover:text-text-primary'
+                  m.delayTime === o.value ? 'bg-text-primary text-bg-primary shadow-[0_0_12px_rgb(255_255_255/0.2)]' : 'bg-bg-cell text-text-muted hover:text-text-primary'
                 }`}
               >
                 {o.label}

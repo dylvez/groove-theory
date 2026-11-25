@@ -87,7 +87,7 @@ function SelectControl({ label, value, onChange, options, accent }: SelectProps)
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <h4 className="text-[11px] font-normal uppercase tracking-widest text-text-muted mt-1">{children}</h4>;
+  return <h4 className="label-caps mt-1">{children}</h4>;
 }
 
 function formatHz(v: number) {
@@ -208,7 +208,7 @@ function PanelFrame({ title, name, onRename, onClose, onAudition, onReset, child
       ref={ref}
       role="dialog"
       aria-labelledby={headingId}
-      className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border-control rounded-lg p-3 shadow-xl w-80"
+      className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border-soft rounded-xl p-3 shadow-xl w-80"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-2">
@@ -372,7 +372,7 @@ export function MelodicSettingsPanel({
               aria-pressed={octave === o}
               aria-label={`Octave ${o}`}
               className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-                octave === o ? 'bg-accent-purple text-on-accent' : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
+                octave === o ? 'bg-text-primary text-bg-primary shadow-[0_0_12px_rgb(255_255_255/0.2)]' : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
               }`}
             >
               {o}

@@ -279,7 +279,7 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
       aria-labelledby={headingId}
       aria-describedby={helpId}
       // -ml-1 + 1px border + 3px padding = columns line up with the lane above
-      className="rounded-md border border-border-control bg-bg-secondary/60 py-2 pr-2 -ml-1 pl-[3px]"
+      className="rounded-xl border border-border bg-bg-secondary py-2 pr-2 -ml-1 pl-[3px]"
     >
       <p id={helpId} className="sr-only">
         Rows are pitches, columns are steps. Arrow keys move. Enter adds a note of the chosen length or removes one.
@@ -290,25 +290,25 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
 
       {/* Toolbar — pinned to the left while the grid scrolls sideways */}
       <div className="sticky left-1 w-fit max-w-[min(100%,1100px)] flex flex-wrap items-center gap-x-4 gap-y-2 mb-2" style={{ paddingLeft: 4 }}>
-        <h4 id={headingId} className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+        <h4 id={headingId} className="label-caps !text-text-primary">
           Piano roll · {track.name}
         </h4>
 
-        <div role="group" aria-label="Length of new notes, in steps" className="flex items-center gap-1">
-          <span aria-hidden="true" className="text-[11px] text-text-muted mr-1">New note length</span>
-          {LENGTHS.map(L => (
-            <button
-              key={L}
-              onClick={() => setDrawLength(L)}
-              aria-pressed={drawLength === L}
-              aria-label={`${L} step${L > 1 ? 's' : ''}`}
-              className={`w-6 h-6 rounded text-[11px] font-bold cursor-pointer transition-colors ${
-                drawLength === L ? 'bg-accent-cyan text-on-accent' : 'bg-bg-cell text-text-muted hover:text-text-primary'
-              }`}
-            >
-              {L}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-xs text-text-muted">New note length</span>
+          <div role="group" aria-label="Length of new notes, in steps" className="seg">
+            {LENGTHS.map(L => (
+              <button
+                key={L}
+                onClick={() => setDrawLength(L)}
+                aria-pressed={drawLength === L}
+                aria-label={`${L} step${L > 1 ? 's' : ''}`}
+                className="seg-item font-mono"
+              >
+                {L}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div role="group" aria-label="Pitch range" className="flex items-center gap-1">
@@ -316,16 +316,16 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
             onClick={() => shiftRange(-1)}
             disabled={baseOctave <= 0}
             aria-label={`Show one octave lower${below ? ` (${below} note${below > 1 ? 's' : ''} below)` : ''}`}
-            className="min-w-6 h-6 px-1 rounded bg-bg-cell text-text-muted hover:text-text-primary text-[11px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="min-w-6 h-6 px-1.5 rounded-full border border-border-soft bg-bg-cell text-text-secondary hover:text-text-primary text-[11px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <span aria-hidden="true">▼{below ? ` ${below}` : ''}</span>
           </button>
-          <span className="text-[11px] text-text-secondary font-mono w-14 text-center" aria-live="polite">{rangeLabel}</span>
+          <span className="text-xs text-text-primary font-mono font-semibold w-16 text-center" aria-live="polite">{rangeLabel}</span>
           <button
             onClick={() => shiftRange(1)}
             disabled={baseOctave >= 5}
             aria-label={`Show one octave higher${above ? ` (${above} note${above > 1 ? 's' : ''} above)` : ''}`}
-            className="min-w-6 h-6 px-1 rounded bg-bg-cell text-text-muted hover:text-text-primary text-[11px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="min-w-6 h-6 px-1.5 rounded-full border border-border-soft bg-bg-cell text-text-secondary hover:text-text-primary text-[11px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <span aria-hidden="true">▲{above ? ` ${above}` : ''}</span>
           </button>
@@ -335,9 +335,7 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
           onClick={() => setScaleOnly(v => !v)}
           aria-pressed={scaleOnly}
           title={`Only show notes in ${rootNote} ${selectedScale.name} (plus any rows that already have notes)`}
-          className={`h-6 px-2 rounded text-[11px] font-medium border cursor-pointer transition-colors ${
-            scaleOnly ? 'bg-accent-purple/20 text-accent-purple-fg border-accent-purple/40' : 'bg-bg-cell text-text-muted border-border-control'
-          }`}
+          className="tog"
         >
           {rootNote} {selectedScale.name} notes only
         </button>
@@ -349,7 +347,7 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
         <button
           onClick={onClose}
           aria-label={`Close ${track.name} piano roll`}
-          className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-text-primary hover:bg-bg-cell cursor-pointer"
+          className="w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-bg-cell cursor-pointer"
         >
           ×
         </button>
@@ -413,7 +411,7 @@ const PianoRollRow = memo(function PianoRollRow({
   return (
     <div role="group" aria-label={`${spoken}${isRoot ? ', root' : inScale ? '' : ', outside the scale'}`} className="flex items-center gap-1">
       {/* Pitch label — mouse users can press it to hear the note */}
-      <div aria-hidden="true" className="shrink-0 sticky left-0 z-10 bg-[#16161d] self-stretch flex items-center justify-end gap-1.5 pr-1" style={{ width: labelWidth }}>
+      <div aria-hidden="true" className="shrink-0 sticky left-0 z-10 bg-bg-secondary self-stretch flex items-center justify-end gap-1.5 pr-1" style={{ width: labelWidth }}>
         <span
           onMouseDown={() => onAudition(note)}
           className={`text-[11px] font-mono cursor-pointer select-none ${

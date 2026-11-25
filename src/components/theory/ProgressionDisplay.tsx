@@ -126,7 +126,7 @@ export function ProgressionDisplay() {
   if (progression.length === 0) {
     return (
       <div className="flex flex-col gap-1.5">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+        <h4 className="label-caps">
           Progression
         </h4>
         <p className="text-xs text-text-muted italic">
@@ -138,7 +138,7 @@ export function ProgressionDisplay() {
 
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+      <h4 className="label-caps">
         Progression
       </h4>
 
@@ -149,9 +149,9 @@ export function ProgressionDisplay() {
           return (
             <div
               key={slot.id}
-              className="px-3 py-2 rounded-md bg-accent-cyan/15 border border-accent-cyan/30 flex items-center gap-2 group"
+              className="px-3 py-2 rounded-[10px] bg-[#121219] border border-[#4a4a62] flex items-center gap-2 group"
             >
-              <span className="text-sm font-bold text-accent-cyan-fg">
+              <span className="font-mono text-[13px] font-bold text-text-primary">
                 {chord?.numeral || slot.scaleDegree + 1}
               </span>
               <span className="text-[11px] text-text-muted">
@@ -173,21 +173,21 @@ export function ProgressionDisplay() {
       <div className="flex gap-2 items-center flex-wrap">
         <button
           onClick={playProgression}
-          className="px-3 py-1 rounded-md bg-accent-cyan/20 text-accent-cyan-fg text-xs font-medium border border-accent-cyan/30 hover:bg-accent-cyan/30 cursor-pointer transition-colors"
+          className="pill"
         >
           Play
         </button>
         <button
           onClick={clearProgression}
-          className="px-3 py-1 rounded-md bg-bg-cell text-text-muted text-xs hover:bg-bg-cell-hover cursor-pointer transition-colors"
+          className="pill"
         >
           Clear
         </button>
       </div>
 
       {/* Write into the sequencer */}
-      <fieldset className="flex flex-col gap-1.5 rounded-md border border-border-control p-2">
-        <legend className="px-1 text-[11px] uppercase tracking-wider text-text-muted">Write to a synth track</legend>
+      <fieldset className="flex flex-col gap-1.5 rounded-[10px] border border-border p-2.5">
+        <legend className="px-1 label-caps">Write to a synth track</legend>
         <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1.5 text-xs">
           <label htmlFor={ids.track} className="text-text-muted">Track</label>
           <select
@@ -195,7 +195,7 @@ export function ProgressionDisplay() {
             value={resolvedTrackId ?? ''}
             onChange={(e) => setTargetTrackId(e.target.value)}
             disabled={melodicTracks.length === 0}
-            className="px-2 py-1 bg-bg-cell border border-border-control rounded-md text-xs text-text-primary min-w-0"
+            className="px-2 py-1 bg-[#111118] border border-border-control rounded-md text-xs text-text-primary min-w-0"
           >
             {melodicTracks.map(t => (
               <option key={t.id} value={t.id}>{t.name}{t.synthType === 'monoSynth' ? ' (mono)' : ''}</option>
@@ -206,7 +206,7 @@ export function ProgressionDisplay() {
             id={ids.style}
             value={style}
             onChange={(e) => setStyle(e.target.value as WriteStyle)}
-            className="px-2 py-1 bg-bg-cell border border-border-control rounded-md text-xs text-text-primary min-w-0"
+            className="px-2 py-1 bg-[#111118] border border-border-control rounded-md text-xs text-text-primary min-w-0"
           >
             {WRITE_STYLES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -215,7 +215,7 @@ export function ProgressionDisplay() {
             id={ids.length}
             value={chordLength}
             onChange={(e) => setChordLengthChoice(e.target.value as ChordLength)}
-            className="px-2 py-1 bg-bg-cell border border-border-control rounded-md text-xs text-text-primary min-w-0"
+            className="px-2 py-1 bg-[#111118] border border-border-control rounded-md text-xs text-text-primary min-w-0"
           >
             {(Object.keys(CHORD_LENGTH_LABELS) as ChordLength[]).map(k => (
               <option key={k} value={k}>{CHORD_LENGTH_LABELS[k]}</option>
@@ -227,7 +227,7 @@ export function ProgressionDisplay() {
           onClick={applyToTrack}
           disabled={!resolvedTrackId}
           aria-describedby={hint ? ids.hint : undefined}
-          className="self-start px-3 py-1 rounded-md bg-accent-green/20 text-accent-green-fg text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="self-start pill pill-go disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Apply to {targetTrack?.name ?? 'track'}
         </button>

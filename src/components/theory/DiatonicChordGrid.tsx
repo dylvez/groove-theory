@@ -66,7 +66,7 @@ export function DiatonicChordGrid() {
   if (!diatonicMap) {
     return (
       <div className="flex flex-col gap-2">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+        <h4 className="label-caps">
           Diatonic Chords
         </h4>
         <p className="text-xs text-text-muted italic">
@@ -78,7 +78,7 @@ export function DiatonicChordGrid() {
 
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+      <h4 className="label-caps">
         Diatonic Chords
       </h4>
       <div className="flex gap-1.5 flex-wrap">

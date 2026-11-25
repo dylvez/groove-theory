@@ -28,19 +28,15 @@ export function LiveInputControl() {
         aria-expanded={open}
         aria-haspopup="dialog"
         title="Live input: scale lock and MIDI keyboard"
-        className={`flex items-center gap-1 px-2 py-1 min-h-7 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
-          open || scaleLock || midiOn
-            ? 'bg-accent-red/15 text-accent-red-fg border-accent-red/40'
-            : 'bg-bg-cell text-text-muted border-border-control hover:text-text-secondary'
-        }`}
+        className={`pill ${open ? '!border-text-primary !bg-[#2a2a3a] !text-white' : scaleLock || midiOn ? '!border-accent-red/60 !text-accent-red-fg' : ''}`}
       >
-        LIVE
+        Live
         {scaleLock && (
           <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
             <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7H4a1.5 1.5 0 0 0-1.5 1.5v5A1.5 1.5 0 0 0 4 15h8a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 12 7h-.5V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clipRule="evenodd" />
           </svg>
         )}
-        {midiOn && <span aria-hidden="true" className="text-[10px] font-bold">MIDI</span>}
+        {midiOn && <span aria-hidden="true" className="text-[10px] font-bold font-mono">MIDI</span>}
         {state && <span className="sr-only">({state})</span>}
       </button>
       {open && <LiveInputPanel onClose={close} />}
@@ -74,7 +70,7 @@ function LiveInputPanel({ onClose }: { onClose: () => void }) {
       ref={ref}
       role="dialog"
       aria-labelledby={`${id}-title`}
-      className="absolute top-full left-0 mt-2 z-50 w-80 max-h-[80vh] overflow-y-auto bg-bg-secondary border border-border-control rounded-lg p-3 shadow-xl text-xs text-text-secondary"
+      className="absolute top-full left-0 mt-2 z-50 w-80 max-h-[80vh] overflow-y-auto bg-bg-secondary border border-border-soft rounded-xl p-3 shadow-xl text-xs text-text-secondary"
     >
       <div className="flex items-center justify-between mb-2">
         <h3 id={`${id}-title`} className="text-xs font-bold uppercase tracking-wider">Live input</h3>
@@ -90,7 +86,7 @@ function LiveInputPanel({ onClose }: { onClose: () => void }) {
       {/* Scale lock */}
       <section aria-labelledby={`${id}-lock`} className="border-t border-border/50 pt-2 mb-3">
         <div className="flex items-center justify-between gap-2">
-          <h4 id={`${id}-lock`} className="text-[11px] uppercase tracking-widest text-text-muted">Scale lock</h4>
+          <h4 id={`${id}-lock`} className="label-caps">Scale lock</h4>
           <button
             role="switch"
             aria-checked={scaleLock}
@@ -128,7 +124,7 @@ function LiveInputPanel({ onClose }: { onClose: () => void }) {
       {/* Octave */}
       <section aria-labelledby={`${id}-oct`} className="border-t border-border/50 pt-2 mb-3">
         <div className="flex items-center justify-between gap-2">
-          <h4 id={`${id}-oct`} className="text-[11px] uppercase tracking-widest text-text-muted">Computer keys octave</h4>
+          <h4 id={`${id}-oct`} className="label-caps">Computer keys octave</h4>
           <div className="flex items-center gap-1">
             <button onClick={() => setLiveOctave(liveOctave - 1)} disabled={liveOctave <= 1} aria-label="Octave down" aria-keyshortcuts="Z" title="Octave down (Z)" className="w-6 h-6 rounded bg-bg-cell text-text-secondary hover:text-text-primary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">−</button>
             <span className="font-mono w-8 text-center text-text-primary" aria-live="polite">C{liveOctave}</span>
@@ -181,7 +177,7 @@ function MidiSection({ id }: { id: string }) {
 
   return (
     <section ref={sectionRef} aria-labelledby={`${id}-midi`} className="border-t border-border/50 pt-2">
-      <h4 id={`${id}-midi`} className="text-[11px] uppercase tracking-widest text-text-muted mb-1">MIDI keyboard</h4>
+      <h4 id={`${id}-midi`} className="label-caps mb-1">MIDI keyboard</h4>
 
       {status === 'on' ? (
         <div className="flex flex-col gap-2">

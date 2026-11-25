@@ -50,7 +50,7 @@ export function LevelMeter() {
   return (
     <div
       aria-hidden="true"
-      className={`relative w-24 h-2.5 rounded-full bg-bg-primary/80 border border-border/60 overflow-hidden shrink-0 hidden 2xl:block transition-opacity ${active ? 'opacity-100' : 'opacity-50'}`}
+      className={`relative w-24 h-2.5 rounded-full bg-bg-primary border border-border-soft overflow-hidden shrink-0 hidden min-[1700px]:block transition-opacity ${active ? 'opacity-100' : 'opacity-50'}`}
       title="Master output level"
     >
       <div ref={barRef} className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-75" style={{ width: '0%' }} />

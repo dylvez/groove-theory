@@ -17,7 +17,7 @@ import { AudioEngine } from '../../audio/AudioEngine';
 import { DEFAULT_MELODIC_PARAMS, SYNTH_PRESETS } from '../../constants';
 import { TrackHeader, HeaderResizeHandle } from './TrackHeader';
 import { MelodicSettingsPanel } from './TrackSettingsPanel';
-import { velocityAlpha, velocityOpacity, readableTextOn, SYNTH_COLORS } from '../../utils/stepDisplay';
+import { velocityAlpha, velocityOpacity, readableTextOn, SYNTH_COLORS, glowLevel, hitShadow, PLAYHEAD_CELL } from '../../utils/stepDisplay';
 import { getScaleNotes } from '../../utils/musicTheory';
 
 interface MelodicTrackProps {
@@ -260,6 +260,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
       <TrackHeader
         name={track.name}
         color={trackColor}
+        soundsAt={(i) => !!track.steps[i]?.active || tails.has(i)}
         muted={track.muted}
         solo={track.solo}
         onMute={() => muteTrack(track.id, 'melodic')}
@@ -307,6 +308,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
       >
         {track.steps.map((step, i) => {
           const isCurrent = isPlaying && currentStep === i;
+          const glow = glowLevel(i, currentStep, isPlaying, track.steps.length);
           const stepsPerBeat = compact ? 8 : 4;
           const isBeatStart = i % stepsPerBeat === 0;
           const isBarStart = i % stepsPerMeasure === 0 && i > 0;
@@ -351,10 +353,10 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
                     ? `${step.note} · ${len} step${len > 1 ? 's' : ''} · vel ${Math.round(step.velocity * 100)}%${feel ? ` · ${feel}` : ''}\nClick to clear · right-click to edit note, chance, repeats and timing · shift+click for velocity`
                     : tail ? 'Held note — right-click the note to change its length' : 'Click to pick a note · drag to paint · right-click to edit'
                 }
-                className={`${cellW} ${cellH} border text-[11px] font-medium transition-all duration-75 cursor-pointer select-none relative ${
+                className={`${cellW} ${cellH} border text-[11px] font-medium transition-[box-shadow,background-color] duration-150 ease-out cursor-pointer select-none relative ${
                   hasTail ? 'rounded-l-md rounded-r-none border-r-0' : tail ? (tail.last ? 'rounded-r-md rounded-l-none border-l-0' : 'rounded-none border-l-0 border-r-0') : 'rounded-md'
                 } ${
-                  isCurrent ? 'ring-2 ring-white/70 z-10' : ''
+                  isCurrent ? 'z-10' : ''
                 } ${
                   step.active
                     ? 'step-active border-transparent'
@@ -366,10 +368,10 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
                 }`}
                 style={
                   step.active
-                    ? { backgroundColor: `${trackColor}${velocityAlpha(step.velocity)}`, color: textColor }
+                    ? { backgroundColor: `${trackColor}${velocityAlpha(step.velocity)}`, color: textColor, boxShadow: hitShadow(trackColor, glow) }
                     : tail
-                    ? { backgroundColor: `${tail.color}${velocityAlpha(tail.velocity * 0.45)}` }
-                    : undefined
+                    ? { backgroundColor: `${tail.color}${velocityAlpha(tail.velocity * 0.45)}`, boxShadow: isCurrent ? '0 0 0 2px #ffffff' : undefined }
+                    : isCurrent ? PLAYHEAD_CELL : undefined
                 }
               >
                 {!compact && step.note ? (
@@ -448,7 +450,7 @@ function NoteEditor({
       ref={ref}
       role="dialog"
       aria-labelledby={headingId}
-      className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border-control rounded-lg p-2 shadow-xl min-w-40"
+      className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border-soft rounded-xl p-2 shadow-xl min-w-40"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-1.5 gap-2">
@@ -476,7 +478,7 @@ function NoteEditor({
             aria-label={`Octave ${oct}`}
             className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
               octave === oct
-                ? 'bg-accent-purple text-on-accent'
+                ? 'bg-text-primary text-bg-primary shadow-[0_0_12px_rgb(255_255_255/0.2)]'
                 : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
             }`}
           >
@@ -496,7 +498,7 @@ function NoteEditor({
               aria-pressed={isSet}
               aria-label={`${spokenNote(full)}, scale degree ${idx + 1}`}
               className={`px-2 py-1 min-h-6 text-xs rounded cursor-pointer transition-colors flex items-center justify-between gap-1 ${
-                isSet ? 'bg-accent-purple text-on-accent' : 'bg-bg-cell hover:bg-accent-purple/30 text-text-primary'
+                isSet ? 'bg-text-primary text-bg-primary shadow-[0_0_12px_rgb(255_255_255/0.2)]' : 'bg-bg-cell hover:bg-accent-purple/30 text-text-primary'
               }`}
             >
               <span>{note}</span>
@@ -508,7 +510,7 @@ function NoteEditor({
       {/* Length and clear (only for active steps) */}
       {active && (
         <div className="mt-2 pt-2 border-t border-border/50">
-          <div id={`${headingId}-len`} className="text-[11px] uppercase tracking-wider text-text-muted mb-1">Length (steps)</div>
+          <div id={`${headingId}-len`} className="label-caps mb-1">Length (steps)</div>
           <div role="group" aria-labelledby={`${headingId}-len`} className="flex gap-1">
             {LENGTH_OPTIONS.map(L => (
               <button
@@ -517,7 +519,7 @@ function NoteEditor({
                 aria-pressed={length === L}
                 aria-label={`${L} step${L > 1 ? 's' : ''}`}
                 className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-                  length === L ? 'bg-accent-cyan text-on-accent' : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
+                  length === L ? 'bg-text-primary text-bg-primary shadow-[0_0_12px_rgb(255_255_255/0.2)]' : 'bg-bg-cell text-text-muted hover:text-text-primary hover:bg-bg-cell-hover'
                 }`}
               >
                 {L}

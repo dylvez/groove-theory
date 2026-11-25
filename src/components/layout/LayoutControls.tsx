@@ -4,9 +4,9 @@ import { useUIStore } from '../../store/useUIStore';
 import { announce } from '../../utils/announce';
 import { toggleSidePanel } from '../../utils/sidePanel';
 
-const BUTTON = 'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors';
-const IDLE = 'bg-bg-cell text-text-muted border-border hover:bg-bg-cell-hover hover:text-text-primary';
-const ACTIVE = 'bg-accent-teal/20 text-accent-teal-fg border-accent-teal/40';
+// Night Glow: plain pills; "on" (menu open, panel showing) is a bright outline
+const BUTTON = 'pill text-[13px]';
+const ACTIVE = '!border-text-primary !bg-[#2a2a3a] !text-white';
 
 const PANEL_SIZES = [
   { label: 'Narrow', value: 280 },
@@ -43,13 +43,15 @@ function SizeChoice({ legend, options, value, onPick }: {
   const name = useId();
   return (
     <fieldset className="flex flex-col gap-1">
-      <legend className="text-[11px] uppercase tracking-wider text-text-muted mb-1">{legend}</legend>
+      <legend className="label-caps mb-1">{legend}</legend>
       <div className="flex gap-1">
         {options.map(o => (
           <label
             key={o.value}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-2 min-h-7 rounded-md border text-xs cursor-pointer ${
-              value === o.value ? 'border-accent-teal bg-accent-teal/15 text-text-primary' : 'border-border-control text-text-secondary hover:bg-bg-cell-hover'
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 min-h-7 rounded-md border text-xs font-semibold cursor-pointer has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus-ring)] ${
+              value === o.value
+                ? 'border-text-primary bg-text-primary text-bg-primary shadow-[0_0_12px_rgb(255_255_255/0.2)]'
+                : 'border-border-soft text-text-secondary hover:bg-bg-cell-hover'
             }`}
           >
             <input
@@ -57,7 +59,7 @@ function SizeChoice({ legend, options, value, onPick }: {
               name={name}
               checked={value === o.value}
               onChange={() => onPick(o.value, o.label)}
-              className="accent-accent-teal"
+              className="sr-only"
             />
             {o.label}
           </label>
@@ -82,7 +84,7 @@ function LayoutPopover({ onClose }: { onClose: () => void }) {
       ref={ref}
       role="dialog"
       aria-label="Layout"
-      className="absolute top-full right-0 mt-1 z-50 w-72 flex flex-col gap-3 p-3 bg-bg-secondary border border-border-control rounded-lg shadow-xl"
+      className="absolute top-full right-0 mt-2 z-50 w-72 flex flex-col gap-3 p-3 bg-bg-secondary border border-border-soft rounded-xl shadow-2xl"
     >
       <SizeChoice
         legend="Side panel width"
@@ -103,7 +105,7 @@ function LayoutPopover({ onClose }: { onClose: () => void }) {
         onPick={(v, label) => { setNameWidth(v); announce(`Track names ${label.toLowerCase()}`); }}
       />
       <p className="text-[11px] text-text-muted leading-snug">
-        You can also drag the coloured dividers, or focus one and use the arrow keys.
+        You can also drag the dividers, or focus one and use the arrow keys.
       </p>
     </div>
   );
@@ -122,7 +124,7 @@ export function LayoutControls() {
           aria-expanded={open}
           aria-haspopup="dialog"
           title="Preset sizes for the side panel, song section and track names"
-          className={`${BUTTON} ${open ? ACTIVE : IDLE}`}
+          className={`${BUTTON} ${open ? ACTIVE : ''}`}
         >
           <svg aria-hidden="true" viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
             <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5" />
@@ -138,7 +140,7 @@ export function LayoutControls() {
         aria-expanded={panelOpen}
         aria-controls="side-panel"
         title={`${panelOpen ? 'Hide' : 'Show'} the Beats and Harmony panel (\\ key)`}
-        className={`${BUTTON} ${panelOpen ? ACTIVE : IDLE}`}
+        className={`${BUTTON} ${panelOpen ? ACTIVE : ''}`}
       >
         <PanelIcon open={panelOpen} />
         Side panel

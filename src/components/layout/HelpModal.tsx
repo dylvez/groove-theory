@@ -144,13 +144,13 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <ul className="list-disc pl-4 space-y-1">
               <li><strong>Volume</strong> — -36 to +6 dB per track.</li>
               <li><strong>Pan</strong> — place the track left or right in the stereo picture. Spreading hats and percussion a little each way makes room in the middle for kick, bass and vocals.</li>
-              <li><strong>Reverb</strong> / <strong>Delay</strong> — how much of this track is sent to the shared effect buses. Shape the buses themselves with the <Kbd>FX</Kbd> button in the transport bar.</li>
+              <li><strong>Reverb</strong> / <strong>Delay</strong> — how much of this track is sent to the shared effect buses. Shape the buses themselves with the <Kbd>Mixer</Kbd> button in the transport bar.</li>
               <li><Kbd>▶ Hear</Kbd> — audition the sound while you tweak it. <strong>Reset</strong> restores defaults.</li>
             </ul>
           </Sub>
-          <Sub title="Mixer & Effects (FX)">
+          <Sub title="Mixer & Effects">
             <ul className="list-disc pl-4 space-y-1">
-              <li><strong>Master</strong> — output volume and a bus <strong>compressor</strong> that glues the mix together. A <strong>limiter</strong> always protects against clipping; the meter next to FX shows the level.</li>
+              <li><strong>Master</strong> — output volume and a bus <strong>compressor</strong> that glues the mix together. A <strong>limiter</strong> always protects against clipping; the meter next to Mixer shows the level.</li>
               <li><strong>Reverb bus</strong> — size (tail length) and return level.</li>
               <li><strong>Delay bus</strong> — tempo-synced time (1/16, 1/8, dotted 1/8, 1/4), feedback, and return level.</li>
               <li>Everything here is baked into WAV and MP3 exports.</li>
@@ -170,17 +170,18 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <li><Kbd>Play / Stop</Kbd> — the one Play button for the app (also <Kbd>Space</Kbd>). The <strong>Pattern / Song</strong> switch next to it picks what it plays: <strong>Pattern</strong> loops the pattern you're editing, <strong>Song</strong> plays the song arrangement from the start. Switching while it plays changes over straight away.</li>
             <li><Kbd>BPM</Kbd> — set tempo from 40 to 300 using the input field or slider, or click <Kbd>Tap</Kbd> in time with a beat.</li>
             <li><Kbd>●</Kbd> <strong>Record</strong> — with a synth track armed, writes what you play on the keyboard into the grid. See <em>Live Keys, MIDI &amp; Recording</em>.</li>
-            <li><Kbd>LIVE</Kbd> — scale lock, the computer keys' octave, and connecting a MIDI keyboard.</li>
+            <li><Kbd>Live</Kbd> — scale lock, the computer keys' octave, and connecting a MIDI keyboard.</li>
+            <li><Kbd>Mixer</Kbd> — reverb, delay and the master bus.</li>
             <li><Kbd>Swing</Kbd> — add rhythmic feel from 0% (straight) to 75% (heavy triplet swing).</li>
             <li><Kbd>Loop</Kbd> — loop the pattern, or play it once. (The song has its own loop range.)</li>
             <li><Kbd>Follow</Kbd> — while a pattern or song plays, the grid scrolls a page at a time to keep the playing step in view. Turn it off to scroll freely. Track names stay pinned on the left as the grid scrolls.</li>
-            <li><Kbd>4/4</Kbd> / <Kbd>3/4</Kbd> — switch between common and waltz time.</li>
-            <li><Kbd>1</Kbd> / <Kbd>2</Kbd> / <Kbd>4</Kbd> / <Kbd>8</Kbd> bars — set how many bars each pattern contains.</li>
-            <li><Kbd>1/16</Kbd> / <Kbd>1/32</Kbd> — step resolution. 1/32 doubles the grid for rolls and fast hats.</li>
-            <li><Kbd>Undo</Kbd> / <Kbd>Redo</Kbd> — step backwards and forwards through changes to the patterns, the song, the sound settings, and the tempo and swing (up to 50).</li>
-            <li><Kbd>⋯</Kbd> next to the pattern buttons opens the <strong>pattern menu</strong>: copy to another slot, copy/paste, shift left/right, humanize velocities, fill empty bars, or clear.</li>
+            <li>The <strong>pattern row</strong> above the grid holds the pattern's own settings:
+              <Kbd>1</Kbd> / <Kbd>2</Kbd> / <Kbd>4</Kbd> / <Kbd>8</Kbd> bars, <Kbd>4/4</Kbd> or <Kbd>3/4</Kbd> time, <Kbd>1/16</Kbd> or <Kbd>1/32</Kbd> steps (1/32 doubles the grid for rolls and fast hats),
+              and <Kbd>⋯</Kbd>, the <strong>pattern menu</strong>: copy to another slot, copy/paste, shift left/right, humanize velocities, fill empty bars, or clear.</li>
+            <li><Kbd>Undo</Kbd> / <Kbd>Redo</Kbd> (the arrows in the header) — step backwards and forwards through changes to the patterns, the song, the sound settings, and the tempo and swing (up to 50).</li>
+            <li>While it plays, hits light up as the playhead reaches them and fade just after, and each track's dot glows while it sounds.</li>
             <li><Kbd>Side panel</Kbd> (top right) — hide the Beats and Harmony panel to give the grid the full width, and bring it back the same way. The <Kbd>\</Kbd> key does the same.</li>
-            <li><Kbd>Layout</Kbd> (top right) — preset sizes for the side panel, the song section and the track name column. You can also drag the coloured dividers, or focus one and use the arrow keys.</li>
+            <li><Kbd>Layout</Kbd> (top right) — preset sizes for the side panel, the song section and the track name column. You can also drag the dividers between the sections (look for the small grip), or focus one and use the arrow keys.</li>
           </ul>
         </>
       ),
@@ -193,9 +194,9 @@ export function HelpModal({ onClose }: HelpModalProps) {
         <>
           <p>Eight independent pattern slots let you build different sections of a song.</p>
           <ul className="list-disc pl-4 space-y-1">
-            <li>Click <Kbd>A</Kbd>–<Kbd>H</Kbd> (or press <Kbd>1</Kbd>–<Kbd>8</Kbd>) to switch patterns. Each is color-coded.</li>
+            <li>Click <Kbd>A</Kbd>–<Kbd>H</Kbd> (or press <Kbd>1</Kbd>–<Kbd>8</Kbd>) to switch patterns. Each button shows a tiny ring of its own rhythm (kick inside, then snare, hats and synth notes), and the selected one glows in its colour.</li>
             <li><strong>Bars</strong> sets a pattern’s length: 1, 2, 4 or 8 bars.</li>
-            <li>Use the <Kbd>⋯</Kbd> menu to <strong>copy a pattern into another slot</strong> — the fastest way to build a variation.</li>
+            <li>Use the <Kbd>⋯</Kbd> menu in the pattern row to <strong>copy a pattern into another slot</strong> — the fastest way to build a variation.</li>
             <li>Every pattern has its own drum tracks, synth tracks, time signature, and bar count.</li>
             <li>Undo covers all the patterns and the song together, so it can take back a change to a pattern you're not looking at.</li>
             <li>Arrange patterns into a full song in the Song Arrangement section below the sequencer.</li>
@@ -407,7 +408,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
       icon: '\u{1F4E4}',
       content: (
         <>
-          <p>Export your work in three professional formats from the header buttons.</p>
+          <p>Press <Kbd>Export</Kbd> in the header and choose a format for <strong>this pattern</strong> or, if you've built one, <strong>the song</strong>.</p>
           <Sub title="MIDI">
             <ul className="list-disc pl-4 space-y-1">
               <li>Exports the active pattern (or full song) as a standard <code className="text-accent-cyan-fg">.mid</code> file.</li>
@@ -420,7 +421,6 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <Sub title="WAV">
             <ul className="list-disc pl-4 space-y-1">
               <li>Renders lossless audio at 44.1kHz / 16-bit stereo.</li>
-              <li>If you have a song arrangement, choose to export the pattern or the full song.</li>
               <li>Muted tracks are excluded, solo is respected.</li>
               <li>Chance is rolled each time round, just as you hear it, so two exports of the same pattern can differ.</li>
             </ul>
@@ -428,7 +428,6 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <Sub title="MP3">
             <ul className="list-disc pl-4 space-y-1">
               <li>Compressed export at 192 kbps — great for sharing.</li>
-              <li>Same pattern-or-song choice as WAV.</li>
               <li>Encoder loads on demand, so first export may take a moment.</li>
             </ul>
           </Sub>
@@ -441,7 +440,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
       icon: '\u{1F3B9}',
       content: (
         <>
-          <p>Play any synth track from your computer keyboard or a MIDI keyboard, and record what you play straight into the grid. The <Kbd>LIVE</Kbd> button in the transport holds the settings below.</p>
+          <p>Play any synth track from your computer keyboard or a MIDI keyboard, and record what you play straight into the grid. The <Kbd>Live</Kbd> button in the transport holds the settings below.</p>
           <Sub title="Playing">
             <ul className="list-disc pl-4 space-y-1">
               <li>Click <Kbd>●</Kbd> on a synth track's header to <strong>arm</strong> it. The transport shows a <strong>Keys</strong> badge with the current octave.</li>
@@ -452,14 +451,14 @@ export function HelpModal({ onClose }: HelpModalProps) {
           </Sub>
           <Sub title="Scale Lock">
             <ul className="list-disc pl-4 space-y-1">
-              <li>Turn on <strong>Scale lock</strong> under <Kbd>LIVE</Kbd> to keep what you play into the armed track in the key chosen in the Harmony tab. A lock shows on the LIVE button while it's on.</li>
+              <li>Turn on <strong>Scale lock</strong> under <Kbd>Live</Kbd> to keep what you play into the armed track in the key chosen in the Harmony tab. A lock shows on the Live button while it's on.</li>
               <li>Computer keys: the home row <Kbd>A</Kbd> <Kbd>S</Kbd> <Kbd>D</Kbd> <Kbd>F</Kbd> <Kbd>G</Kbd> <Kbd>H</Kbd> <Kbd>J</Kbd> <Kbd>K</Kbd> <Kbd>L</Kbd> <Kbd>;</Kbd> plays the scale upwards from its root, so there are no wrong notes. The top row is silent. The LIVE panel shows which note each key plays.</li>
               <li>MIDI keyboard: a note outside the key plays the nearest note in it.</li>
             </ul>
           </Sub>
           <Sub title="MIDI Keyboard">
             <ul className="list-disc pl-4 space-y-1">
-              <li>Plug in a USB or Bluetooth MIDI keyboard, open <Kbd>LIVE</Kbd> and press <strong>Connect MIDI keyboard</strong>. The browser asks for permission the first time; after that it reconnects by itself.</li>
+              <li>Plug in a USB or Bluetooth MIDI keyboard, open <Kbd>Live</Kbd> and press <strong>Connect MIDI keyboard</strong>. The browser asks for permission the first time; after that it reconnects by itself.</li>
               <li>Works in Chrome, Edge and Firefox. Safari can't use MIDI keyboards.</li>
               <li>It plays the armed synth track, with how hard you play setting the velocity. Recording works the same as with the computer keys.</li>
               <li>With several keyboards connected, <strong>Listen to</strong> picks one. The panel shows the last note received, so you can check it's getting through.</li>
@@ -628,7 +627,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search help..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-bg-cell border border-border/50 rounded-md text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-orange/50"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-bg-cell border border-border/50 rounded-md text-text-primary placeholder:text-text-muted focus:outline-none focus:border-text-primary/50"
             />
             {search && (
               <button

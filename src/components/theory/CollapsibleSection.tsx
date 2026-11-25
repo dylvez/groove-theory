@@ -10,7 +10,7 @@ export function CollapsibleSection({ title, defaultOpen = false, children }: Col
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col border-t border-border pt-2">
       <button
         onClick={() => setOpen(!open)}
         aria-expanded={open}
@@ -24,7 +24,7 @@ export function CollapsibleSection({ title, defaultOpen = false, children }: Col
         >
           <path d="M6.293 4.293a1 1 0 011.414 0L14 10.586l-6.293 6.293a1 1 0 01-1.414-1.414L11.172 10.586 6.293 5.707a1 1 0 010-1.414z" />
         </svg>
-        <span className="text-xs font-semibold text-text-muted uppercase tracking-wider group-hover:text-text-secondary transition-colors">
+        <span className="label-caps group-hover:text-text-secondary transition-colors">
           {title}
         </span>
       </button>

@@ -11,6 +11,7 @@ import type { SynthType } from '../../types';
 import { DrumTrack } from './DrumTrack';
 import { MelodicTrack } from './MelodicTrack';
 import { StepRuler } from './StepRuler';
+import { PatternBar } from './PatternBar';
 
 const SYNTH_OPTIONS: { type: SynthType; label: string; color: string }[] = [
   { type: 'synth', label: 'Basic Synth', color: '#a855f7' },
@@ -193,9 +194,10 @@ export function SequencerGrid() {
         Shift+Enter changes velocity. Alt+Enter opens the step editor for chance, repeats and timing.
         Delete clears a step. Space plays and stops.
       </p>
+      <PatternBar />
       <div
         ref={scrollerRef}
-        className="py-3 overflow-auto min-h-0 flex-1"
+        className="pt-2 pb-3 overflow-auto min-h-0 flex-1"
         onKeyDown={handleGridKeyDown}
         onFocus={handleGridFocus}
       >
@@ -207,13 +209,11 @@ export function SequencerGrid() {
 
         {/* Drums section */}
         <div>
-          <div className={`w-full flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
-            studioTab === 'beats'
-              ? 'bg-accent-amber/20 text-accent-amber-fg border border-accent-amber/40'
-              : 'bg-bg-tertiary text-text-secondary border border-transparent'
+          <div className={`w-full flex items-center gap-2 py-1 font-display text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors ${
+            studioTab === 'beats' ? 'text-accent-amber-fg' : 'text-text-secondary'
           }`}>
             {/* Pinned to the left while the grid scrolls sideways */}
-            <div className="sticky left-3 flex items-center gap-2">
+            <div className="sticky left-0 flex items-center gap-2">
             <h3 className="flex items-center">
             <button
               onClick={() => setDrumsCollapsed(!drumsCollapsed)}
@@ -231,20 +231,20 @@ export function SequencerGrid() {
               Drums
             </button>
             </h3>
-            <label className="flex items-center gap-1.5 ml-3 normal-case tracking-normal font-normal">
-              <span className="text-[11px]">Kit</span>
+            <label className="flex items-center gap-1.5 ml-3 normal-case tracking-normal font-normal font-sans">
+              <span className="text-[11px] text-text-muted">Kit</span>
               <select
                 value={drumKitId}
                 onChange={(e) => handleKitChange(e.target.value)}
                 title={DRUM_KITS.find(k => k.id === drumKitId)?.description}
-                className="bg-bg-primary/60 border border-current rounded px-1.5 py-1 text-[11px] font-semibold cursor-pointer text-inherit"
+                className="bg-[#111118] border border-border-control rounded-full px-2 py-1 text-xs font-medium cursor-pointer text-text-primary"
               >
                 {DRUM_KITS.map(k => (
                   <option key={k.id} value={k.id}>{k.name}</option>
                 ))}
               </select>
             </label>
-            <span className="text-[11px] font-normal normal-case tracking-normal ml-3">
+            <span className="text-[11px] font-normal normal-case tracking-normal ml-3 font-sans text-text-muted">
               {activePattern.drumTracks.length} {activePattern.drumTracks.length === 1 ? 'track' : 'tracks'}
             </span>
             </div>
@@ -268,19 +268,19 @@ export function SequencerGrid() {
                   onClick={() => { setShowDrumPicker(!showDrumPicker); setShowSynthPicker(false); }}
                   aria-expanded={showDrumPicker}
                   aria-haspopup="dialog"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-text-primary bg-bg-cell hover:bg-bg-cell-hover border border-border/30 hover:border-border/60 cursor-pointer transition-colors"
+                  className="pill"
                 >
                   <span aria-hidden="true" className="text-sm leading-none">+</span> Add Drum
                 </button>
                 <button
                   onClick={fillAllDrums}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-accent-purple-fg bg-bg-cell hover:bg-accent-purple/15 border border-border/30 hover:border-accent-purple/40 cursor-pointer transition-colors"
+                  className="pill"
                   title="Fill blank bars on all drum tracks"
                 >
                   Fill All Drums
                 </button>
                 {showDrumPicker && (
-                  <Popover label="Add a drum" onClose={() => setShowDrumPicker(false)} className="absolute top-9 left-0 z-50 bg-bg-secondary border border-border-control rounded-lg p-2 shadow-xl min-w-40">
+                  <Popover label="Add a drum" onClose={() => setShowDrumPicker(false)} className="absolute top-9 left-0 z-50 bg-bg-secondary border border-border-soft rounded-xl p-2 shadow-2xl min-w-40">
                     <div className="flex flex-col gap-1">
                       {DRUM_KIT.map(kit => (
                         <button
@@ -302,12 +302,10 @@ export function SequencerGrid() {
 
         {/* Synth section */}
         <div>
-          <div className={`w-full flex items-center px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors ${
-            studioTab === 'harmony'
-              ? 'bg-accent-purple/20 text-accent-purple-fg border border-accent-purple/40'
-              : 'bg-bg-tertiary text-text-secondary border border-transparent'
+          <div className={`w-full flex items-center py-1 font-display text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors ${
+            studioTab === 'harmony' ? 'text-accent-purple-fg' : 'text-text-secondary'
           }`}>
-          <h3 className="sticky left-3">
+          <h3 className="sticky left-0">
           <button
             onClick={() => setSynthsCollapsed(!synthsCollapsed)}
             aria-expanded={!synthsCollapsed}
@@ -321,8 +319,8 @@ export function SequencerGrid() {
             >
               <path d="M4 2l5 4-5 4V2z" />
             </svg>
-            Synth
-            <span className="text-[11px] font-normal normal-case tracking-normal ml-3">
+            Synths
+            <span className="text-[11px] font-normal normal-case tracking-normal ml-3 font-sans text-text-muted">
               <span className="sr-only">, </span>{activePattern.melodicTracks.length} {activePattern.melodicTracks.length === 1 ? 'track' : 'tracks'}
             </span>
           </button>
@@ -347,20 +345,20 @@ export function SequencerGrid() {
                   onClick={() => { setShowSynthPicker(!showSynthPicker); setShowDrumPicker(false); }}
                   aria-expanded={showSynthPicker}
                   aria-haspopup="dialog"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-text-primary bg-bg-cell hover:bg-bg-cell-hover border border-border/30 hover:border-border/60 cursor-pointer transition-colors"
+                  className="pill"
                 >
                   <span aria-hidden="true" className="text-sm leading-none">+</span> Add Synth
                 </button>
                 <button
                   onClick={fillAllSynths}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-accent-purple-fg bg-bg-cell hover:bg-accent-purple/15 border border-border/30 hover:border-accent-purple/40 cursor-pointer transition-colors"
+                  className="pill"
                   title="Fill blank bars on all synth tracks"
                 >
                   Fill All Synths
                 </button>
                 {showSynthPicker && (
-                  <Popover label="Add a synth" onClose={() => setShowSynthPicker(false)} className="absolute top-9 left-0 z-50 bg-bg-secondary border border-border-control rounded-lg p-2 shadow-xl min-w-56">
-                    <h4 id="synth-presets-heading" className="text-[11px] font-normal uppercase tracking-widest text-text-muted px-2 pb-1">Presets</h4>
+                  <Popover label="Add a synth" onClose={() => setShowSynthPicker(false)} className="absolute top-9 left-0 z-50 bg-bg-secondary border border-border-soft rounded-xl p-2 shadow-2xl min-w-56">
+                    <h4 id="synth-presets-heading" className="label-caps px-2 pb-1">Presets</h4>
                     <div role="group" aria-labelledby="synth-presets-heading" className="grid grid-cols-2 gap-1 mb-2">
                       {SYNTH_PRESETS.map(preset => (
                         <button
@@ -374,7 +372,7 @@ export function SequencerGrid() {
                         </button>
                       ))}
                     </div>
-                    <h4 id="synth-blank-heading" className="text-[11px] font-normal uppercase tracking-widest text-text-muted px-2 pb-1 border-t border-border/50 pt-2">Blank engine</h4>
+                    <h4 id="synth-blank-heading" className="label-caps px-2 pb-1 border-t border-border pt-2">Blank engine</h4>
                     <div role="group" aria-labelledby="synth-blank-heading" className="flex flex-col gap-1">
                       {SYNTH_OPTIONS.map(option => (
                         <button

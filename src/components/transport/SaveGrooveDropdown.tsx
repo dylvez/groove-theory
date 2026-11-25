@@ -106,8 +106,8 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
             onKeyDown={handleKeyDown}
             placeholder="Groove name..."
             autoFocus
-            className="flex-1 px-2 py-1.5 bg-bg-cell border border-border rounded-md text-xs text-text-primary
-              placeholder:text-text-muted focus:border-accent-orange"
+            className="flex-1 px-2 py-1.5 bg-[#111118] border border-border-control rounded-md text-xs text-text-primary
+              placeholder:text-text-muted focus:border-text-primary"
           />
           <button
             onClick={handleSave}

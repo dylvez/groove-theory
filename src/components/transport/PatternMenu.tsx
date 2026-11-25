@@ -46,8 +46,8 @@ export function PatternMenu({ onClose }: PatternMenuProps) {
   const run = (fn: () => void) => () => { fn(); onClose(); };
 
   return (
-    <div ref={ref} role="dialog" aria-label="Pattern actions" className="absolute top-full left-0 mt-1 z-50 bg-bg-secondary border border-border-control rounded-lg shadow-xl min-w-56 py-1">
-      <h3 id="copy-to-slot" className="px-3 pt-1 pb-1 text-[11px] font-normal uppercase tracking-widest text-text-muted">Copy to slot</h3>
+    <div ref={ref} role="dialog" aria-label="Pattern actions" className="absolute top-full left-0 mt-1 z-50 bg-bg-secondary border border-border-soft rounded-xl shadow-xl min-w-56 py-1">
+      <h3 id="copy-to-slot" className="px-3 pt-1 pb-1 label-caps">Copy to slot</h3>
       <div role="group" aria-labelledby="copy-to-slot" className="grid grid-cols-4 gap-1 px-3 pb-2">
         {patterns.map(p => {
           const color = PATTERN_COLORS[p.id] ?? '#f97316';

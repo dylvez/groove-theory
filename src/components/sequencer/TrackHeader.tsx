@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useUIStore, DEFAULT_HEADER_WIDTH } from '../../store/useUIStore';
+import { useTransportStore } from '../../store/useTransportStore';
+import { useSongStore } from '../../store/useSongStore';
 
 interface TrackHeaderProps {
   name: string;
@@ -25,6 +27,26 @@ interface TrackHeaderProps {
   onTogglePianoRoll?: () => void;
   /** Floating panel anchored to the header (sound settings), so it opens in view even when the grid is scrolled */
   panel?: React.ReactNode;
+  /** Does the track sound on this step? Lights the track's dot while playing. */
+  soundsAt?: (step: number) => boolean;
+}
+
+/** The track's colour dot. It lights up while the track is sounding. */
+function SoundingDot({ color, soundsAt }: { color: string; soundsAt?: (step: number) => boolean }) {
+  const step = useTransportStore(s => s.currentStep);
+  const transportPlaying = useTransportStore(s => s.state) === 'playing';
+  const songPlaying = useSongStore(s => s.songState) === 'playing';
+  const on = (transportPlaying || songPlaying) && !!soundsAt?.(step);
+  return (
+    <span
+      aria-hidden="true"
+      className="w-2 h-2 rounded-full shrink-0 transition-[box-shadow,background-color] duration-150"
+      style={{
+        backgroundColor: on ? color : `${color}8c`,
+        boxShadow: on ? `0 0 10px ${color}, 0 0 3px ${color}` : 'none',
+      }}
+    />
+  );
 }
 
 export function HeaderResizeHandle() {
@@ -81,7 +103,7 @@ export function HeaderResizeHandle() {
 export function TrackHeader({
   name, color, muted, solo,
   onMute, onSolo, onRemove, onRename, onOpenSettings, settingsOpen, onFill,
-  onAudition, armed, onToggleArm, subtitle, pianoRollOpen, onTogglePianoRoll, panel,
+  onAudition, armed, onToggleArm, subtitle, pianoRollOpen, onTogglePianoRoll, panel, soundsAt,
 }: TrackHeaderProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(name);
@@ -110,12 +132,12 @@ export function TrackHeader({
         aria-label={`${name} sound settings`}
         aria-expanded={!!settingsOpen}
         aria-haspopup="dialog"
-        className="w-6 h-6 shrink-0 flex items-center justify-center text-[15px] font-bold leading-none cursor-pointer rounded hover:bg-bg-cell transition-colors"
-        style={{ color, textShadow: `0 0 2px ${color}` }}
+        className={`w-6 h-6 shrink-0 flex items-center justify-center text-[15px] leading-none cursor-pointer rounded-full hover:bg-bg-cell hover:text-text-primary transition-colors ${settingsOpen ? 'text-text-primary bg-bg-cell' : 'text-text-muted'}`}
         title="Sound settings"
       >
         <span aria-hidden="true">&#9881;</span>
       </button>
+      <SoundingDot color={color} soundsAt={soundsAt} />
 
       {editing ? (
         <input
@@ -181,8 +203,8 @@ export function TrackHeader({
             onClick={onToggleArm}
             aria-pressed={!!armed}
             aria-label={`Play ${name} from the computer keyboard`}
-            className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-              armed ? 'bg-accent-red text-on-accent animate-pulse' : 'bg-bg-cell text-text-muted hover:text-accent-red-fg'
+            className={`w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors border ${
+              armed ? 'bg-accent-red border-accent-red text-white shadow-[0_0_12px_rgb(239_68_68/0.6)] animate-pulse' : 'bg-bg-cell border-border-soft text-accent-red-fg hover:bg-bg-cell-hover'
             }`}
             title={armed ? 'Armed for live keys — click to disarm' : 'Arm: play this synth with your keyboard'}
           >
@@ -193,7 +215,7 @@ export function TrackHeader({
           <button
             onClick={onRemove}
             aria-label={`Remove ${name}`}
-            className="w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors bg-bg-cell text-text-muted hover:bg-accent-red/30 hover:text-accent-red-fg"
+            className="w-6 h-6 rounded-full text-[13px] font-bold flex items-center justify-center cursor-pointer transition-colors bg-bg-cell border border-border-soft text-text-muted hover:bg-accent-red/30 hover:text-accent-red-fg"
             title={`Remove ${name}`}
           >
             <span aria-hidden="true">×</span>
@@ -203,8 +225,8 @@ export function TrackHeader({
           onClick={onMute}
           aria-pressed={muted}
           aria-label={`Mute ${name}`}
-          className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-            muted ? 'bg-accent-red/30 text-accent-red-fg ring-1 ring-accent-red-fg' : 'bg-bg-cell text-text-muted hover:text-text-secondary'
+          className={`w-6 h-6 rounded-full font-mono text-[10px] font-bold flex items-center justify-center cursor-pointer transition-colors border ${
+            muted ? 'bg-accent-red/30 text-accent-red-fg border-accent-red-fg' : 'bg-bg-cell border-border-soft text-text-muted hover:text-text-primary'
           }`}
           title={muted ? `Unmute ${name}` : `Mute ${name}`}
         >
@@ -214,8 +236,8 @@ export function TrackHeader({
           onClick={onSolo}
           aria-pressed={solo}
           aria-label={`Solo ${name}`}
-          className={`w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors ${
-            solo ? 'bg-accent-amber/30 text-accent-amber-fg ring-1 ring-accent-amber-fg' : 'bg-bg-cell text-text-muted hover:text-text-secondary'
+          className={`w-6 h-6 rounded-full font-mono text-[10px] font-bold flex items-center justify-center cursor-pointer transition-colors border ${
+            solo ? 'bg-accent-amber/30 text-accent-amber-fg border-accent-amber-fg' : 'bg-bg-cell border-border-soft text-text-muted hover:text-text-primary'
           }`}
           title={solo ? `Unsolo ${name}` : `Solo ${name}`}
         >
@@ -225,7 +247,7 @@ export function TrackHeader({
           <button
             onClick={onFill}
             aria-label={`Fill empty bars of ${name}`}
-            className="w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors bg-bg-cell text-text-muted hover:bg-accent-purple/30 hover:text-accent-purple-fg"
+            className="h-6 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center cursor-pointer transition-colors bg-bg-cell border border-border-soft text-text-muted hover:text-text-primary"
             title="Fill blank bars with existing pattern"
           >
             Fill

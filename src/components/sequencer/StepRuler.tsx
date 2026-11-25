@@ -57,17 +57,17 @@ export function StepRuler({ numSteps, stepsPerMeasure, compact = false }: StepRu
               className={`${compact ? 'w-6' : 'w-9'} h-4 flex items-end justify-center relative ${isBarStart ? 'ml-2' : ''}`}
             >
               {isBeatStart ? (
-                <span className={`text-[11px] font-semibold leading-none ${
+                <span className={`font-mono text-[11px] font-bold leading-none ${
                   beat === 1 ? 'text-text-secondary' : 'text-text-muted'
                 }`}>
                   {compact ? beat : (beat === 1 ? `${bar}.${beat}` : beat)}
                 </span>
               ) : (
-                <span className="w-px h-1.5 bg-border/60 mb-px" />
+                <span className="w-px h-1.5 bg-border-soft mb-px" />
               )}
               <span
                 className={`absolute -bottom-1 left-0 right-0 h-0.5 rounded-full transition-opacity duration-75 ${
-                  isCurrent ? 'bg-accent-orange opacity-100' : 'opacity-0'
+                  isCurrent ? 'bg-white shadow-[0_0_8px_#fff] opacity-100' : 'opacity-0'
                 }`}
               />
             </div>

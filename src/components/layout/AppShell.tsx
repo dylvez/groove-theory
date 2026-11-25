@@ -103,10 +103,12 @@ function StudioView() {
             if (e.key === 'Home') { e.preventDefault(); setSongHeight(MIN_SONG_HEIGHT); }
             if (e.key === 'End') { e.preventDefault(); setSongHeight(MAX_SONG_HEIGHT); }
           }}
-          className="h-1.5 shrink-0 cursor-row-resize bg-accent-purple hover:bg-accent-purple/80 active:bg-accent-purple/60 transition-colors relative group"
+          className="h-1.5 shrink-0 cursor-row-resize bg-border hover:bg-[#3d3d52] active:bg-[#4a4a62] transition-colors relative group"
           title="Drag, or use the up and down arrow keys, to resize the song section. Double-click to reset. Preset sizes are in the Layout menu."
         >
           <div className="absolute -top-1 -bottom-1 inset-x-0" />
+          {/* Grip: what marks this line as something you can drag */}
+          <div aria-hidden="true" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-0.5 rounded-full bg-border-control group-hover:bg-text-primary group-focus-visible:bg-text-primary" />
         </div>
 
         {/* Song section */}
@@ -135,11 +137,12 @@ function StudioView() {
             if (e.key === 'Home') { e.preventDefault(); setPanelWidth(MIN_PANEL_WIDTH); }
             if (e.key === 'End') { e.preventDefault(); setPanelWidth(MAX_PANEL_WIDTH); }
           }}
-          className="w-1.5 shrink-0 cursor-col-resize bg-accent-teal hover:bg-accent-teal/80 active:bg-accent-teal/60 transition-colors relative group"
+          className="w-1.5 shrink-0 cursor-col-resize bg-border hover:bg-[#3d3d52] active:bg-[#4a4a62] transition-colors relative group"
           title="Drag, or use the left and right arrow keys, to resize the side panel. Double-click to reset. Preset sizes are in the Layout menu."
         >
           {/* Wider invisible hit area for easier grabbing */}
           <div className="absolute inset-y-0 -left-1 -right-1" />
+          <div aria-hidden="true" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-0.5 rounded-full bg-border-control group-hover:bg-text-primary group-focus-visible:bg-text-primary" />
         </div>
       )}
 

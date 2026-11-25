@@ -68,7 +68,7 @@ function AppDialog({ request }: { request: DialogRequest }) {
           )}
           {request.kind === 'prompt' && (
             <div className="flex flex-col gap-1">
-              <label htmlFor={inputId} className="text-[11px] uppercase tracking-wider text-text-muted">{request.label}</label>
+              <label htmlFor={inputId} className="label-caps">{request.label}</label>
               <input
                 id={inputId}
                 ref={inputRef}

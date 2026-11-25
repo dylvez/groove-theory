@@ -27,7 +27,7 @@ export function ChordExplorer() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Chord Explorer</h3>
+      <h3 className="font-display text-[13px] font-bold uppercase tracking-[0.08em] text-text-primary">Chord Explorer</h3>
 
       <div className="flex gap-3">
         {/* Root selector */}
@@ -37,7 +37,7 @@ export function ChordExplorer() {
           aria-label="Root"
             value={chordRoot}
             onChange={(e) => { setChordRoot(e.target.value as NoteName); setHighlightMode('chord'); setSelectedDegreeIndex(null); }}
-            className="px-3 py-1.5 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-purple"
+            className="px-3 py-1.5 bg-[#111118] border border-border-control rounded-md text-sm text-text-primary focus:outline-none focus:border-text-primary"
           >
             {NOTE_NAMES.map(n => (
               <option key={n} value={n}>{formatNote(n)}</option>
@@ -55,7 +55,7 @@ export function ChordExplorer() {
               const chord = CHORDS.find(c => c.name === e.target.value);
               if (chord) { setSelectedChord(chord); setHighlightMode('chord'); setChordInversion(0); setSelectedDegreeIndex(null); }
             }}
-            className="px-3 py-1.5 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-purple"
+            className="px-3 py-1.5 bg-[#111118] border border-border-control rounded-md text-sm text-text-primary focus:outline-none focus:border-text-primary"
           >
             {CHORDS.map(c => (
               <option key={c.name} value={c.name}>{c.name}</option>
@@ -71,7 +71,7 @@ export function ChordExplorer() {
         </div>
         <button
           onClick={playChord}
-          className="px-3 py-1.5 rounded-md bg-accent-purple/20 text-accent-purple-fg text-sm font-medium border border-accent-purple/30 hover:bg-accent-purple/30 cursor-pointer transition-colors"
+          className="pill"
         >
           Play
         </button>
@@ -98,7 +98,7 @@ export function ChordExplorer() {
             onClick={() => setChordInversion(i)}
             className={`w-7 h-7 rounded-md text-xs font-medium flex items-center justify-center cursor-pointer transition-colors ${
               chordInversion === i
-                ? 'bg-accent-purple text-on-accent'
+                ? 'bg-text-primary text-bg-primary shadow-[0_0_12px_rgb(255_255_255/0.2)]'
                 : 'bg-bg-cell text-text-secondary hover:bg-bg-cell-hover'
             }`}
           >

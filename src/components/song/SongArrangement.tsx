@@ -210,17 +210,17 @@ export function SongArrangement() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Song Transport Bar */}
-      <div className="flex items-center gap-3 px-4 sm:px-6 py-2 bg-bg-tertiary border-b-2 border-border shrink-0">
+      <div className="flex items-center gap-3 px-4 sm:px-6 py-2 bg-bg-tertiary border-b border-border shrink-0">
         {/* Song label + info */}
         <div className="flex items-center gap-2 shrink-0">
-          <h2 id="song-heading" className="text-xs text-text-secondary uppercase tracking-wider font-medium">Song</h2>
+          <h2 id="song-heading" className="font-display text-base font-bold tracking-tight text-text-primary">Song</h2>
           {hasBlocks && (
             <span className="text-[11px] text-text-muted">
               {blocks.length} block{blocks.length !== 1 ? 's' : ''} · {totalBars} bar{totalBars !== 1 ? 's' : ''}
             </span>
           )}
           {songState === 'playing' && (
-            <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse" />
+            <span aria-hidden="true" className="w-2 h-2 rounded-full bg-[#3ddc84] shadow-[0_0_8px_#3ddc84] animate-pulse" />
           )}
         </div>
 
@@ -230,7 +230,7 @@ export function SongArrangement() {
             // This button goes away once it's used, so focus moves to Play
             onClick={async () => { await choosePlayMode('song'); document.getElementById('main-play')?.focus(); }}
             title="Set the Play button to play the song instead of looping the pattern"
-            className="px-2 py-1 min-h-6 rounded text-[11px] font-medium text-accent-purple-fg bg-accent-purple/15 border border-accent-purple/30 hover:bg-accent-purple/25 cursor-pointer transition-colors shrink-0"
+            className="pill shrink-0"
           >
             Use Play for the song
           </button>
@@ -239,19 +239,15 @@ export function SongArrangement() {
         {/* Loop toggle */}
         {hasBlocks && (
           <>
-            <div aria-hidden="true" className="w-px h-4 bg-border/50" />
+            <div aria-hidden="true" className="w-px h-4 bg-border" />
             <button
               onClick={() => { if (hasLoop) { clearLoopRange(); announce('Loop cleared'); } }}
               aria-pressed={hasLoop}
               aria-label={hasLoop ? `Loop blocks ${loopStart! + 1} to ${loopEnd! + 1}. Press to clear` : 'Loop: off. Set a loop range from a block’s options menu'}
-              className={`px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer shrink-0 ${
-                hasLoop
-                  ? 'bg-accent-blue/20 text-accent-blue-fg border border-accent-blue/40'
-                  : 'bg-bg-cell text-text-muted border border-border-control hover:bg-bg-cell-hover'
-              }`}
+              className="tog shrink-0"
               title={hasLoop ? `Loop: blocks ${loopStart! + 1}–${loopEnd! + 1} (click to clear)` : 'Shift+click two blocks, or use a block’s options menu, to set a loop range'}
             >
-              LOOP{hasLoop ? ` ${loopStart! + 1}–${loopEnd! + 1}` : ''}
+              Loop{hasLoop ? ` ${loopStart! + 1}–${loopEnd! + 1}` : ''}
             </button>
           </>
         )}
@@ -259,12 +255,12 @@ export function SongArrangement() {
         {/* Clear song */}
         {hasBlocks && songState !== 'playing' && (
           <>
-            <div aria-hidden="true" className="w-px h-4 bg-border/50" />
+            <div aria-hidden="true" className="w-px h-4 bg-border" />
             <button
               onClick={() => { clearSong(); announce('Song cleared. Undo brings it back.'); }}
               aria-label="Clear song arrangement"
               title="Clear the song arrangement (Undo brings it back)"
-              className="px-2 py-1 rounded text-[11px] text-text-muted bg-bg-cell hover:bg-bg-cell-hover border border-border-control cursor-pointer transition-colors"
+              className="pill"
             >
               Clear
             </button>
@@ -280,17 +276,9 @@ export function SongArrangement() {
             onClick={handleSaveSong}
             disabled={!hasBlocks}
             title="Save song arrangement to file"
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
-              hasBlocks
-                ? 'bg-accent-green/15 text-accent-green-fg border-accent-green/25 hover:bg-accent-green/25 cursor-pointer'
-                : 'bg-bg-cell text-text-muted/30 border-border/50 cursor-not-allowed'
-            }`}
+            className="pill"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-2.5 h-2.5">
-              <path d="M3.5 1.75a.75.75 0 0 0-1.5 0v3a2.25 2.25 0 0 0 2.25 2.25h5.5A2.25 2.25 0 0 0 12 4.75v-3a.75.75 0 0 0-1.5 0v3a.75.75 0 0 1-.75.75h-5.5a.75.75 0 0 1-.75-.75v-3Z" />
-              <path d="M1 8.75A.75.75 0 0 1 1.75 8h12.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-.75.75H1.75a.75.75 0 0 1-.75-.75v-5.5Zm7 1a.75.75 0 0 0-.75.75v1.5a.75.75 0 0 0 1.5 0v-1.5A.75.75 0 0 0 8 9.75Z" />
-            </svg>
-            Save Song
+            Save song
           </button>
           <div className="relative">
             <button
@@ -298,14 +286,10 @@ export function SongArrangement() {
               title="Open song — presets or import file"
               aria-expanded={showOpenSong}
               aria-haspopup="dialog"
-              className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium border transition-colors
-                bg-accent-blue/15 text-accent-blue-fg border-accent-blue/25 hover:bg-accent-blue/25 cursor-pointer"
+              className={`pill ${showOpenSong ? '!border-text-primary !bg-[#2a2a3a] !text-white' : ''}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-2.5 h-2.5">
-                <path d="M1.75 2A1.75 1.75 0 0 0 0 3.75v.5A1.75 1.75 0 0 0 1.02 5.89l.857 6A1.75 1.75 0 0 0 3.607 13.5h8.786a1.75 1.75 0 0 0 1.731-1.61l.857-6A1.75 1.75 0 0 0 16 4.25v-.5A1.75 1.75 0 0 0 14.25 2H9.236a.75.75 0 0 1-.447-.148L7.078.578A2.25 2.25 0 0 0 5.736 0H1.75Z" />
-              </svg>
-              Open Song
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-2 h-2 opacity-60">
+              Open song
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-2.5 h-2.5 opacity-70">
                 <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
               </svg>
             </button>
@@ -319,7 +303,7 @@ export function SongArrangement() {
       {/* Block Timeline */}
       <div
         ref={timelineRef}
-        className="flex-1 overflow-y-hidden overflow-x-auto px-6 py-2 bg-bg-secondary/30 relative"
+        className="flex-1 overflow-y-hidden overflow-x-auto px-6 py-2 bg-bg-tertiary relative"
         onDragEnd={handleDragEnd}
       >
         <div className="flex items-start gap-0 pt-5" style={{ minHeight: 40 }}>
@@ -357,7 +341,7 @@ export function SongArrangement() {
                 )}
                 {/* Loop range indicator */}
                 {hasLoop && idx >= loopStart! && idx <= loopEnd! && (
-                  <div className="absolute inset-0 rounded-lg border-2 border-accent-blue/40 pointer-events-none z-5" />
+                  <div className="absolute -inset-1 rounded-[14px] border-2 border-dashed border-text-muted/70 pointer-events-none z-5" />
                 )}
                 <SongBlockChip
                   block={block}
@@ -437,10 +421,10 @@ export function SongArrangement() {
         {songState === 'playing' && cursorX !== null && (
           <div
             aria-hidden="true"
-            className="absolute top-0 bottom-0 w-0.5 bg-accent-teal pointer-events-none z-10"
+            className="absolute top-0 bottom-0 w-0.5 bg-white pointer-events-none z-10"
             style={{
               transform: `translateX(${cursorX + TIMELINE_PAD}px)`,
-              boxShadow: '0 0 6px #28d7d4',
+              boxShadow: '0 0 10px #ffffff, 0 0 18px rgb(255 255 255 / 0.5)',
             }}
           />
         )}

@@ -34,8 +34,9 @@ export function TheoryTabs({ showPiano = true, pianoOctaves = 2, pianoStartOctav
 
   return (
     <>
-      {/* Tab bar — height matches the TransportBar (py-2.5 + h-9 = h-14) */}
-      <div role="tablist" aria-label="Theory tools" onKeyDown={handleKeyDown} className="flex shrink-0 h-[60px] bg-bg-tertiary">
+      {/* Tab bar — the same height as the transport bar beside it */}
+      <div className="shrink-0 h-[63px] px-4 flex items-center bg-bg-tertiary border-b border-border">
+      <div role="tablist" aria-label="Theory tools" onKeyDown={handleKeyDown} className="seg w-full !rounded-[10px]">
         {TABS.map(tab => (
           <button
             key={tab.key}
@@ -45,15 +46,12 @@ export function TheoryTabs({ showPiano = true, pianoOctaves = 2, pianoStartOctav
             aria-controls="theory-tabpanel"
             tabIndex={studioTab === tab.key ? 0 : -1}
             onClick={() => setStudioTab(tab.key)}
-            className={`flex-1 px-3 flex items-center justify-center text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer border-b-2 ${
-              studioTab === tab.key
-                ? 'text-accent-orange-fg border-accent-orange'
-                : 'text-text-muted hover:text-text-secondary border-border'
-            }`}
+            className="seg-item flex-1 !min-h-[30px] !rounded-[8px] font-display !text-[13px] tracking-[0.04em]"
           >
             {tab.label}
           </button>
         ))}
+      </div>
       </div>
 
       {/* Tab content */}

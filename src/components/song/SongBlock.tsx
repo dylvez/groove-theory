@@ -1,7 +1,9 @@
-import { useState, useRef, useCallback, memo } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { useSongStore, type SongBlock as SongBlockType } from '../../store/useSongStore';
 import { PATTERN_COLORS, patternTextColor } from '../../constants/patterns';
 import type { Pattern } from '../../types/sequencer';
+import { RhythmRing } from '../common/RhythmRing';
+import { ringFromPattern } from '../../utils/rhythmRing';
 
 interface SongBlockProps {
   block: SongBlockType;
@@ -16,40 +18,6 @@ interface SongBlockProps {
   /** Open the block's options menu at a screen position */
   onContextMenu: (pos: { x: number; y: number }, blockId: string) => void;
 }
-
-/** Mini-grid preview showing drum track activity as tiny step rows */
-const MiniGrid = memo(function MiniGrid({ pattern }: { pattern: Pattern }) {
-  return (
-    <div className="flex flex-col justify-center gap-px flex-1 overflow-hidden min-w-0">
-      {pattern.drumTracks.map((track) => (
-        <div key={track.id} className="flex gap-px h-[2px]">
-          {track.steps.map((step, j) => (
-            <div
-              key={j}
-              className="flex-1 rounded-[0.5px]"
-              style={{ backgroundColor: step > 0 ? track.color : '#2a2a3d', opacity: step > 0 ? 0.4 + 0.6 * step : 1 }}
-            />
-          ))}
-        </div>
-      ))}
-      {/* Aggregated melodic row */}
-      {pattern.melodicTracks.length > 0 && (
-        <div className="flex gap-px h-[2px] mt-px">
-          {pattern.melodicTracks[0].steps.map((_, j) => {
-            const hasActivity = pattern.melodicTracks.some((t) => t.steps[j]?.active);
-            return (
-              <div
-                key={j}
-                className="flex-1 rounded-[0.5px]"
-                style={{ backgroundColor: hasActivity ? '#a855f7' : '#2a2a3d' }}
-              />
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-});
 
 export function SongBlockChip({
   block,
@@ -72,6 +40,7 @@ export function SongBlockChip({
 
   const patternName = pattern?.name ?? '?';
   const color = PATTERN_COLORS[block.patternId] ?? '#888';
+  const ring = useMemo(() => (pattern ? ringFromPattern(pattern) : null), [pattern]);
 
   const handleRepeatsClick = useCallback(() => {
     if (songState === 'playing') return;
@@ -122,75 +91,64 @@ export function SongBlockChip({
       onDragOver={(e) => onDragOver(e, index)}
       onDrop={() => onDrop(index)}
       onContextMenu={handleContextMenu}
-      title="Drag to reorder · click the letter or right-click for options"
-      className={`group relative flex flex-col rounded-lg cursor-grab transition-all select-none shrink-0 h-full ${
+      title="Drag to reorder · click the ring or right-click for options"
+      className={`group relative flex items-center gap-2.5 pl-1.5 pr-2 rounded-xl border cursor-grab transition-[box-shadow,border-color] select-none shrink-0 h-full overflow-hidden ${
         block.muted ? 'opacity-40' : ''
-      } ${
-        isActive
-          ? 'ring-2 ring-accent-teal'
-          : 'hover:ring-1 hover:ring-border'
-      }`}
-      style={{ width: widthPx, minWidth: 60 }}
+      } ${isActive ? '' : 'border-[#383848] bg-bg-cell hover:border-text-muted'}`}
+      style={{
+        width: widthPx,
+        minWidth: 60,
+        ...(isActive ? {
+          borderColor: `${color}d9`,
+          background: `linear-gradient(90deg, ${color}2e, var(--color-bg-cell) 75%)`,
+          boxShadow: `0 0 24px ${color}4d`,
+        } : {}),
+      }}
     >
-      {/* Colored top accent stripe */}
-      <div
-        className="h-1 w-full rounded-t-lg shrink-0"
-        style={{ backgroundColor: color }}
-      />
+      {/* The ring is also the options button */}
+      <button
+        type="button"
+        onClick={openOptions}
+        aria-haspopup="dialog"
+        aria-label={`Block ${index + 1}${block.sectionLabel ? `, ${block.sectionLabel}` : ''}: pattern ${patternName}, ${block.repeats} time${block.repeats === 1 ? '' : 's'}${block.muted ? ', muted' : ''}${isActive ? ', playing' : ''}. Options`}
+        className="relative shrink-0 w-[52px] h-[52px] rounded-full cursor-pointer hover:bg-white/5 flex items-center justify-center"
+      >
+        {ring && <RhythmRing ring={ring} size={52} lit={isActive} className="absolute inset-0 pointer-events-none" />}
+        <span aria-hidden="true" className="relative font-display text-[13px] font-bold" style={{ color: patternTextColor(block.patternId) }}>
+          {patternName}
+        </span>
+      </button>
 
-      {/* Block body */}
-      <div className="flex-1 flex items-stretch bg-bg-cell rounded-b-lg overflow-hidden min-h-0">
-        {/* Pattern letter badge — also the options button */}
-        <button
-          type="button"
-          onClick={openOptions}
-          aria-haspopup="dialog"
-          aria-label={`Block ${index + 1}${block.sectionLabel ? `, ${block.sectionLabel}` : ''}: pattern ${patternName}, ${block.repeats} time${block.repeats === 1 ? '' : 's'}${block.muted ? ', muted' : ''}${isActive ? ', playing' : ''}. Options`}
-          className="flex items-center justify-center px-2 min-w-6 shrink-0 cursor-pointer hover:brightness-125"
-          style={{ backgroundColor: `${color}15` }}
-        >
-          <span aria-hidden="true" className="text-sm font-bold" style={{ color: patternTextColor(block.patternId) }}>
-            {patternName}
-          </span>
-        </button>
-
-        {/* Mini-grid preview (center area) */}
-        {pattern && widthPx > 80 && (
-          <div aria-hidden="true" className="flex-1 py-1 px-1 min-w-0 overflow-hidden">
-            <MiniGrid pattern={pattern} />
-          </div>
-        )}
-
-        {/* Repeat badge (right) */}
-        <div className="flex items-center px-2 shrink-0">
-          {editingRepeats ? (
-            <input
-              ref={repeatsInputRef}
-              type="number"
-              min={1}
-              max={99}
-              value={block.repeats}
-              onChange={handleRepeatsChange}
-              onBlur={handleRepeatsBlur}
-              onKeyDown={handleRepeatsKeyDown}
-              aria-label={`Repeats for block ${index + 1}`}
-              className="w-8 text-center text-[11px] bg-bg-primary border border-border rounded px-0.5 py-0 text-text-primary focus:outline-none focus:border-accent-orange"
-            />
-          ) : (
-            <button
-              onClick={handleRepeatsClick}
-              aria-label={`Block ${index + 1} repeats ${block.repeats} time${block.repeats === 1 ? '' : 's'}. Edit`}
-              className="text-[11px] min-h-6 min-w-6 px-0.5 text-text-muted hover:text-text-primary cursor-pointer"
-              title="Click to edit repeats"
-            >
-              {isActive ? (
-                <span className="text-accent-teal-fg">{currentRepeat + 1}/{block.repeats}</span>
-              ) : (
-                <span>×{block.repeats}</span>
-              )}
-            </button>
-          )}
+      {/* Name, then repeats */}
+      {widthPx > 100 && (
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span aria-hidden="true" className="text-xs font-semibold text-text-primary truncate">Pattern {patternName}</span>
         </div>
+      )}
+      <div className="ml-auto flex items-center shrink-0">
+        {editingRepeats ? (
+          <input
+            ref={repeatsInputRef}
+            type="number"
+            min={1}
+            max={99}
+            value={block.repeats}
+            onChange={handleRepeatsChange}
+            onBlur={handleRepeatsBlur}
+            onKeyDown={handleRepeatsKeyDown}
+            aria-label={`Repeats for block ${index + 1}`}
+            className="w-10 text-center font-mono text-[11px] bg-[#111118] border border-border-control rounded px-0.5 py-0.5 text-text-primary focus:outline-none focus:border-text-primary"
+          />
+        ) : (
+          <button
+            onClick={handleRepeatsClick}
+            aria-label={`Block ${index + 1} repeats ${block.repeats} time${block.repeats === 1 ? '' : 's'}. Edit`}
+            className="font-mono text-[11px] min-h-6 min-w-6 px-1.5 rounded-full border border-border-soft text-text-secondary hover:text-text-primary hover:bg-bg-cell-hover cursor-pointer"
+            title="Click to edit repeats"
+          >
+            {isActive ? <span className="text-text-primary">{currentRepeat + 1}/{block.repeats}</span> : <span>×{block.repeats}</span>}
+          </button>
+        )}
       </div>
 
       {/* Mute indicator */}

@@ -97,7 +97,7 @@ export function PianoKeyboard({ startOctave = 3, numOctaves = 3 }: PianoKeyboard
               key={`${k.note}${k.octave}-${i}`}
               {...keyHandlers(noteStr)}
               aria-label={keyLabel(k.note, k.octave, isInScale, isRoot, degree)}
-              className="focus-on-light relative w-11 shrink-0 h-32 rounded-b-lg border border-gray-400 cursor-pointer transition-colors flex flex-col items-center justify-end pb-2 bg-white hover:bg-gray-100 active:bg-gray-200"
+              className="focus-on-light relative w-11 shrink-0 h-32 rounded-b-lg border border-gray-400 cursor-pointer transition-colors flex flex-col items-center justify-end pb-2 bg-[#ececf1] hover:bg-white active:bg-gray-200"
             >
               <span aria-hidden="true" className={`text-[11px] font-medium ${isInScale ? getDegreeColor() : 'text-gray-600'}`}>{k.note}</span>
               {isInScale && degree >= 0 && (
@@ -136,7 +136,7 @@ export function PianoKeyboard({ startOctave = 3, numOctaves = 3 }: PianoKeyboard
             key={`${k.note}${k.octave}`}
             {...keyHandlers(noteStr)}
             aria-label={keyLabel(k.note, k.octave, isInScale, isRoot, degree)}
-            className="absolute top-0 w-7 h-20 rounded-b-md z-10 border border-border/50 cursor-pointer transition-colors flex flex-col items-end justify-center pb-1 bg-gray-900 hover:bg-gray-700 active:bg-gray-600"
+            className="absolute top-0 w-7 h-20 rounded-b-md z-10 border border-border-soft cursor-pointer transition-colors flex flex-col items-end justify-center pb-1 bg-[#1c1c25] hover:bg-[#2a2a36] active:bg-[#34344a]"
             style={{ left: `${leftPos}px` }}
           >
             {isInScale && degree >= 0 && (

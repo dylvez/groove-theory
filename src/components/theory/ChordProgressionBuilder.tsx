@@ -82,7 +82,7 @@ export function ChordProgressionBuilder() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Chord Progression</h3>
+      <h3 className="font-display text-[13px] font-bold uppercase tracking-[0.08em] text-text-primary">Chord Progression</h3>
 
       {/* Diatonic chord buttons */}
       <div className="flex gap-1.5 flex-wrap">
@@ -126,13 +126,13 @@ export function ChordProgressionBuilder() {
           <div className="flex gap-2">
             <button
               onClick={playProgression}
-              className="px-3 py-1.5 rounded-md bg-accent-cyan/20 text-accent-cyan-fg text-sm font-medium border border-accent-cyan/30 hover:bg-accent-cyan/30 cursor-pointer transition-colors"
+              className="pill"
             >
               Play
             </button>
             <button
               onClick={applyToTrack}
-              className="px-3 py-1.5 rounded-md bg-accent-green/20 text-accent-green-fg text-sm font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors"
+              className="pill pill-go"
             >
               Apply to Track
             </button>

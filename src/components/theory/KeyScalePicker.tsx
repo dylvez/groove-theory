@@ -41,7 +41,7 @@ export function KeyScalePicker() {
           aria-label="Key"
           value={rootNote}
           onChange={(e) => { setRootNote(e.target.value as NoteName); setHighlightMode('scale'); }}
-          className="px-2 py-1 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-orange min-w-[3.5rem]"
+          className="px-2 py-1 bg-[#111118] border border-border-control rounded-md text-sm text-text-primary focus:outline-none focus:border-text-primary min-w-[3.5rem]"
         >
           {NOTE_NAMES.map(n => (
             <option key={n} value={n}>{formatNote(n)}</option>
@@ -55,7 +55,7 @@ export function KeyScalePicker() {
             const scale = SCALES.find(s => s.name === e.target.value);
             if (scale) { setSelectedScale(scale); setHighlightMode('scale'); }
           }}
-          className="px-2 py-1 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-orange flex-1 min-w-0"
+          className="px-2 py-1 bg-[#111118] border border-border-control rounded-md text-sm text-text-primary focus:outline-none focus:border-text-primary flex-1 min-w-0"
         >
           {SCALES.map(s => (
             <option key={s.name} value={s.name}>{s.name}</option>
@@ -64,11 +64,11 @@ export function KeyScalePicker() {
 
         <button
           onClick={playScale}
-          className="px-2.5 py-1 rounded-md bg-accent-blue/20 text-accent-blue-fg text-xs font-medium border border-accent-blue/30 hover:bg-accent-blue/30 cursor-pointer transition-colors shrink-0"
+          className="pill shrink-0"
           title="Play scale"
           aria-label="Play scale"
         >
-          &#9654; Scale
+          <span aria-hidden="true">&#9654;</span> Scale
         </button>
       </div>
 
@@ -79,7 +79,7 @@ export function KeyScalePicker() {
             key={`${note}-${i}`}
             onClick={() => playNote(note)}
             aria-label={`Play ${spokenNote(note)}, ${selectedScale.intervals[i] === 0 ? 'root' : `${selectedScale.intervals[i]} semitones up`}`}
-            className="px-2 py-1 rounded bg-accent-blue/15 text-accent-blue-fg text-xs font-medium border border-accent-blue/25 hover:bg-accent-blue/25 cursor-pointer transition-colors"
+            className="pill"
           >
             {formatNote(note)}
             <span className="ml-1 text-text-muted text-[11px]">

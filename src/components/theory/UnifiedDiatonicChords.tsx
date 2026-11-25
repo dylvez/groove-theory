@@ -86,7 +86,7 @@ export function UnifiedDiatonicChords() {
   if (!diatonicMap) {
     return (
       <div className="flex flex-col gap-2">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+        <h4 className="label-caps">
           Diatonic Chords
         </h4>
         <p className="text-xs text-text-muted italic">
@@ -98,7 +98,7 @@ export function UnifiedDiatonicChords() {
 
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+      <h4 className="label-caps">
         Diatonic Chords
       </h4>
       <div className="flex gap-1.5 flex-wrap">
@@ -108,18 +108,18 @@ export function UnifiedDiatonicChords() {
             onClick={() => handleChordClick(i)}
             aria-pressed={selectedDegreeIndex === i}
             aria-label={`${chord.numeral}, ${spokenNote(chord.rootNote)} ${chord.chordDef.name}`}
-            className={`relative px-3 py-2 rounded-md border cursor-pointer transition-colors flex flex-col items-center min-w-[3rem] group ${
+            className={`relative px-3 py-2 rounded-[10px] border cursor-pointer transition-colors flex flex-col items-center min-w-[3rem] group ${
               selectedDegreeIndex === i
-                ? 'bg-accent-purple/25 border-accent-purple/50 ring-1 ring-accent-purple/30'
-                : 'bg-bg-cell border-border hover:border-accent-cyan/50 hover:bg-bg-cell-hover'
+                ? 'bg-text-primary border-text-primary shadow-[0_0_14px_rgb(255_255_255/0.22)]'
+                : 'bg-bg-cell border-border-soft hover:border-text-muted hover:bg-bg-cell-hover'
             }`}
           >
-            <span className={`text-sm font-bold ${
-              selectedDegreeIndex === i ? 'text-accent-purple-fg' : 'text-text-primary'
+            <span className={`font-mono text-[13px] font-bold ${
+              selectedDegreeIndex === i ? 'text-bg-primary' : 'text-text-primary'
             }`}>
               {chord.numeral}
             </span>
-            <span className="text-[11px] text-text-muted">
+            <span className={`text-[11px] ${selectedDegreeIndex === i ? 'text-bg-primary' : 'text-text-muted'}`}>
               {formatNote(chord.rootNote)}
             </span>
           </button>
@@ -127,7 +127,7 @@ export function UnifiedDiatonicChords() {
           <button
             onClick={(e) => handleAddToProgression(i, e)}
             aria-label={`Add ${chord.numeral} to the progression`}
-            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-accent-cyan text-on-accent text-sm font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-accent-cyan/80 cursor-pointer"
+            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#3ddc84] text-bg-primary text-sm font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:brightness-110 cursor-pointer shadow-[0_0_10px_rgb(61_220_132/0.5)]"
             title="Add to progression"
           >
             <span aria-hidden="true">+</span>

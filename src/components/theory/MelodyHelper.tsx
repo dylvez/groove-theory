@@ -89,7 +89,7 @@ export function MelodyHelper() {
   if (progression.length === 0) {
     return (
       <div className="flex flex-col gap-1.5">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+        <h4 className="label-caps">
           Melody Helper
         </h4>
         <p className="text-xs text-text-muted italic">
@@ -104,7 +104,7 @@ export function MelodyHelper() {
 
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+      <h4 className="label-caps">
         Melody Helper
       </h4>
 
@@ -115,7 +115,7 @@ export function MelodyHelper() {
           aria-label="Pattern"
           value={patternType}
           onChange={(e) => setPatternType(e.target.value as MelodyPatternType)}
-          className="px-2 py-1 bg-bg-cell border border-border rounded-md text-sm text-text-primary focus:outline-none focus:border-accent-orange flex-1 min-w-0"
+          className="px-2 py-1 bg-[#111118] border border-border-control rounded-md text-sm text-text-primary focus:outline-none focus:border-text-primary flex-1 min-w-0"
         >
           {PATTERN_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -131,7 +131,7 @@ export function MelodyHelper() {
           value={resolvedTrackId ?? ''}
           onChange={(e) => setTargetTrackId(e.target.value)}
           disabled={melodicTracks.length === 0}
-          className="px-2 py-1 bg-bg-cell border border-border rounded-md text-xs text-text-primary focus:outline-none focus:border-accent-purple min-w-0 flex-1"
+          className="px-2 py-1 bg-[#111118] border border-border-control rounded-md text-xs text-text-primary focus:outline-none focus:border-text-primary min-w-0 flex-1"
         >
           {melodicTracks.map(t => (
             <option key={t.id} value={t.id}>{t.name}</option>
@@ -140,14 +140,14 @@ export function MelodyHelper() {
 
         <button
           onClick={previewMelody}
-          className="px-2.5 py-1 rounded-md bg-accent-purple/20 text-accent-purple-fg text-xs font-medium border border-accent-purple/30 hover:bg-accent-purple/30 cursor-pointer transition-colors shrink-0"
+          className="pill shrink-0"
         >
           Preview
         </button>
         <button
           onClick={applyToTrack}
           disabled={!resolvedTrackId}
-          className="px-2.5 py-1 rounded-md bg-accent-green/20 text-accent-green-fg text-xs font-medium border border-accent-green/30 hover:bg-accent-green/30 cursor-pointer transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="pill pill-go shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Apply
         </button>
@@ -161,7 +161,7 @@ export function MelodyHelper() {
               key={i}
               className={`px-1.5 py-0.5 rounded text-[11px] font-medium min-w-[2rem] text-center ${
                 note
-                  ? 'bg-accent-purple/15 text-accent-purple-fg border border-accent-purple/25'
+                  ? 'bg-[#121219] text-text-primary border border-[#4a4a62]'
                   : 'bg-bg-cell text-text-muted border border-transparent'
               }`}
             >

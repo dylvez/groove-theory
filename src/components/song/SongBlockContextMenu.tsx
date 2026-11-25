@@ -121,7 +121,7 @@ export function SongBlockContextMenu({ x, y, block, index, count, onClose }: Con
       style={menuStyle}
       role="dialog"
       aria-label={`Options for block ${index + 1}, pattern ${patternName}`}
-      className="bg-bg-secondary border border-border-control rounded-lg shadow-xl py-1 min-w-[180px] text-xs"
+      className="bg-bg-secondary border border-border-soft rounded-xl shadow-xl py-1 min-w-[180px] text-xs"
     >
       {/* Header showing block info */}
       <div aria-hidden="true" className="px-3 py-1.5 text-text-muted border-b border-border/50 flex items-center gap-2">
@@ -180,7 +180,7 @@ export function SongBlockContextMenu({ x, y, block, index, count, onClose }: Con
               if (e.key === 'Enter') handleRepeatsSubmit();
             }}
             onBlur={handleRepeatsSubmit}
-            className="w-12 px-1 py-0.5 bg-bg-primary border border-border rounded text-center text-xs text-text-primary focus:outline-none focus:border-accent-orange"
+            className="w-12 px-1 py-0.5 bg-bg-primary border border-border rounded text-center text-xs text-text-primary focus:outline-none focus:border-text-primary"
           />
         </div>
       ) : (
@@ -247,7 +247,7 @@ export function SongBlockContextMenu({ x, y, block, index, count, onClose }: Con
               if (e.key === 'Enter') handleLabelSubmit();
             }}
             onBlur={handleLabelSubmit}
-            className="flex-1 px-1 py-0.5 bg-bg-primary border border-border rounded text-xs text-text-primary focus:outline-none focus:border-accent-orange"
+            className="flex-1 px-1 py-0.5 bg-bg-primary border border-border rounded text-xs text-text-primary focus:outline-none focus:border-text-primary"
           />
         </div>
       ) : (
