@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useUIStore, DEFAULT_HEADER_WIDTH } from '../../store/useUIStore';
 import { useTransportStore } from '../../store/useTransportStore';
 import { useSongStore } from '../../store/useSongStore';
+import { useTrackHeaderWidth } from '../../hooks/useCramped';
 
 interface TrackHeaderProps {
   name: string;
@@ -107,7 +108,7 @@ export function TrackHeader({
 }: TrackHeaderProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(name);
-  const trackHeaderWidth = useUIStore(s => s.trackHeaderWidth);
+  const trackHeaderWidth = useTrackHeaderWidth();
 
   const commitRename = () => {
     const trimmed = editName.trim();
@@ -127,7 +128,7 @@ export function TrackHeader({
     // it sits above the headers below, or they would cover the panel.
     <div
       data-sticky-header=""
-      className={`sticky left-0 ${panel ? 'z-40' : 'z-20'} self-stretch flex items-center gap-1.5 shrink-0 px-1 -mx-1 transition-colors ${armed ? 'bg-[#251418]' : 'bg-bg-primary'}`}
+      className={`sticky left-0 ${panel ? 'z-40' : 'z-20'} self-stretch flex items-center gap-1.5 shrink-0 px-1 -mx-1 transition-colors cramped:flex-wrap cramped:content-center cramped:gap-y-1 cramped:py-1 ${armed ? 'bg-[#251418]' : 'bg-bg-primary'}`}
       style={{
         width: trackHeaderWidth + 8,
         boxShadow: `0 -4px 0 ${armed ? '#251418' : 'var(--color-bg-primary)'}, 0 4px 0 ${armed ? '#251418' : 'var(--color-bg-primary)'}, 10px 0 10px -8px rgb(0 0 0 / 0.85)`,
@@ -203,7 +204,7 @@ export function TrackHeader({
         </div>
       )}
 
-      <div className="flex gap-1 ml-auto shrink-0">
+      <div className="flex gap-1 ml-auto shrink-0 cramped:basis-full cramped:ml-0 cramped:pl-7">
         {onToggleArm && (
           <button
             onClick={onToggleArm}

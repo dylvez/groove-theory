@@ -12,6 +12,7 @@ import { DrumTrack } from './DrumTrack';
 import { MelodicTrack } from './MelodicTrack';
 import { StepRuler } from './StepRuler';
 import { PatternBar } from './PatternBar';
+import { useTrackHeaderWidth } from '../../hooks/useCramped';
 
 const SYNTH_OPTIONS: { type: SynthType; label: string; color: string }[] = [
   { type: 'synth', label: 'Basic Synth', color: '#a855f7' },
@@ -48,6 +49,7 @@ export function SequencerGrid() {
   const [synthsCollapsed, setSynthsCollapsed] = useState(false);
   const setGridFocus = useGridFocusStore(s => s.setGridFocus);
   const followPlayhead = useUIStore(s => s.followPlayhead);
+  const headerWidth = useTrackHeaderWidth();
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Follow the playhead: when the playing step leaves the visible area, turn
@@ -150,7 +152,9 @@ export function SequencerGrid() {
     e.preventDefault();
     if (next) {
       setGridFocus(next.dataset.track!, Number(next.dataset.step));
-      next.focus();
+      next.focus({ preventScroll: true });
+      // Scroll it clear of the pinned track names (scroll-padding on the scroller)
+      next.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
   }, [setDrumStep, setMelodicStep, setGridFocus]);
 
@@ -187,7 +191,7 @@ export function SequencerGrid() {
   };
 
   return (
-    <section aria-labelledby="sequencer-heading" className="flex flex-col min-h-0 flex-1" data-sequencer-grid>
+    <section aria-labelledby="sequencer-heading" className="flex flex-col min-h-0 flex-1 cramped:flex-none" data-sequencer-grid>
       <h2 id="sequencer-heading" className="sr-only">Sequencer, pattern {activePattern.name}</h2>
       <p id="grid-instructions" className="sr-only">
         Arrow keys move between steps. Enter turns a drum step on or off, or opens the note editor for a synth step.
@@ -197,7 +201,9 @@ export function SequencerGrid() {
       <PatternBar />
       <div
         ref={scrollerRef}
-        className="pt-2 pb-3 overflow-auto min-h-0 flex-1"
+        className="pt-2 pb-3 overflow-auto min-h-0 flex-1 cramped:flex-none"
+        // A step scrolled into view by the keyboard lands clear of the pinned track names
+        style={{ scrollPaddingLeft: headerWidth + 24 }}
         onKeyDown={handleGridKeyDown}
         onFocus={handleGridFocus}
       >

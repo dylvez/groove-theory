@@ -80,9 +80,9 @@ function StudioView() {
   }, [setPanelWidth, setSongHeight]);
 
   return (
-    <div ref={containerRef} className="flex flex-1 min-h-0 overflow-hidden">
+    <div ref={containerRef} className="flex flex-1 min-h-0 overflow-hidden cramped:flex-col cramped:flex-none cramped:overflow-visible">
       {/* Sequencer side */}
-      <div ref={sequencerColRef} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div ref={sequencerColRef} className="flex-1 flex flex-col min-h-0 overflow-hidden cramped:flex-none cramped:overflow-visible">
         <TransportBar />
         <SequencerGrid />
 
@@ -103,7 +103,7 @@ function StudioView() {
             if (e.key === 'Home') { e.preventDefault(); setSongHeight(MIN_SONG_HEIGHT); }
             if (e.key === 'End') { e.preventDefault(); setSongHeight(MAX_SONG_HEIGHT); }
           }}
-          className="h-1.5 shrink-0 cursor-row-resize bg-border hover:bg-[#3d3d52] active:bg-[#4a4a62] transition-colors relative group"
+          className="h-1.5 shrink-0 cursor-row-resize bg-border hover:bg-[#3d3d52] active:bg-[#4a4a62] transition-colors relative group cramped:hidden"
           title="Drag, or use the up and down arrow keys, to resize the song section. Double-click to reset. Preset sizes are in the Layout menu."
         >
           <div className="absolute -top-1 -bottom-1 inset-x-0" />
@@ -113,7 +113,7 @@ function StudioView() {
 
         {/* Song section */}
         {/* Capped so the grid keeps room when the window is short or zoomed in */}
-        <section aria-labelledby="song-heading" className="shrink-0 overflow-hidden" style={{ height: songHeight, maxHeight: '35%' }}>
+        <section aria-labelledby="song-heading" className="shrink-0 overflow-hidden cramped:!h-auto cramped:!max-h-none cramped:border-t cramped:border-border" style={{ height: songHeight, maxHeight: '35%' }}>
           <SongArrangement />
         </section>
       </div>
@@ -137,7 +137,7 @@ function StudioView() {
             if (e.key === 'Home') { e.preventDefault(); setPanelWidth(MIN_PANEL_WIDTH); }
             if (e.key === 'End') { e.preventDefault(); setPanelWidth(MAX_PANEL_WIDTH); }
           }}
-          className="w-1.5 shrink-0 cursor-col-resize bg-border hover:bg-[#3d3d52] active:bg-[#4a4a62] transition-colors relative group"
+          className="w-1.5 shrink-0 cursor-col-resize bg-border hover:bg-[#3d3d52] active:bg-[#4a4a62] transition-colors relative group cramped:hidden"
           title="Drag, or use the left and right arrow keys, to resize the side panel. Double-click to reset. Preset sizes are in the Layout menu."
         >
           {/* Wider invisible hit area for easier grabbing */}
@@ -151,7 +151,7 @@ function StudioView() {
         id="side-panel"
         aria-labelledby="theory-heading"
         hidden={!panelOpen}
-        className="flex flex-col overflow-hidden bg-bg-secondary shrink-0 min-h-0"
+        className="flex flex-col overflow-hidden bg-bg-secondary shrink-0 min-h-0 cramped:!w-full cramped:overflow-visible cramped:border-t cramped:border-border"
         style={{ width: panelWidth }}
       >
         <h2 id="theory-heading" className="sr-only">Beats and Harmony</h2>
@@ -184,9 +184,9 @@ export function AppShell() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">
+    <div className="flex flex-col h-screen overflow-hidden bg-bg-primary cramped:h-auto cramped:min-h-screen cramped:overflow-visible">
       <Header />
-      <main className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <main className="flex flex-col flex-1 min-h-0 overflow-hidden cramped:flex-none cramped:overflow-visible">
         {showWelcome && <WelcomeBar onDismiss={dismissWelcome} />}
         <StudioView />
       </main>

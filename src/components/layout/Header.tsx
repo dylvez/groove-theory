@@ -15,6 +15,7 @@ import { OpenGrooveDropdown } from '../transport/OpenGrooveDropdown';
 import { RingMark } from '../common/RhythmRing';
 import { HelpModal } from './HelpModal';
 import { LayoutControls } from './LayoutControls';
+import { useTrackHeaderWidth } from '../../hooks/useCramped';
 
 type Format = 'midi' | 'wav' | 'mp3';
 const FORMATS: { key: Format; label: string }[] = [
@@ -75,7 +76,7 @@ export function Header() {
   const undoDepth = useSequencerStore(s => s.undoDepth);
   const redoDepth = useSequencerStore(s => s.redoDepth);
   const bpm = useTransportStore(s => s.bpm);
-  const trackHeaderWidth = useUIStore(s => s.trackHeaderWidth);
+  const trackHeaderWidth = useTrackHeaderWidth();
   const songBlocks = useSongStore(s => s.blocks);
   const clearSong = useSongStore(s => s.clearSong);
 
@@ -136,7 +137,7 @@ export function Header() {
   }, [exporting, getActivePattern, bpm, songBlocks, patterns]);
 
   return (
-    <header className="sticky top-0 z-50 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 sm:px-6 py-2 min-h-[53px] bg-bg-tertiary border-b border-border shrink-0">
+    <header className="sticky top-0 z-50 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 sm:px-6 py-2 min-h-[53px] bg-bg-tertiary border-b border-border shrink-0 cramped:static">
       {/* Logo + title, as wide as the track names so the buttons line up with the grid */}
       <div className="flex items-center gap-3 shrink-0 pr-3" style={{ minWidth: trackHeaderWidth + 4 }}>
         <RingMark size={30} />
@@ -181,7 +182,7 @@ export function Header() {
         </button>
       </div>
 
-      <div className="ml-auto flex items-center gap-2 shrink-0">
+      <div className="ml-auto flex flex-wrap items-center gap-2 shrink-0 cramped:shrink cramped:ml-0">
         <div className="relative">
           <button
             onClick={() => setExportOpen(v => !v)}

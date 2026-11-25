@@ -4,6 +4,11 @@
 @import "@fontsource-variable/space-grotesk";
 @import "@fontsource-variable/jetbrains-mono";
 
+/* A narrow or short window, including desktop zoom of 200% or more. The app
+   becomes an ordinary scrolling page with its sections stacked. Keep in step
+   with CRAMPED_QUERY in hooks/useCramped.ts. */
+@custom-variant cramped (@media (max-width: 767px), (max-height: 499px));
+
 @theme {
   /* Night Glow: near-black ground, light only where there's sound */
   --font-sans: 'Inter Variable', Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -143,6 +148,27 @@ html, body, #root {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Cramped windows: pop-up panels become sheets along the bottom of the
+   window, so none of them can run off an edge (WCAG 1.4.10). Modal dialogs
+   size themselves. */
+@media (max-width: 767px), (max-height: 499px) {
+  [role="dialog"]:not([aria-modal="true"]) {
+    position: fixed !important;
+    left: 8px !important;
+    right: 8px !important;
+    top: auto !important;
+    bottom: 8px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: calc(100vh - 16px) !important;
+    overflow-y: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    z-index: 200 !important;
   }
 }
 

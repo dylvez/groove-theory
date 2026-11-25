@@ -208,7 +208,7 @@ function PanelFrame({ title, name, onRename, onClose, onAudition, onReset, child
       ref={ref}
       role="dialog"
       aria-labelledby={headingId}
-      className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border-soft rounded-xl p-3 shadow-2xl w-80"
+      className="absolute top-10 left-0 z-50 bg-bg-secondary border border-border-soft rounded-xl p-3 shadow-2xl w-80 max-h-[min(70vh,34rem)] overflow-y-auto"
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-2">

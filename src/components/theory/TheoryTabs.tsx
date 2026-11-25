@@ -60,7 +60,7 @@ export function TheoryTabs({ showPiano = true, pianoOctaves = 2, pianoStartOctav
         role="tabpanel"
         aria-labelledby={`theory-tab-${studioTab}`}
         tabIndex={0}
-        className="flex-1 overflow-auto p-4 flex flex-col gap-4"
+        className="flex-1 overflow-auto p-4 flex flex-col gap-4 cramped:overflow-visible"
       >
         {studioTab === 'harmony' && (
           <HarmonyPanel

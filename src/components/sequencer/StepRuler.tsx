@@ -1,6 +1,7 @@
 import { useTransportStore } from '../../store/useTransportStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useSongStore } from '../../store/useSongStore';
+import { useTrackHeaderWidth } from '../../hooks/useCramped';
 
 interface StepRulerProps {
   numSteps: number;
@@ -14,7 +15,8 @@ interface StepRulerProps {
  * the marks line up with the step cells beneath.
  */
 export function StepRuler({ numSteps, stepsPerMeasure, compact = false }: StepRulerProps) {
-  const trackHeaderWidth = useUIStore(s => s.trackHeaderWidth);
+  const storedWidth = useUIStore(s => s.trackHeaderWidth);
+  const trackHeaderWidth = useTrackHeaderWidth();
   const setTrackHeaderWidth = useUIStore(s => s.setTrackHeaderWidth);
   const currentStep = useTransportStore(s => s.currentStep);
   const songPlaying = useSongStore(s => s.songState) === 'playing';
@@ -33,11 +35,11 @@ export function StepRuler({ numSteps, stepsPerMeasure, compact = false }: StepRu
           aria-label="Track name column width"
           aria-valuemin={120}
           aria-valuemax={300}
-          aria-valuenow={trackHeaderWidth}
+          aria-valuenow={storedWidth}
           title="Track name column width — use the left and right arrow keys"
           onKeyDown={(e) => {
             const delta = e.key === 'ArrowRight' ? 16 : e.key === 'ArrowLeft' ? -16 : 0;
-            if (delta) { e.preventDefault(); setTrackHeaderWidth(trackHeaderWidth + delta); }
+            if (delta) { e.preventDefault(); setTrackHeaderWidth(storedWidth + delta); }
             if (e.key === 'Home') { e.preventDefault(); setTrackHeaderWidth(120); }
             if (e.key === 'End') { e.preventDefault(); setTrackHeaderWidth(300); }
           }}

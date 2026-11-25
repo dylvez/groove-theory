@@ -5,7 +5,6 @@ import { useSequencerStore } from '../../store/useSequencerStore';
 import { useTheoryStore } from '../../store/useTheoryStore';
 import { useTransportStore } from '../../store/useTransportStore';
 import { useSongStore } from '../../store/useSongStore';
-import { useUIStore } from '../../store/useUIStore';
 import { beginUndoGroup, endUndoGroup } from '../../store/history';
 import { stepPosition, velocityName } from '../../store/useGridFocusStore';
 import { AudioEngine } from '../../audio/AudioEngine';
@@ -16,6 +15,7 @@ import { velocityAlpha } from '../../utils/stepDisplay';
 import { describeFx, melodicFx } from '../../utils/stepFx';
 import { glowLevel, hexAlpha } from '../../utils/stepDisplay';
 import { Popover } from '../common/Popover';
+import { useTrackHeaderWidth } from '../../hooks/useCramped';
 import { announce } from '../../utils/announce';
 import { FxMarks, StepFxControls } from './StepFxControls';
 
@@ -52,7 +52,7 @@ interface PianoRollProps {
  * Shift+↑/↓ moves the note, Delete removes, Shift+Enter changes velocity.
  */
 export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: PianoRollProps) {
-  const trackHeaderWidth = useUIStore(s => s.trackHeaderWidth);
+  const trackHeaderWidth = useTrackHeaderWidth();
   const rootNote = useTheoryStore(s => s.rootNote);
   const selectedScale = useTheoryStore(s => s.selectedScale);
   const addMelodicNote = useSequencerStore(s => s.addMelodicNote);
