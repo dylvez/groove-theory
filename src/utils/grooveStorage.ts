@@ -189,17 +189,15 @@ export function applyGroove(groove: SavedGroove): void {
   useTransportStore.getState().stop();
   useSongStore.getState().stopSong();
 
-  // Patterns + song arrangement replace together as one undo step
+  // Patterns, song arrangement, tempo and swing replace together as one undo step
   withUndoGroup(() => {
     useSequencerStore.getState().loadPatterns(groove.patterns, groove.activePatternId);
     useSongStore.getState().loadBlocks(groove.songBlocks ?? []);
+    useTransportStore.getState().setBpm(groove.bpm);
+    if (groove.swing !== undefined) {
+      useTransportStore.getState().setSwing(groove.swing);
+    }
   });
-
-  // Load transport
-  useTransportStore.getState().setBpm(groove.bpm);
-  if (groove.swing !== undefined) {
-    useTransportStore.getState().setSwing(groove.swing);
-  }
 
   // Load theory (bulk action)
   useTheoryStore.getState().loadTheoryState({
@@ -308,11 +306,13 @@ export function applyPatternBank(data: SavedPatternBank): void {
   useTransportStore.getState().stop();
   useSongStore.getState().stopSong();
 
-  useSequencerStore.getState().loadPatterns(data.patterns, data.activePatternId);
-  useTransportStore.getState().setBpm(data.bpm);
-  if (data.swing !== undefined) {
-    useTransportStore.getState().setSwing(data.swing);
-  }
+  withUndoGroup(() => {
+    useSequencerStore.getState().loadPatterns(data.patterns, data.activePatternId);
+    useTransportStore.getState().setBpm(data.bpm);
+    if (data.swing !== undefined) {
+      useTransportStore.getState().setSwing(data.swing);
+    }
+  });
   useTheoryStore.getState().loadTheoryState({
     rootNote: data.rootNote,
     selectedScale: data.selectedScale,

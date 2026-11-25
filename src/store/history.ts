@@ -2,9 +2,9 @@ import type { Pattern } from '../types';
 import type { SongBlock } from './useSongStore';
 
 /**
- * One undo/redo history shared by the sequencer patterns and the song
- * arrangement, so "undo" after loading a groove or clearing the song brings
- * both back together.
+ * One undo/redo history shared by the sequencer patterns, the song
+ * arrangement and the tempo and swing, so "undo" after loading a groove or
+ * clearing the song brings them all back together.
  *
  * Stores register getters/restorers at creation time (avoids an import cycle)
  * and call `recordChange` from inside their `set` wrapper with the value they
@@ -17,9 +17,15 @@ import type { SongBlock } from './useSongStore';
  *    COALESCE_MS apart merge (slider drags, typing in a number field).
  */
 
+export interface TransportSnapshot {
+  bpm: number;
+  swing: number;
+}
+
 interface Snapshot {
   patterns: Pattern[];
   blocks: SongBlock[];
+  transport: TransportSnapshot;
 }
 
 const MAX_UNDO = 50;
@@ -39,6 +45,8 @@ let getPatterns: () => Pattern[] = () => [];
 let getBlocks: () => SongBlock[] = () => [];
 let restorePatterns: (p: Pattern[]) => void = () => {};
 let restoreBlocks: (b: SongBlock[]) => void = () => {};
+let getTransport: () => TransportSnapshot = () => ({ bpm: 120, swing: 0 });
+let restoreTransport: (t: TransportSnapshot) => void = () => {};
 let depthListener: (undo: number, redo: number) => void = () => {};
 
 export function registerPatternHistory(get: () => Pattern[], restore: (p: Pattern[]) => void) {
@@ -51,6 +59,11 @@ export function registerSongHistory(get: () => SongBlock[], restore: (b: SongBlo
   restoreBlocks = restore;
 }
 
+export function registerTransportHistory(get: () => TransportSnapshot, restore: (t: TransportSnapshot) => void) {
+  getTransport = get;
+  restoreTransport = restore;
+}
+
 export function onHistoryDepthChange(listener: (undo: number, redo: number) => void) {
   depthListener = listener;
 }
@@ -60,7 +73,7 @@ function notify() {
 }
 
 function current(): Snapshot {
-  return { patterns: getPatterns(), blocks: getBlocks() };
+  return { patterns: getPatterns(), blocks: getBlocks(), transport: getTransport() };
 }
 
 /** Called by a store after it changes, with its own previous value. */
@@ -85,6 +98,7 @@ export function recordChange(prev: Partial<Snapshot>) {
     undoStack.push(structuredClone({
       patterns: prev.patterns ?? cur.patterns,
       blocks: prev.blocks ?? cur.blocks,
+      transport: prev.transport ?? cur.transport,
     }));
     if (undoStack.length > MAX_UNDO) undoStack.shift();
   }
@@ -96,6 +110,7 @@ function apply(snapshot: Snapshot) {
   try {
     restorePatterns(snapshot.patterns);
     restoreBlocks(snapshot.blocks);
+    restoreTransport(snapshot.transport);
   } finally {
     restoring = false;
   }

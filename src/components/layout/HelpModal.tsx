@@ -71,6 +71,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li><strong>New note length</strong> sets how long clicked notes are. <strong>▼ / ▲</strong> move the two-octave view; the numbers show how many notes sit outside it.</li>
               <li><strong>Scale notes only</strong> hides rows outside the key chosen in the Harmony tab. Rows that already hold notes always stay visible.</li>
               <li>A Mono Synth plays one note at a time, so adding a note replaces the one on that step.</li>
+              <li>Notes show the same stripes, ticks and arrows as the lane for a step's chance, repeats and timing. These belong to the step, so they apply to every note in a chord. Change them on the track's own row above (right-click a step).</li>
             </ul>
           </Sub>
           <Sub title="Adding & Removing Tracks">
@@ -166,16 +167,16 @@ export function HelpModal({ onClose }: HelpModalProps) {
         <>
           <p>Controls along the top of the sequencer manage playback and timing.</p>
           <ul className="list-disc pl-4 space-y-1">
-            <li><Kbd>Play / Stop</Kbd> — start or stop pattern playback. The playhead animates across the grid.</li>
+            <li><Kbd>Play / Stop</Kbd> — the one Play button for the app (also <Kbd>Space</Kbd>). The <strong>Pattern / Song</strong> switch next to it picks what it plays: <strong>Pattern</strong> loops the pattern you're editing, <strong>Song</strong> plays the song arrangement from the start. Switching while it plays changes over straight away.</li>
             <li><Kbd>BPM</Kbd> — set tempo from 40 to 300 using the input field or slider, or click <Kbd>Tap</Kbd> in time with a beat.</li>
             <li><Kbd>●</Kbd> <strong>Record</strong> — with a synth track armed, writes what you play on the keyboard into the grid. See <em>Live Keys</em>.</li>
             <li><Kbd>Swing</Kbd> — add rhythmic feel from 0% (straight) to 75% (heavy triplet swing).</li>
-            <li><Kbd>Loop</Kbd> — toggle pattern looping on or off.</li>
+            <li><Kbd>Loop</Kbd> — loop the pattern, or play it once. (The song has its own loop range.)</li>
             <li><Kbd>Follow</Kbd> — while a pattern or song plays, the grid scrolls a page at a time to keep the playing step in view. Turn it off to scroll freely. Track names stay pinned on the left as the grid scrolls.</li>
             <li><Kbd>4/4</Kbd> / <Kbd>3/4</Kbd> — switch between common and waltz time.</li>
             <li><Kbd>1</Kbd> / <Kbd>2</Kbd> / <Kbd>4</Kbd> / <Kbd>8</Kbd> bars — set how many bars each pattern contains.</li>
             <li><Kbd>1/16</Kbd> / <Kbd>1/32</Kbd> — step resolution. 1/32 doubles the grid for rolls and fast hats.</li>
-            <li><Kbd>Undo</Kbd> / <Kbd>Redo</Kbd> — step backwards and forwards through sequencer changes (up to 50).</li>
+            <li><Kbd>Undo</Kbd> / <Kbd>Redo</Kbd> — step backwards and forwards through changes to the patterns, the song, the sound settings, and the tempo and swing (up to 50).</li>
             <li><Kbd>⋯</Kbd> next to the pattern buttons opens the <strong>pattern menu</strong>: copy to another slot, copy/paste, shift left/right, humanize velocities, fill empty bars, or clear.</li>
             <li><Kbd>Side panel</Kbd> (top right) — hide the Beats and Harmony panel to give the grid the full width, and bring it back the same way. The <Kbd>\</Kbd> key does the same.</li>
             <li><Kbd>Layout</Kbd> (top right) — preset sizes for the side panel, the song section and the track name column. You can also drag the coloured dividers, or focus one and use the arrow keys.</li>
@@ -195,7 +196,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <li><strong>Bars</strong> sets a pattern’s length: 1, 2, 4 or 8 bars.</li>
             <li>Use the <Kbd>⋯</Kbd> menu to <strong>copy a pattern into another slot</strong> — the fastest way to build a variation.</li>
             <li>Every pattern has its own drum tracks, synth tracks, time signature, and bar count.</li>
-            <li>Each pattern maintains its own undo history.</li>
+            <li>Undo covers all the patterns and the song together, so it can take back a change to a pattern you're not looking at.</li>
             <li>Arrange patterns into a full song in the Song Arrangement section below the sequencer.</li>
           </ul>
         </>
@@ -352,9 +353,9 @@ export function HelpModal({ onClose }: HelpModalProps) {
           </Sub>
           <Sub title="Song Playback">
             <ul className="list-disc pl-4 space-y-1">
-              <li>The song transport has its own Play/Stop, BPM, and Swing controls.</li>
+              <li>Set the <strong>Pattern / Song</strong> switch next to Play to <strong>Song</strong> (or press <strong>Use Play for the song</strong> in the song bar), then press Play or <Kbd>Space</Kbd>.</li>
+              <li>The song uses the same BPM and Swing as everything else, set in the transport bar.</li>
               <li>A playback cursor follows progress across blocks in real time.</li>
-              <li>Song playback and pattern playback are mutually exclusive.</li>
             </ul>
           </Sub>
         </>
@@ -465,9 +466,9 @@ export function HelpModal({ onClose }: HelpModalProps) {
       content: (
         <>
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 items-center">
-            <Kbd>Space</Kbd> <span>Play / Stop playback (anywhere outside a text field)</span>
+            <Kbd>Space</Kbd> <span>Play / Stop the pattern or the song, whichever the Play switch is set to (anywhere outside a text field)</span>
             <Kbd>1 – 8</Kbd> <span>Select pattern A – H</span>
-            <Kbd>⌘/Ctrl + Z</Kbd> <span>Undo the last change to the patterns or the song</span>
+            <Kbd>⌘/Ctrl + Z</Kbd> <span>Undo the last change to the patterns, the song, or the tempo and swing</span>
             <Kbd>⌘/Ctrl + Shift + Z</Kbd> <span>Redo</span>
             <Kbd>⌘/Ctrl + C</Kbd> <span>Copy the active pattern</span>
             <Kbd>⌘/Ctrl + V</Kbd> <span>Paste into the active pattern</span>

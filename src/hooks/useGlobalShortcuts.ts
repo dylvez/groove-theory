@@ -1,12 +1,10 @@
 import { useEffect } from 'react';
 import { useSequencerStore } from '../store/useSequencerStore';
-import { useTransportStore } from '../store/useTransportStore';
-import { useSongStore } from '../store/useSongStore';
 import { useUIStore } from '../store/useUIStore';
-import { AudioEngine } from '../audio/AudioEngine';
 import { PATTERN_IDS, patternLetter } from '../constants/patterns';
 import { announce } from '../utils/announce';
 import { toggleSidePanel } from '../utils/sidePanel';
+import { togglePlayback } from '../utils/playback';
 import { isModalOpen } from './useModal';
 
 function isTypingTarget(t: EventTarget | null): boolean {
@@ -16,7 +14,7 @@ function isTypingTarget(t: EventTarget | null): boolean {
 
 /**
  * App-wide keyboard shortcuts:
- *   Space            play / stop
+ *   Space            play / stop (the pattern or the song, as the Play switch says)
  *   1 … 8            select pattern A–H
  *   ⌘/Ctrl+Z         undo · ⌘/Ctrl+Shift+Z (or ⌘/Ctrl+Y) redo
  *   ⌘/Ctrl+C / V     copy / paste pattern
@@ -62,14 +60,7 @@ export function useGlobalShortcuts() {
 
       if (e.code === 'Space') {
         e.preventDefault();
-        const transport = useTransportStore.getState();
-        const song = useSongStore.getState();
-        if (transport.state === 'playing') {
-          transport.stop();
-        } else {
-          if (song.songState === 'playing') song.stopSong();
-          AudioEngine.getInstance().init().then(() => useTransportStore.getState().play());
-        }
+        togglePlayback();
         return;
       }
 

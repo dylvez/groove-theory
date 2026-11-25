@@ -7,6 +7,7 @@ import { useAudioInit } from '../../audio/useAudioInit';
 import type { TimeSignature, StepResolution } from '../../types';
 import { PATTERN_COLORS, PATTERN_BAR_OPTIONS, patternTextColor } from '../../constants/patterns';
 import { getStepsPerMeasure } from '../../utils/patternHelpers';
+import { choosePlayMode, effectivePlayMode, togglePlayback } from '../../utils/playback';
 import { PatternMenu } from './PatternMenu';
 import { MixerPanel } from './MixerPanel';
 import { TapTempo } from './TapTempo';
@@ -38,7 +39,7 @@ function IconButton({ onClick, disabled, title, label, children, active, accent 
 }
 
 export function TransportBar() {
-  const { bpm, swing, state, loop, setBpm, setSwing, play, stop, toggleLoop } = useTransportStore();
+  const { bpm, swing, state, loop, setBpm, setSwing, toggleLoop } = useTransportStore();
   const { ready, init } = useAudioInit();
   const trackHeaderWidth = useUIStore(s => s.trackHeaderWidth);
   const armedTrackId = useUIStore(s => s.armedTrackId);
@@ -70,19 +71,14 @@ export function TransportBar() {
   const armedTrack = armedTrackId ? activePattern?.melodicTracks.find(t => t.id === armedTrackId) : null;
 
   const songState = useSongStore(s => s.songState);
-  const stopSong = useSongStore(s => s.stopSong);
+  const songBlocks = useSongStore(s => s.blocks.length);
+  const playMode = useUIStore(s => s.playMode);
+  const mode = effectivePlayMode(playMode, songBlocks);
+  const playing = state === 'playing' || songState === 'playing';
 
   const handlePlay = async () => {
     if (!ready) await init();
-    if (state === 'playing') {
-      stop();
-    } else {
-      // Stop song playback if active (mutual exclusion)
-      if (songState === 'playing') {
-        stopSong();
-      }
-      play();
-    }
+    await togglePlayback();
   };
 
   const handleTimeSignatureToggle = () => {
@@ -211,20 +207,48 @@ export function TransportBar() {
       {/* Separator */}
       <div aria-hidden="true" className="w-px h-6 bg-border shrink-0" />
 
-      {/* Play/Stop */}
+      {/* Play/Stop: the only one in the app; the switch beside it picks pattern or song */}
       <button
+        id="main-play"
         onClick={handlePlay}
-        title={state === 'playing' ? 'Stop (Space)' : 'Play (Space)'}
-        aria-label={state === 'playing' ? 'Stop pattern' : 'Play pattern'}
+        title={playing ? 'Stop (Space)' : mode === 'song' ? 'Play the song (Space)' : 'Loop the pattern (Space)'}
+        aria-label={playing ? 'Stop' : mode === 'song' ? 'Play song' : 'Play pattern'}
         aria-keyshortcuts="Space"
         className={`w-9 h-9 rounded-lg flex items-center justify-center text-base font-bold transition-colors cursor-pointer shrink-0 ${
-          state === 'playing'
+          playing
             ? 'bg-accent-red text-on-accent'
             : 'bg-accent-green text-on-accent'
         }`}
       >
-        <span aria-hidden="true">{state === 'playing' ? '■' : '▶'}</span>
+        <span aria-hidden="true">{playing ? '■' : '▶'}</span>
       </button>
+      <div role="group" aria-label="Play mode" className="flex gap-0.5 p-0.5 rounded-md bg-bg-cell border border-border-control shrink-0">
+        <button
+          onClick={() => choosePlayMode('pattern')}
+          aria-pressed={mode === 'pattern'}
+          title="Play loops the selected pattern"
+          className={`h-6 px-2 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+            mode === 'pattern' ? 'bg-accent-purple/30 text-accent-purple-fg' : 'text-text-secondary hover:text-text-primary hover:bg-bg-cell-hover'
+          }`}
+        >
+          Pattern
+        </button>
+        <button
+          onClick={() => choosePlayMode('song')}
+          aria-pressed={mode === 'song'}
+          aria-disabled={songBlocks === 0 || undefined}
+          title={songBlocks === 0 ? 'Add blocks to the song to play it' : 'Play plays the song arrangement'}
+          className={`h-6 px-2 rounded text-[11px] font-bold transition-colors ${
+            songBlocks === 0
+              ? 'text-text-muted cursor-not-allowed'
+              : mode === 'song'
+              ? 'bg-accent-purple/30 text-accent-purple-fg cursor-pointer'
+              : 'text-text-secondary hover:text-text-primary hover:bg-bg-cell-hover cursor-pointer'
+          }`}
+        >
+          Song
+        </button>
+      </div>
 
       {/* Record (live keys) */}
       <button

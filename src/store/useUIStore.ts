@@ -3,9 +3,13 @@ import { persist } from 'zustand/middleware';
 import type { MidiFileData } from '../utils/midiImport';
 
 export type StudioTab = 'harmony' | 'beats';
+/** What the Play button (and Space) plays */
+export type PlayMode = 'pattern' | 'song';
 
 interface UIStore {
   studioTab: StudioTab;
+  playMode: PlayMode;
+  setPlayMode: (mode: PlayMode) => void;
   trackHeaderWidth: number;
   /** Melodic track that receives live keyboard input (null = theory piano preview) */
   armedTrackId: string | null;
@@ -56,6 +60,8 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 
 export const useUIStore = create<UIStore>()(persist((set) => ({
   studioTab: 'beats',
+  playMode: 'pattern',
+  setPlayMode: (mode) => set({ playMode: mode }),
   trackHeaderWidth: DEFAULT_HEADER_WIDTH,
   armedTrackId: null,
   recording: false,
@@ -98,5 +104,6 @@ export const useUIStore = create<UIStore>()(persist((set) => ({
     sidePanelOpen: s.sidePanelOpen,
     sidePanelWidth: s.sidePanelWidth,
     songHeight: s.songHeight,
+    playMode: s.playMode,
   }),
 }));

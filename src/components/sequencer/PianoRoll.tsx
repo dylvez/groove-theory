@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { MelodicTrack, NoteWithOctave } from '../../types';
+import type { MelodicTrack, NoteWithOctave, StepFx } from '../../types';
 import { NOTE_NAMES } from '../../constants/notes';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useTheoryStore } from '../../store/useTheoryStore';
@@ -13,7 +13,9 @@ import { getScaleNotes } from '../../utils/musicTheory';
 import { midiToNote, noteCovering, noteToMidi, stepNotes } from '../../utils/melodicNotes';
 import { spokenNote } from '../../utils/noteHelpers';
 import { velocityAlpha } from '../../utils/stepDisplay';
+import { describeFx, melodicFx } from '../../utils/stepFx';
 import { announce } from '../../utils/announce';
+import { FxMarks } from './StepFxControls';
 
 const LENGTHS = [1, 2, 3, 4, 6, 8];
 const ROW_GAP = 2; // px between rows (gap-0.5)
@@ -25,6 +27,8 @@ interface Cell {
   velocity: number;
   /** Last cell of the note */
   last: boolean;
+  /** The step's chance / repeats / timing (start cells only) */
+  fx?: StepFx;
 }
 
 interface PianoRollProps {
@@ -85,13 +89,14 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
       return r;
     };
     track.steps.forEach((s, i) => {
+      const fx = s.active ? melodicFx(s) : undefined;
       for (const n of stepNotes(s)) {
         const m = noteToMidi(n.note);
         used.add(m);
         if (m > hi) { above++; continue; }
         if (m < lo) { below++; continue; }
         const r = row(m);
-        r[i] = { kind: 'start', start: i, length: n.length, velocity: n.velocity, last: n.length === 1 };
+        r[i] = { kind: 'start', start: i, length: n.length, velocity: n.velocity, last: n.length === 1, fx };
         for (let k = 1; k < n.length && i + k < numSteps; k++) {
           // A later note of the same pitch cuts this one short
           if (stepNotes(track.steps[i + k]).some(o => noteToMidi(o.note) === m)) break;
@@ -279,7 +284,8 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
       <p id={helpId} className="sr-only">
         Rows are pitches, columns are steps. Arrow keys move. Enter adds a note of the chosen length or removes one.
         Shift+Left and Shift+Right change a note’s length, Shift+Up and Shift+Down move it to the next row,
-        Shift+Enter changes velocity, Delete removes it.
+        Shift+Enter changes velocity, Delete removes it. A step’s chance, repeats and timing apply to all its notes;
+        set them on the track’s step row above with Alt+Enter or a right-click.
       </p>
 
       {/* Toolbar — pinned to the left while the grid scrolls sideways */}
@@ -424,10 +430,11 @@ const PianoRollRow = memo(function PianoRollRow({
           const isBarStart = i % stepsPerMeasure === 0 && i > 0;
           const isBeatStart = i % stepsPerBeat === 0;
           const position = stepPosition(i, stepsPerMeasure, stepsPerBeat);
+          const feel = c?.kind === 'start' ? describeFx(c.fx) : '';
           const label = !c
             ? `${spoken} ${position}`
             : c.kind === 'start'
-            ? `${spoken} ${position}, ${c.length} step${c.length > 1 ? 's' : ''} long, ${velocityName(c.velocity)}`
+            ? `${spoken} ${position}, ${c.length} step${c.length > 1 ? 's' : ''} long, ${velocityName(c.velocity)}${feel ? `, ${feel}` : ''}`
             : `${spoken} ${position}, held from ${stepPosition(c.start, stepsPerMeasure, stepsPerBeat)}`;
           const continues = c && !c.last;
           return (
@@ -444,7 +451,7 @@ const PianoRollRow = memo(function PianoRollRow({
               onMouseEnter={() => onCellEnter(midi, i)}
               onClick={(e) => { if (e.detail === 0) onActivate(midi, i, e.shiftKey); }}
               onContextMenu={(e) => e.preventDefault()}
-              className={`${cellW} h-6 border cursor-pointer select-none ${isBarStart ? 'ml-2' : ''} ${
+              className={`relative ${cellW} h-6 border cursor-pointer select-none ${isBarStart ? 'ml-2' : ''} ${
                 c
                   ? `step-active border-transparent ${c.kind === 'start' ? (continues ? 'rounded-l-sm' : 'rounded-sm') : continues ? '' : 'rounded-r-sm'}`
                   : `rounded-sm border-border-cell hover:border-border-control ${
@@ -454,7 +461,9 @@ const PianoRollRow = memo(function PianoRollRow({
               style={c ? {
                 backgroundColor: `${color}${velocityAlpha(c.kind === 'start' ? c.velocity : c.velocity * 0.6)}`,
               } : undefined}
-            />
+            >
+              {c?.kind === 'start' && <FxMarks fx={c.fx} />}
+            </button>
           );
         })}
       </div>

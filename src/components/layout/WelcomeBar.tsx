@@ -5,8 +5,8 @@ import { useTransportStore } from '../../store/useTransportStore';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useUIStore } from '../../store/useUIStore';
 import { withUndoGroup } from '../../store/history';
-import { AudioEngine } from '../../audio/AudioEngine';
 import { applyGroove } from '../../utils/grooveStorage';
+import { playSongNow } from '../../utils/playback';
 import { confirmReplaceWork } from '../../utils/workState';
 import { announce } from '../../utils/announce';
 import { DEMO_PRESET_ID } from '../../utils/firstRun';
@@ -18,7 +18,6 @@ import { DEMO_PRESET_ID } from '../../utils/firstRun';
  */
 export function WelcomeBar({ onDismiss }: { onDismiss: () => void }) {
   const songState = useSongStore(s => s.songState);
-  const playSong = useSongStore(s => s.playSong);
   const stopSong = useSongStore(s => s.stopSong);
   const clearSong = useSongStore(s => s.clearSong);
   const clearAllPatterns = useSequencerStore(s => s.clearAllPatterns);
@@ -29,13 +28,11 @@ export function WelcomeBar({ onDismiss }: { onDismiss: () => void }) {
   const demo = demos.find(d => d.id === demoId) ?? demos[0];
   const playing = songState === 'playing';
 
+  // Plays the song and leaves the main Play switch on Song, so Space carries on from here
   const togglePlay = useCallback(async () => {
     if (useSongStore.getState().songState === 'playing') { stopSong(); return; }
-    await AudioEngine.getInstance().init();
-    const transport = useTransportStore.getState();
-    if (transport.state === 'playing') transport.stop();
-    playSong();
-  }, [playSong, stopSong]);
+    await playSongNow();
+  }, [stopSong]);
 
   const loadDemo = async (id: string) => {
     const preset = demos.find(d => d.id === id);

@@ -79,6 +79,9 @@ export function useSongPlayback() {
           return;
         }
 
+        // Taking over from the pattern: start the song from its first step
+        if (engine.getTransportState() === 'started') engine.stop();
+
         store.setCurrentBlockIndex(firstPlayable);
         useSequencerStore.getState().setActivePattern(blocks[firstPlayable].patternId);
 
@@ -150,10 +153,13 @@ export function useSongPlayback() {
       engine.start();
     } else {
       if (scheduledRef.current) {
-        engine.stop();
-        engine.clearSchedule();
         scheduledRef.current = false;
-        useTransportStore.getState().setCurrentStep(0);
+        // Switching to the pattern: it has already taken the engine over
+        if (useTransportStore.getState().state !== 'playing') {
+          engine.stop();
+          engine.clearSchedule();
+          useTransportStore.getState().setCurrentStep(0);
+        }
       }
     }
 

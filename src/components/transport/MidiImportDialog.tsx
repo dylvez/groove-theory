@@ -62,9 +62,9 @@ export function MidiImportDialog({ file }: { file: MidiFileData & { fileName: st
     withUndoGroup(() => {
       loadPatterns(preview.patterns, PATTERN_IDS[0]);
       loadBlocks(preview.blocks);
+      useTransportStore.getState().setBpm(preview.bpm);
+      useTransportStore.getState().setSwing(0);
     });
-    useTransportStore.getState().setBpm(preview.bpm);
-    useTransportStore.getState().setSwing(0);
     markWorkSaved();
     announce(`Imported ${file.fileName}: ${preview.patterns.length} patterns, ${preview.importedBars} bars. Undo brings back what was here.`);
     close();

@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { useSongStore } from '../../store/useSongStore';
 import { useSequencerStore } from '../../store/useSequencerStore';
-import { useTransportStore } from '../../store/useTransportStore';
-import { useAudioInit } from '../../audio/useAudioInit';
+import { useUIStore } from '../../store/useUIStore';
+import { choosePlayMode } from '../../utils/playback';
 import { SongBlockChip } from './SongBlock';
 import { SongBlockContextMenu } from './SongBlockContextMenu';
 import { PATTERN_IDS, PATTERN_COLORS, patternTextColor } from '../../constants/patterns';
@@ -42,23 +42,14 @@ export function SongArrangement() {
   const addBlock = useSongStore((s) => s.addBlock);
   const insertBlock = useSongStore((s) => s.insertBlock);
   const reorderBlock = useSongStore((s) => s.reorderBlock);
-  const playSong = useSongStore((s) => s.playSong);
-  const stopSong = useSongStore((s) => s.stopSong);
   const clearSong = useSongStore((s) => s.clearSong);
   const loopStart = useSongStore((s) => s.loopStart);
   const loopEnd = useSongStore((s) => s.loopEnd);
   const setLoopRange = useSongStore((s) => s.setLoopRange);
   const clearLoopRange = useSongStore((s) => s.clearLoopRange);
 
-  const transportState = useTransportStore((s) => s.state);
-  const transportStop = useTransportStore((s) => s.stop);
-  const bpm = useTransportStore((s) => s.bpm);
-  const swing = useTransportStore((s) => s.swing);
-  const setBpm = useTransportStore((s) => s.setBpm);
-  const setSwing = useTransportStore((s) => s.setSwing);
-
+  const playMode = useUIStore((s) => s.playMode);
   const patterns = useSequencerStore((s) => s.patterns);
-  const { ready, init } = useAudioInit();
 
   const [showAddButtons, setShowAddButtons] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
@@ -109,18 +100,6 @@ export function SongArrangement() {
     dragIndexRef.current = null;
     setDragOverIndex(null);
   }, []);
-
-  const handlePlaySong = useCallback(async () => {
-    if (!ready) await init();
-    if (songState === 'playing') {
-      stopSong();
-    } else {
-      if (transportState === 'playing') {
-        transportStop();
-      }
-      playSong();
-    }
-  }, [ready, init, songState, stopSong, transportState, transportStop, playSong]);
 
   const handleAddBlock = useCallback(
     (patternId: string) => {
@@ -245,74 +224,17 @@ export function SongArrangement() {
           )}
         </div>
 
-        <div aria-hidden="true" className="w-px h-5 bg-border shrink-0" />
-
-        {/* Play/Stop */}
-        <button
-          onClick={handlePlaySong}
-          disabled={!hasBlocks}
-          aria-label={songState === 'playing' ? 'Stop song' : 'Play song'}
-          title={!hasBlocks ? 'Add blocks to play the song' : songState === 'playing' ? 'Stop song' : 'Play song'}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-colors shrink-0 ${
-            !hasBlocks
-              ? 'bg-bg-cell text-text-muted/30 cursor-not-allowed'
-              : songState === 'playing'
-                ? 'bg-accent-red text-on-accent cursor-pointer'
-                : 'bg-accent-green text-on-accent cursor-pointer'
-          }`}
-        >
-          <span aria-hidden="true">{songState === 'playing' ? '\u25A0' : '\u25B6'}</span>
-        </button>
-
-        {/* BPM */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <label htmlFor="song-bpm" className="text-[11px] text-text-muted uppercase tracking-wider">BPM</label>
-          <input
-            id="song-bpm"
-            type="number"
-            min={40}
-            max={300}
-            value={bpm}
-            onChange={(e) => setBpm(parseInt(e.target.value) || 120)}
-            className="w-12 px-1 py-1 bg-bg-cell border border-border-control rounded text-center text-xs text-text-primary focus:border-accent-orange"
-          />
-          <input
-            type="range"
-            min={40}
-            max={300}
-            value={bpm}
-            aria-label="Song tempo"
-            aria-valuetext={`${bpm} BPM`}
-            onChange={(e) => setBpm(parseInt(e.target.value))}
-            className="w-16 h-6 accent-accent-orange hidden md:block"
-          />
-        </div>
-
-        {/* Swing */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <label htmlFor="song-swing" className="text-[11px] text-text-muted uppercase tracking-wider">Swing</label>
-          <input
-            id="song-swing"
-            type="number"
-            min={0}
-            max={75}
-            value={Math.round(swing * 100)}
-            onChange={(e) => setSwing((parseInt(e.target.value) || 0) / 100)}
-            aria-describedby="song-swing-unit"
-            className="w-12 px-1 py-1 bg-bg-cell border border-border-control rounded text-center text-xs text-text-primary focus:border-accent-orange"
-          />
-          <input
-            type="range"
-            min={0}
-            max={75}
-            value={Math.round(swing * 100)}
-            aria-label="Song swing amount"
-            aria-valuetext={`${Math.round(swing * 100)}%`}
-            onChange={(e) => setSwing(parseInt(e.target.value) / 100)}
-            className="w-14 h-6 accent-accent-orange hidden md:block"
-          />
-          <span id="song-swing-unit" className="text-[11px] text-text-muted">%</span>
-        </div>
+        {/* Play lives in the transport bar; offer the switch to Song from here */}
+        {hasBlocks && songState !== 'playing' && playMode !== 'song' && (
+          <button
+            // This button goes away once it's used, so focus moves to Play
+            onClick={async () => { await choosePlayMode('song'); document.getElementById('main-play')?.focus(); }}
+            title="Set the Play button to play the song instead of looping the pattern"
+            className="px-2 py-1 min-h-6 rounded text-[11px] font-medium text-accent-purple-fg bg-accent-purple/15 border border-accent-purple/30 hover:bg-accent-purple/25 cursor-pointer transition-colors shrink-0"
+          >
+            Use Play for the song
+          </button>
+        )}
 
         {/* Loop toggle */}
         {hasBlocks && (
