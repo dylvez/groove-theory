@@ -119,13 +119,19 @@ export function TrackHeader({
 
   return (
     // Pinned to the left edge while the grid scrolls sideways; needs an opaque
-    // background so the cells pass underneath it. Every pinned header is its
-    // own layer, so while this one's sound panel is open it sits above the
-    // headers below, or they would cover the panel.
+    // background so the cells pass underneath it. It stretches to the full row
+    // height (the cells are taller than the buttons here) and its shadow
+    // covers half the gap above and below, so nothing shows round its edges;
+    // a soft shadow on the right lets cells fade as they slide under. Every
+    // pinned header is its own layer, so while this one's sound panel is open
+    // it sits above the headers below, or they would cover the panel.
     <div
       data-sticky-header=""
-      className={`sticky left-0 ${panel ? 'z-40' : 'z-20'} flex items-center gap-1.5 shrink-0 px-1 -mx-1 transition-colors ${armed ? 'bg-[#251418]' : 'bg-bg-primary'}`}
-      style={{ width: trackHeaderWidth + 8 }}
+      className={`sticky left-0 ${panel ? 'z-40' : 'z-20'} self-stretch flex items-center gap-1.5 shrink-0 px-1 -mx-1 transition-colors ${armed ? 'bg-[#251418]' : 'bg-bg-primary'}`}
+      style={{
+        width: trackHeaderWidth + 8,
+        boxShadow: `0 -4px 0 ${armed ? '#251418' : 'var(--color-bg-primary)'}, 0 4px 0 ${armed ? '#251418' : 'var(--color-bg-primary)'}, 10px 0 10px -8px rgb(0 0 0 / 0.85)`,
+      }}
     >
       <button
         onClick={onOpenSettings}
