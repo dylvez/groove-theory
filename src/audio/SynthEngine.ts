@@ -67,6 +67,7 @@ interface MelodicVoice {
   volume: number;
   reverbSend: number;
   delaySend: number;
+  pan: number;
 }
 
 /**
@@ -108,14 +109,15 @@ export class SynthEngine {
     volume: number = -6,
     reverbSend: number = 0,
     delaySend: number = 0,
+    pan: number = 0,
   ) {
     const existing = this.voices.get(trackId);
     if (!existing) {
-      const channel = this.mixer.createChannel(volume, reverbSend, delaySend);
+      const channel = this.mixer.createChannel(volume, reverbSend, delaySend, pan);
       const poly = createPolySynth(synthType, params);
       const filter = createFilter(params);
       poly.chain(filter, channel.input);
-      this.voices.set(trackId, { poly, filter, channel, synthType, params, volume, reverbSend, delaySend });
+      this.voices.set(trackId, { poly, filter, channel, synthType, params, volume, reverbSend, delaySend, pan });
       return;
     }
     if (existing.synthType !== synthType) {
@@ -127,6 +129,7 @@ export class SynthEngine {
     if (existing.reverbSend !== reverbSend || existing.delaySend !== delaySend) {
       this.setSends(trackId, reverbSend, delaySend, true);
     }
+    if (existing.pan !== pan) this.setPan(trackId, pan, true);
   }
 
   changeSynthType(trackId: string, synthType: SynthType, params: MelodicSynthParams, immediate = false) {
@@ -216,6 +219,13 @@ export class SynthEngine {
     if (!voice) return;
     voice.volume = db;
     voice.channel.setVolume(db);
+  }
+
+  setPan(trackId: string, pan: number, immediate = false) {
+    const voice = this.voices.get(trackId);
+    if (!voice) return;
+    voice.pan = pan;
+    voice.channel.setPan(pan, immediate);
   }
 
   setSends(trackId: string, reverb: number, delay: number, immediate = false) {

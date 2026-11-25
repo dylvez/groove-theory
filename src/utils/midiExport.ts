@@ -1,6 +1,7 @@
 import MidiWriter from 'midi-writer-js';
 import type { Pattern } from '../types';
 import { stepNotes } from './melodicNotes';
+import { drumFx, melodicFx, stepHits, hitLength } from './stepFx';
 import type { SongBlock } from '../store/useSongStore';
 import { showAlert } from './dialogs';
 
@@ -78,15 +79,19 @@ function addPatternEvents(
     for (let step = 0; step < pattern.numSteps; step++) {
       const vel = dt.steps[step];
       if (!vel) continue;
-      drumTrack.addEvent(new MidiWriter.NoteEvent({
-        pitch: [midiNote],
-        duration: `T${tps}`,
-        velocity: midiVelocity(vel),
-        channel: 10,
-        startTick: atTick(startTick + step * tps),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any));
-      counters.drum++;
+      // Chance is rolled here too, so the file is one take of the pattern
+      const hits = stepHits(drumFx(dt, step));
+      for (const h of hits) {
+        drumTrack.addEvent(new MidiWriter.NoteEvent({
+          pitch: [midiNote],
+          duration: `T${Math.max(1, Math.round(tps / hits.length))}`,
+          velocity: midiVelocity(vel),
+          channel: 10,
+          startTick: atTick(Math.max(0, startTick + Math.round((step + h) * tps))),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any));
+        counters.drum++;
+      }
     }
   }
 
@@ -97,17 +102,21 @@ function addPatternEvents(
       const notes = stepNotes(mTrack.steps[step]);
       if (notes.length === 0) continue;
       if (!track) track = melodicTracks.get(mTrack.name) ?? getMelodicTrack(mTrack.name);
+      const out = track;
+      const hits = stepHits(melodicFx(mTrack.steps[step]));
       // One event per note so each keeps its own length and velocity
-      for (const n of notes) {
-        track.addEvent(new MidiWriter.NoteEvent({
-          pitch: [n.note],
-          duration: `T${Math.max(1, n.length) * tps}`,
-          velocity: midiVelocity(n.velocity),
-          startTick: atTick(startTick + step * tps),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any));
-        counters.melodic++;
-      }
+      hits.forEach((h, k) => {
+        for (const n of notes) {
+          out.addEvent(new MidiWriter.NoteEvent({
+            pitch: [n.note],
+            duration: `T${Math.max(1, Math.round(hitLength(Math.max(1, n.length), k, hits.length) * tps))}`,
+            velocity: midiVelocity(n.velocity),
+            startTick: atTick(Math.max(0, startTick + Math.round((step + h) * tps))),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any));
+          counters.melodic++;
+        }
+      });
     }
   }
 

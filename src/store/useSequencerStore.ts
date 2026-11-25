@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Pattern, StepValue, NoteWithOctave, DrumSynthParams, MelodicSynthParams, SynthType, TimeSignature, StepResolution, MelodicStep } from '../types';
+import type { Pattern, StepValue, NoteWithOctave, DrumSynthParams, MelodicSynthParams, SynthType, TimeSignature, StepResolution, MelodicStep, DrumTrack, StepFx } from '../types';
 import { VELOCITY_LEVELS, DEFAULT_VELOCITY } from '../types';
 import { DEFAULT_DRUM_PARAMS, DEFAULT_MELODIC_PARAMS, getDrumKit, getSynthPreset } from '../constants';
 import { createDefaultPattern, createEmptyDrumTrack, createEmptyMelodicTrack, getStepsPerMeasure } from '../utils/patternHelpers';
@@ -8,6 +8,7 @@ import * as history from './history';
 import { PATTERN_IDS, patternLetter, type PatternBars } from '../constants/patterns';
 import { announce } from '../utils/announce';
 import { stepNotes, stepFromNotes, transposeStep, noteToMidi } from '../utils/melodicNotes';
+import { cleanFx, fullFx, withFx, rescaleFx } from '../utils/stepFx';
 
 // Undo history lives in ./history (shared with the song arrangement).
 // Don't record anything until persisted state has been rehydrated.
@@ -59,6 +60,57 @@ function rotate<T>(arr: T[], by: number): T[] {
   return [...arr.slice(n - k), ...arr.slice(0, n - k)];
 }
 
+/** Set one drum step; turning it off also drops its chance / repeats / timing */
+function drumWithStep(t: DrumTrack, i: number, v: StepValue): DrumTrack {
+  const next = { ...t, steps: t.steps.map((s, j) => (j === i ? v : s)) };
+  if (v > 0 || !t.fx?.[i]) return next;
+  return withFx(next, fullFx(t).map((f, j) => (j === i ? null : f)));
+}
+
+/** A drum track resized to `n` steps (padding with rests), feel kept in step */
+function resizeDrumTrack(t: DrumTrack, n: number): DrumTrack {
+  const steps = t.steps.length < n
+    ? [...t.steps, ...new Array(n - t.steps.length).fill(0)]
+    : t.steps.slice(0, n);
+  return withFx({ ...t, steps }, fullFx(t, n));
+}
+
+/** Copy the first bar with hits into every blank bar, feel included */
+function fillDrumBars(t: DrumTrack, stepsPerMeasure: number): DrumTrack {
+  const measures = Math.ceil(t.steps.length / stepsPerMeasure);
+  const barOf = (m: number) => [m * stepsPerMeasure, Math.min((m + 1) * stepsPerMeasure, t.steps.length)] as const;
+  let sourceBar = -1;
+  for (let m = 0; m < measures; m++) {
+    const [start, end] = barOf(m);
+    if (t.steps.slice(start, end).some(s => s > 0)) { sourceBar = m; break; }
+  }
+  if (sourceBar === -1) return t;
+  const srcStart = sourceBar * stepsPerMeasure;
+  const fx = fullFx(t);
+  const newSteps = [...t.steps];
+  const newFx = [...fx];
+  for (let m = 0; m < measures; m++) {
+    if (m === sourceBar) continue;
+    const [barStart, barEnd] = barOf(m);
+    if (!t.steps.slice(barStart, barEnd).every(s => s === 0)) continue;
+    for (let i = 0; i < stepsPerMeasure && barStart + i < newSteps.length; i++) {
+      newSteps[barStart + i] = t.steps[srcStart + i] ?? 0;
+      newFx[barStart + i] = fx[srcStart + i] ?? null;
+    }
+  }
+  return withFx({ ...t, steps: newSteps }, newFx);
+}
+
+/** Scale a synth step's timing shift when the step length changes */
+function rescaleStep(s: MelodicStep, factor: number): MelodicStep {
+  if (!s.fx) return s;
+  const fx = rescaleFx(s.fx, factor);
+  if (fx) return { ...s, fx };
+  const rest = { ...s };
+  delete rest.fx;
+  return rest;
+}
+
 interface SequencerStore {
   patterns: Pattern[];
   activePatternId: string;
@@ -75,6 +127,12 @@ interface SequencerStore {
   setDrumStep: (trackId: string, stepIndex: number, velocity: number) => void;
   /** Cycle an active drum step through velocity levels */
   cycleDrumVelocity: (trackId: string, stepIndex: number) => void;
+  /** Change a drum step's chance / repeats / timing (merged with what's there) */
+  setDrumStepFx: (trackId: string, stepIndex: number, fx: StepFx) => void;
+  /** Change a synth step's chance / repeats / timing (merged with what's there) */
+  setMelodicStepFx: (trackId: string, stepIndex: number, fx: StepFx) => void;
+  /** Stereo position −1 (left) to 1 (right) */
+  setTrackPan: (trackId: string, type: 'drum' | 'melodic', pan: number) => void;
   setMelodicStep: (trackId: string, stepIndex: number, note: NoteWithOctave | null, opts?: { velocity?: number; length?: number }) => void;
   /** Length for every note on the step */
   setMelodicStepLength: (trackId: string, stepIndex: number, length: number) => void;
@@ -190,12 +248,7 @@ export const useSequencerStore = create<SequencerStore>()(
             p.id !== state.activePatternId ? p : {
               ...p,
               drumTracks: p.drumTracks.map(t =>
-                t.id !== trackId ? t : {
-                  ...t,
-                  steps: t.steps.map((s, i) =>
-                    i === stepIndex ? ((s > 0 ? 0 : DEFAULT_VELOCITY) as StepValue) : s
-                  ),
-                }
+                t.id !== trackId ? t : drumWithStep(t, stepIndex, t.steps[stepIndex] > 0 ? 0 : DEFAULT_VELOCITY)
               ),
             }
           ),
@@ -207,12 +260,7 @@ export const useSequencerStore = create<SequencerStore>()(
             p.id !== state.activePatternId ? p : {
               ...p,
               drumTracks: p.drumTracks.map(t =>
-                t.id !== trackId ? t : {
-                  ...t,
-                  steps: t.steps.map((s, i) =>
-                    i === stepIndex ? Math.max(0, Math.min(1, velocity)) : s
-                  ),
-                }
+                t.id !== trackId ? t : drumWithStep(t, stepIndex, Math.max(0, Math.min(1, velocity)))
               ),
             }
           ),
@@ -235,6 +283,48 @@ export const useSequencerStore = create<SequencerStore>()(
           ),
         })),
 
+      setDrumStepFx: (trackId, stepIndex, fx) => history.coalesced(`fx:${trackId}:${stepIndex}`, () =>
+        set((state) => ({
+          patterns: state.patterns.map(p =>
+            p.id !== state.activePatternId ? p : {
+              ...p,
+              drumTracks: p.drumTracks.map(t => {
+                if (t.id !== trackId) return t;
+                const list = fullFx(t);
+                list[stepIndex] = cleanFx({ ...list[stepIndex], ...fx }) ?? null;
+                return withFx(t, list);
+              }),
+            }
+          ),
+        }))),
+
+      setMelodicStepFx: (trackId, stepIndex, fx) => history.coalesced(`fx:${trackId}:${stepIndex}`, () =>
+        set((state) => mapMelodicStep(state, trackId, stepIndex, (s) => {
+          if (!s.active) return s;
+          const merged = cleanFx({ ...s.fx, ...fx });
+          if (merged) return { ...s, fx: merged };
+          const rest = { ...s };
+          delete rest.fx;
+          return rest;
+        }))),
+
+      setTrackPan: (trackId, type, pan) => history.coalesced(`pan:${trackId}`, () =>
+        set((state) => {
+          const value = Math.max(-1, Math.min(1, Math.round(pan * 100) / 100));
+          return {
+            patterns: state.patterns.map(p =>
+              p.id !== state.activePatternId ? p : {
+                ...p,
+                ...(type === 'drum' ? {
+                  drumTracks: p.drumTracks.map(t => (t.id !== trackId ? t : { ...t, pan: value })),
+                } : {
+                  melodicTracks: p.melodicTracks.map(t => (t.id !== trackId ? t : { ...t, pan: value })),
+                }),
+              }
+            ),
+          };
+        })),
+
       setMelodicStep: (trackId, stepIndex, note, opts) =>
         set((state) => ({
           patterns: state.patterns.map(p =>
@@ -250,6 +340,8 @@ export const useSequencerStore = create<SequencerStore>()(
                       note,
                       velocity: opts?.velocity ?? s.velocity,
                       length: note === null ? undefined : (opts?.length ?? s.length),
+                      // Changing the note keeps the step's chance / repeats / timing
+                      ...(note !== null && s.active && s.fx ? { fx: s.fx } : {}),
                     }
                   ),
                 }
@@ -465,10 +557,7 @@ export const useSequencerStore = create<SequencerStore>()(
           patterns: state.patterns.map(p =>
             p.id !== state.activePatternId ? p : {
               ...p,
-              drumTracks: p.drumTracks.map(t => ({
-                ...t,
-                steps: new Array(p.numSteps).fill(0),
-              })),
+              drumTracks: p.drumTracks.map(t => withFx({ ...t, steps: new Array(p.numSteps).fill(0) }, [])),
               melodicTracks: p.melodicTracks.map(t => ({
                 ...t,
                 steps: t.steps.map(() => ({ active: false, note: null, velocity: 0.8 })),
@@ -618,7 +707,7 @@ export const useSequencerStore = create<SequencerStore>()(
             p.id !== state.activePatternId ? p : {
               ...p,
               drumTracks: p.drumTracks.map(t =>
-                t.id !== trackId ? t : { ...t, steps }
+                t.id !== trackId ? t : withFx({ ...t, steps }, fullFx(t, steps.length).map((f, i) => (steps[i] > 0 ? f : null)))
               ),
             }
           ),
@@ -656,12 +745,7 @@ export const useSequencerStore = create<SequencerStore>()(
                 ...p,
                 timeSignature: ts,
                 numSteps: newNumSteps,
-                drumTracks: p.drumTracks.map(t => ({
-                  ...t,
-                  steps: t.steps.length < newNumSteps
-                    ? [...t.steps, ...new Array(newNumSteps - t.steps.length).fill(0)]
-                    : t.steps.slice(0, newNumSteps),
-                })),
+                drumTracks: p.drumTracks.map(t => resizeDrumTrack(t, newNumSteps)),
                 melodicTracks: p.melodicTracks.map(t => ({
                   ...t,
                   steps: t.steps.length < newNumSteps
@@ -690,17 +774,23 @@ export const useSequencerStore = create<SequencerStore>()(
                 ...p,
                 stepResolution: resolution,
                 numSteps: newNumSteps,
-                drumTracks: p.drumTracks.map(t => ({
-                  ...t,
-                  steps: doubling
-                    ? t.steps.flatMap(s => [s, 0 as StepValue])
-                    : t.steps.filter((_, i) => i % 2 === 0),
-                })),
+                // Steps halve or double in length, so timing shifts scale to match
+                drumTracks: p.drumTracks.map(t => withFx(
+                  {
+                    ...t,
+                    steps: doubling
+                      ? t.steps.flatMap(s => [s, 0 as StepValue])
+                      : t.steps.filter((_, i) => i % 2 === 0),
+                  },
+                  doubling
+                    ? fullFx(t).flatMap(f => [rescaleFx(f, 2), null])
+                    : fullFx(t).filter((_, i) => i % 2 === 0).map(f => rescaleFx(f, 0.5)),
+                )),
                 melodicTracks: p.melodicTracks.map(t => ({
                   ...t,
                   steps: doubling
-                    ? t.steps.flatMap(s => [s, emptyMelodicStep()])
-                    : t.steps.filter((_, i) => i % 2 === 0),
+                    ? t.steps.flatMap(s => [rescaleStep(s, 2), emptyMelodicStep()])
+                    : t.steps.filter((_, i) => i % 2 === 0).map(s => rescaleStep(s, 0.5)),
                 })),
               }
             ),
@@ -718,12 +808,7 @@ export const useSequencerStore = create<SequencerStore>()(
               p.id !== state.activePatternId ? p : {
                 ...p,
                 numSteps: newNumSteps,
-                drumTracks: p.drumTracks.map(t => ({
-                  ...t,
-                  steps: t.steps.length < newNumSteps
-                    ? [...t.steps, ...new Array(newNumSteps - t.steps.length).fill(0)]
-                    : t.steps.slice(0, newNumSteps),
-                })),
+                drumTracks: p.drumTracks.map(t => resizeDrumTrack(t, newNumSteps)),
                 melodicTracks: p.melodicTracks.map(t => ({
                   ...t,
                   steps: t.steps.length < newNumSteps
@@ -746,36 +831,7 @@ export const useSequencerStore = create<SequencerStore>()(
             patterns: state.patterns.map(p =>
               p.id !== state.activePatternId ? p : {
                 ...p,
-                drumTracks: p.drumTracks.map(t => {
-                  if (t.id !== trackId) return t;
-                  const measures = Math.ceil(t.steps.length / stepsPerMeasure);
-                  // Find first non-blank measure
-                  let sourceBar = -1;
-                  for (let m = 0; m < measures; m++) {
-                    const start = m * stepsPerMeasure;
-                    const end = Math.min(start + stepsPerMeasure, t.steps.length);
-                    if (t.steps.slice(start, end).some(s => s > 0)) {
-                      sourceBar = m;
-                      break;
-                    }
-                  }
-                  if (sourceBar === -1) return t;
-                  const srcStart = sourceBar * stepsPerMeasure;
-                  const srcSteps = t.steps.slice(srcStart, srcStart + stepsPerMeasure);
-                  const newSteps = [...t.steps];
-                  for (let m = 0; m < measures; m++) {
-                    if (m === sourceBar) continue;
-                    const barStart = m * stepsPerMeasure;
-                    const barEnd = Math.min(barStart + stepsPerMeasure, t.steps.length);
-                    const isBlank = t.steps.slice(barStart, barEnd).every(s => s === 0);
-                    if (isBlank) {
-                      for (let i = 0; i < stepsPerMeasure && barStart + i < newSteps.length; i++) {
-                        newSteps[barStart + i] = srcSteps[i] ?? 0;
-                      }
-                    }
-                  }
-                  return { ...t, steps: newSteps as StepValue[] };
-                }),
+                drumTracks: p.drumTracks.map(t => (t.id !== trackId ? t : fillDrumBars(t, stepsPerMeasure))),
               }
             ),
           };
@@ -833,34 +889,7 @@ export const useSequencerStore = create<SequencerStore>()(
             patterns: state.patterns.map(p =>
               p.id !== state.activePatternId ? p : {
                 ...p,
-                drumTracks: p.drumTracks.map(t => {
-                  const measures = Math.ceil(t.steps.length / stepsPerMeasure);
-                  let sourceBar = -1;
-                  for (let m = 0; m < measures; m++) {
-                    const start = m * stepsPerMeasure;
-                    const end = Math.min(start + stepsPerMeasure, t.steps.length);
-                    if (t.steps.slice(start, end).some(s => s > 0)) {
-                      sourceBar = m;
-                      break;
-                    }
-                  }
-                  if (sourceBar === -1) return t;
-                  const srcStart = sourceBar * stepsPerMeasure;
-                  const srcSteps = t.steps.slice(srcStart, srcStart + stepsPerMeasure);
-                  const newSteps = [...t.steps];
-                  for (let m = 0; m < measures; m++) {
-                    if (m === sourceBar) continue;
-                    const barStart = m * stepsPerMeasure;
-                    const barEnd = Math.min(barStart + stepsPerMeasure, t.steps.length);
-                    const isBlank = t.steps.slice(barStart, barEnd).every(s => s === 0);
-                    if (isBlank) {
-                      for (let i = 0; i < stepsPerMeasure && barStart + i < newSteps.length; i++) {
-                        newSteps[barStart + i] = srcSteps[i] ?? 0;
-                      }
-                    }
-                  }
-                  return { ...t, steps: newSteps as StepValue[] };
-                }),
+                drumTracks: p.drumTracks.map(t => fillDrumBars(t, stepsPerMeasure)),
               }
             ),
           };
@@ -953,7 +982,7 @@ export const useSequencerStore = create<SequencerStore>()(
           patterns: state.patterns.map(p =>
             p.id !== state.activePatternId ? p : {
               ...p,
-              drumTracks: p.drumTracks.map(t => ({ ...t, steps: rotate(t.steps, steps) })),
+              drumTracks: p.drumTracks.map(t => withFx({ ...t, steps: rotate(t.steps, steps) }, rotate(fullFx(t), steps))),
               melodicTracks: p.melodicTracks.map(t => ({ ...t, steps: rotate(t.steps, steps) })),
             }
           ),

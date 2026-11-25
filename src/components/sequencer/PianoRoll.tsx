@@ -137,10 +137,10 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
   const audition = useCallback((note: NoteWithOctave, velocity = 0.8) => {
     const engine = AudioEngine.getInstance();
     engine.init().then(() => {
-      engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
+      engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0, track.pan ?? 0);
       engine.synthEngine.playNote(track.id, note, '8n', undefined, velocity);
     });
-  }, [track.id, track.synthType, track.synthParams, track.volume, track.reverbSend, track.delaySend]);
+  }, [track.id, track.synthType, track.synthParams, track.volume, track.reverbSend, track.delaySend, track.pan]);
 
   const focusCell = useCallback((pitch: number, step: number) => {
     setFocus({ pitch, step });

@@ -54,6 +54,15 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li>The <strong>ruler</strong> above the grid shows bar.beat numbers and the playhead.</li>
             </ul>
           </Sub>
+          <Sub title="Chance, Repeats & Timing">
+            <p className="mb-1"><strong>Right-click</strong> any step (or press <Kbd>Alt + Enter</Kbd> on it) to open its step editor. Synth steps show these under the note picker.</p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li><strong>Chance</strong> — how often the step plays: 100%, 75%, 50%, 25% or 10% of the times round. Great for hi-hats and fills that never repeat exactly. Striped cells have a chance below 100%.</li>
+              <li><strong>Repeats</strong> — 2, 3 or 4 quick hits inside one step, for rolls and stutters. Small ticks along the top of a cell show the count.</li>
+              <li><strong>Timing</strong> — push the step a little <strong>early</strong> or <strong>late</strong> (up to half a step) for a looser, laid-back feel. A small arrow in the cell's corner points the way it moved. Double-click the slider to put it back on the grid.</li>
+              <li>Changing the note, copying, shifting, filling and resizing all keep these settings. Turning a step off clears them.</li>
+            </ul>
+          </Sub>
           <Sub title="Piano Roll (chords and longer notes)">
             <ul className="list-disc pl-4 space-y-1">
               <li>Click a <strong>synth track’s name</strong> to open its piano roll under the track. Rows are pitches, columns line up with the steps above.</li>
@@ -133,6 +142,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <Sub title="Mix: Volume & Sends">
             <ul className="list-disc pl-4 space-y-1">
               <li><strong>Volume</strong> — -36 to +6 dB per track.</li>
+              <li><strong>Pan</strong> — place the track left or right in the stereo picture. Spreading hats and percussion a little each way makes room in the middle for kick, bass and vocals.</li>
               <li><strong>Reverb</strong> / <strong>Delay</strong> — how much of this track is sent to the shared effect buses. Shape the buses themselves with the <Kbd>FX</Kbd> button in the transport bar.</li>
               <li><Kbd>▶ Hear</Kbd> — audition the sound while you tweak it. <strong>Reset</strong> restores defaults.</li>
             </ul>
@@ -402,6 +412,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li>Drums are mapped to General MIDI percussion (channel 10).</li>
               <li>Each synth track gets its own MIDI track with correct pitches.</li>
               <li>Tempo and time signature are embedded in the file.</li>
+              <li>Repeats and timing shifts are written as real notes. Steps with a chance below 100% roll the dice once, so each export is one take.</li>
             </ul>
           </Sub>
           <Sub title="WAV">
@@ -409,6 +420,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li>Renders lossless audio at 44.1kHz / 16-bit stereo.</li>
               <li>If you have a song arrangement, choose to export the pattern or the full song.</li>
               <li>Muted tracks are excluded, solo is respected.</li>
+              <li>Chance is rolled each time round, just as you hear it, so two exports of the same pattern can differ.</li>
             </ul>
           </Sub>
           <Sub title="MP3">
@@ -462,7 +474,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
             <Kbd>[</Kbd> / <Kbd>]</Kbd> <span>Shift the pattern one step left / right</span>
             <Kbd>\</Kbd> <span>Show / hide the Beats and Harmony side panel</span>
             <Kbd>Shift + click</Kbd> <span>Cycle a step's velocity</span>
-            <Kbd>Right-click</Kbd> <span>Edit a synth step (note, octave, length)</span>
+            <Kbd>Right-click</Kbd> <span>Open the step editor: note and length (synth), velocity (drums), chance, repeats and timing</span>
             <Kbd>R</Kbd> <span>Toggle recording (when a track is armed)</span>
             <Kbd>Z</Kbd> / <Kbd>X</Kbd> <span>Live keys octave down / up</span>
             <Kbd>Escape</Kbd> <span>Close a menu or panel / disarm live keys / close this help</span>
@@ -474,6 +486,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <Kbd>Home</Kbd> / <Kbd>End</Kbd> <span>First / last step of the track</span>
               <Kbd>Enter</Kbd> <span>Turn a drum step on or off · open the note editor on a synth step</span>
               <Kbd>Shift + Enter</Kbd> <span>Cycle the velocity of an active step</span>
+              <Kbd>Alt + Enter</Kbd> <span>Open the step editor (chance, repeats, timing). The context-menu key works too.</span>
               <Kbd>Delete</Kbd> <span>Clear the step</span>
             </div>
             <p className="mt-2">Each position is read as bar.beat.subdivision, for example “2.3.1” is bar 2, beat 3, first sixteenth.</p>

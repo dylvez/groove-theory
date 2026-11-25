@@ -1,6 +1,7 @@
 import * as Tone from 'tone';
 import type { Pattern } from '../types';
 import { stepNotes } from './melodicNotes';
+import { drumFx, melodicFx, stepHits, hitLength } from './stepFx';
 import type { SongBlock } from '../store/useSongStore';
 import { Mixer } from '../audio/Mixer';
 import { DrumEngine } from '../audio/DrumEngine';
@@ -57,7 +58,7 @@ async function renderBlocksOffline(blocks: RenderBlock[], bpm: number): Promise<
         // Drum tracks
         for (const track of pattern.drumTracks) {
           if (track.muted || (drumHasSolo && !track.solo)) continue;
-          drums.ensureSynth(track.sampleKey, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
+          drums.ensureSynth(track.sampleKey, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0, track.pan ?? 0);
 
           for (let step = 0; step < pattern.numSteps; step++) {
             const vel = track.steps[step];
@@ -65,14 +66,17 @@ async function renderBlocksOffline(blocks: RenderBlock[], bpm: number): Promise<
             const swingOffset = step % 2 === 1 ? swing * secsPerStep * 0.5 : 0;
             const time = timeOffset + step * secsPerStep + swingOffset;
             const key = track.sampleKey;
-            transport.schedule((t) => drums.trigger(key, t, vel), time);
+            // Each pass rolls its own chance, as in live playback
+            for (const h of stepHits(drumFx(track, step))) {
+              transport.schedule((t) => drums.trigger(key, t, vel), Math.max(0, time + h * secsPerStep));
+            }
           }
         }
 
         // Melodic tracks
         for (const track of pattern.melodicTracks) {
           if (track.muted || (melodicHasSolo && !track.solo)) continue;
-          synths.ensureSynth(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
+          synths.ensureSynth(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0, track.pan ?? 0);
 
           for (let step = 0; step < pattern.numSteps; step++) {
             const notes = stepNotes(track.steps[step]);
@@ -80,11 +84,14 @@ async function renderBlocksOffline(blocks: RenderBlock[], bpm: number): Promise<
             const swingOffset = step % 2 === 1 ? swing * secsPerStep * 0.5 : 0;
             const time = timeOffset + step * secsPerStep + swingOffset;
             const id = track.id;
-            for (const n of notes) {
-              const duration = Math.max(0.03, Math.max(1, n.length) * secsPerStep - 0.01);
-              const { note, velocity } = n;
-              transport.schedule((t) => synths.playNote(id, note, duration, t, velocity), time);
-            }
+            const hits = stepHits(melodicFx(track.steps[step]));
+            hits.forEach((h, k) => {
+              for (const n of notes) {
+                const duration = Math.max(0.03, hitLength(Math.max(1, n.length), k, hits.length) * secsPerStep - 0.01);
+                const { note, velocity } = n;
+                transport.schedule((t) => synths.playNote(id, note, duration, t, velocity), Math.max(0, time + h * secsPerStep));
+              }
+            });
           }
         }
 

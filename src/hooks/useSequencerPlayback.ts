@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { AudioEngine } from '../audio/AudioEngine';
+import { AudioEngine, drumStepData, melodicStepData } from '../audio/AudioEngine';
 import { useTransportStore } from '../store/useTransportStore';
 import { useSequencerStore } from '../store/useSequencerStore';
-import { stepNotes } from '../utils/melodicNotes';
 
 export function useSequencerPlayback() {
   const engine = AudioEngine.getInstance();
@@ -23,41 +22,8 @@ export function useSequencerPlayback() {
         engine.setStepCallback(setCurrentStep);
 
         engine.scheduleRepeat(
-          // Read drum steps imperatively to avoid stale closures
-          () => {
-            const pattern = useSequencerStore.getState().getActivePattern();
-            const hasSolo = pattern.drumTracks.some(t => t.solo);
-            return pattern.drumTracks.map(track => {
-              const isMuted = track.muted || (hasSolo && !track.solo);
-              return track.steps.map(step => ({
-                sampleKey: track.sampleKey,
-                velocity: step,
-                muted: isMuted,
-                synthParams: track.synthParams,
-                volume: track.volume,
-                reverbSend: track.reverbSend ?? 0,
-                delaySend: track.delaySend ?? 0,
-              }));
-            });
-          },
-          // Read melodic steps imperatively
-          () => {
-            const pattern = useSequencerStore.getState().getActivePattern();
-            const hasSolo = pattern.melodicTracks.some(t => t.solo);
-            return pattern.melodicTracks.map(track => {
-              const isMuted = track.muted || (hasSolo && !track.solo);
-              return track.steps.map(step => ({
-                trackId: track.id,
-                notes: stepNotes(step),
-                muted: isMuted,
-                synthType: track.synthType,
-                synthParams: track.synthParams,
-                volume: track.volume,
-                reverbSend: track.reverbSend ?? 0,
-                delaySend: track.delaySend ?? 0,
-              }));
-            });
-          },
+          () => drumStepData(useSequencerStore.getState().getActivePattern()),
+          () => melodicStepData(useSequencerStore.getState().getActivePattern()),
           () => useSequencerStore.getState().getActivePattern().numSteps,
           () => useTransportStore.getState().loop,
           () => useTransportStore.getState().stop(),

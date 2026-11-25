@@ -55,6 +55,23 @@ export function saveGroove(groove: SavedGroove): GrooveSlotEntry {
   return entry;
 }
 
+/**
+ * Save over an existing slot. The new data is written into the same key, so
+ * if storage is full the browser keeps the old version untouched: nothing is
+ * deleted until the new version is safely stored.
+ */
+export function replaceGroove(id: string, groove: SavedGroove): GrooveSlotEntry {
+  const json = JSON.stringify(groove);
+  try {
+    localStorage.setItem(`${SAVE_PREFIX}${id}`, json);
+  } catch {
+    throw new Error('Storage full, so the saved groove was left as it was. Delete old saves or export to a file instead.');
+  }
+  const entry: GrooveSlotEntry = { id, name: groove.name, savedAt: groove.savedAt, sizeBytes: new Blob([json]).size };
+  saveIndex([entry, ...listGrooves().filter(e => e.id !== id)]); // newest first
+  return entry;
+}
+
 export function loadGroove(id: string): SavedGroove | null {
   try {
     const raw = localStorage.getItem(`${SAVE_PREFIX}${id}`);

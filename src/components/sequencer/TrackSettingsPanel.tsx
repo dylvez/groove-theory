@@ -17,11 +17,13 @@ interface ParamSliderProps {
   step: number;
   onChange: (v: number) => void;
   format?: (v: number) => string;
+  /** What screen readers hear, when the short display isn't clear spoken */
+  spoken?: (v: number) => string;
   /** Use a logarithmic curve (for frequencies) */
   log?: boolean;
 }
 
-export function ParamSlider({ label, value, min, max, step, onChange, format, log }: ParamSliderProps) {
+export function ParamSlider({ label, value, min, max, step, onChange, format, spoken, log }: ParamSliderProps) {
   const display = format ? format(value) : value.toFixed(step < 0.01 ? 3 : step < 1 ? 2 : 0);
   const toSlider = (v: number) => log ? (Math.log(v / min) / Math.log(max / min)) * 1000 : v;
   const fromSlider = (s: number) => log ? min * Math.pow(max / min, s / 1000) : s;
@@ -33,11 +35,27 @@ export function ParamSlider({ label, value, min, max, step, onChange, format, lo
         min={log ? 0 : min} max={log ? 1000 : max} step={log ? 1 : step}
         value={toSlider(value)}
         onChange={e => onChange(fromSlider(parseFloat(e.target.value)))}
-        aria-valuetext={display}
+        aria-valuetext={spoken ? spoken(value) : display}
         className="flex-1 accent-accent-orange h-6 cursor-pointer"
       />
       <span aria-hidden="true" className="w-12 text-right text-text-muted font-mono text-[11px]">{display}</span>
     </label>
+  );
+}
+
+/** Stereo position slider, −1 (left) to 1 (right) */
+function PanSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <ParamSlider
+      label="Pan"
+      value={value}
+      min={-1}
+      max={1}
+      step={0.05}
+      onChange={v => onChange(Math.abs(v) < 0.025 ? 0 : v)}
+      format={v => (v === 0 ? 'C' : `${v < 0 ? 'L' : 'R'}${Math.round(Math.abs(v) * 100)}`)}
+      spoken={v => (v === 0 ? 'centre' : `${Math.round(Math.abs(v) * 100)}% ${v < 0 ? 'left' : 'right'}`)}
+    />
   );
 }
 
@@ -237,21 +255,24 @@ interface DrumSettingsProps {
   volume: number;
   reverbSend: number;
   delaySend: number;
+  pan: number;
   onChange: (params: Partial<DrumSynthParams>) => void;
   onVolumeChange: (db: number) => void;
   onSendsChange: (reverb: number, delay: number) => void;
+  onPanChange: (pan: number) => void;
   onReset: () => void;
   onAudition?: () => void;
   onClose: () => void;
 }
 
 export function DrumSettingsPanel({
-  name, onRename, synthParams, volume, reverbSend, delaySend, onChange, onVolumeChange, onSendsChange, onReset, onAudition, onClose,
+  name, onRename, synthParams, volume, reverbSend, delaySend, pan, onChange, onVolumeChange, onSendsChange, onPanChange, onReset, onAudition, onClose,
 }: DrumSettingsProps) {
   return (
     <PanelFrame title="Drum sound" name={name} onRename={onRename} onClose={onClose} onAudition={onAudition} onReset={onReset}>
       <SectionLabel>Mix</SectionLabel>
       <ParamSlider label="Volume" value={volume} min={-36} max={6} step={1} onChange={onVolumeChange} format={v => `${v > 0 ? '+' : ''}${v} dB`} />
+      <PanSlider value={pan} onChange={onPanChange} />
       <ParamSlider label="Reverb" value={reverbSend} min={0} max={1} step={0.01} onChange={v => onSendsChange(v, delaySend)} format={pct} />
       <ParamSlider label="Delay" value={delaySend} min={0} max={1} step={0.01} onChange={v => onSendsChange(reverbSend, v)} format={pct} />
       <div className="border-t border-border/50 my-1" />
@@ -287,9 +308,11 @@ interface MelodicSettingsProps {
   octave: number;
   reverbSend: number;
   delaySend: number;
+  pan: number;
   onParamChange: (params: Partial<MelodicSynthParams>) => void;
   onVolumeChange: (db: number) => void;
   onSendsChange: (reverb: number, delay: number) => void;
+  onPanChange: (pan: number) => void;
   onSynthTypeChange: (synthType: SynthType) => void;
   onPresetChange: (presetId: string) => void;
   onOctaveChange: (octave: number) => void;
@@ -299,8 +322,8 @@ interface MelodicSettingsProps {
 }
 
 export function MelodicSettingsPanel({
-  name, onRename, synthType, synthParams, volume, octave, reverbSend, delaySend,
-  onParamChange, onVolumeChange, onSendsChange, onSynthTypeChange, onPresetChange, onOctaveChange, onReset, onAudition, onClose,
+  name, onRename, synthType, synthParams, volume, octave, reverbSend, delaySend, pan,
+  onParamChange, onVolumeChange, onSendsChange, onPanChange, onSynthTypeChange, onPresetChange, onOctaveChange, onReset, onAudition, onClose,
 }: MelodicSettingsProps) {
   return (
     <PanelFrame title="Synth sound" name={name} onRename={onRename} onClose={onClose} onAudition={onAudition} onReset={onReset}>
@@ -317,6 +340,7 @@ export function MelodicSettingsPanel({
       <div className="border-t border-border/50 my-1" />
       <SectionLabel>Mix</SectionLabel>
       <ParamSlider label="Volume" value={volume} min={-36} max={6} step={1} onChange={onVolumeChange} format={v => `${v > 0 ? '+' : ''}${v} dB`} />
+      <PanSlider value={pan} onChange={onPanChange} />
       <ParamSlider label="Reverb" value={reverbSend} min={0} max={1} step={0.01} onChange={v => onSendsChange(v, delaySend)} format={pct} />
       <ParamSlider label="Delay" value={delaySend} min={0} max={1} step={0.01} onChange={v => onSendsChange(reverbSend, v)} format={pct} />
       <div className="border-t border-border/50 my-1" />

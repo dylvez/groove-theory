@@ -6,7 +6,7 @@ import { showAlert, showConfirm } from '../../utils/dialogs';
 import {
   listGrooves,
   saveGroove,
-  deleteGroove,
+  replaceGroove,
   exportGrooveToFile,
   buildGrooveSnapshot,
   buildPatternSnapshot,
@@ -70,9 +70,7 @@ export function SaveGrooveDropdown({ onClose }: { onClose: () => void }) {
     );
     if (!ok) return;
     try {
-      deleteGroove(id);
-      const groove = buildGrooveSnapshot(existingName);
-      saveGroove(groove);
+      replaceGroove(id, buildGrooveSnapshot(existingName));
       markWorkSaved();
       setSaves(listGrooves());
       announce(`Saved over ${existingName}`);

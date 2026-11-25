@@ -44,6 +44,8 @@ export function stepFromNotes(prev: MelodicStep, notes: NoteEvent[]): MelodicSte
     velocity: first.velocity,
     length: Math.max(1, first.length),
     ...(rest.length ? { more: rest.map(n => ({ ...n, length: Math.max(1, n.length) })) } : {}),
+    // Chance / repeats / timing belong to the step, so they survive note edits
+    ...(prev.active && prev.fx ? { fx: prev.fx } : {}),
   };
 }
 

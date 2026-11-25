@@ -190,7 +190,8 @@ export function SequencerGrid() {
       <h2 id="sequencer-heading" className="sr-only">Sequencer, pattern {activePattern.name}</h2>
       <p id="grid-instructions" className="sr-only">
         Arrow keys move between steps. Enter turns a drum step on or off, or opens the note editor for a synth step.
-        Shift+Enter changes velocity. Delete clears a step. Space plays and stops.
+        Shift+Enter changes velocity. Alt+Enter opens the step editor for chance, repeats and timing.
+        Delete clears a step. Space plays and stops.
       </p>
       <div
         ref={scrollerRef}

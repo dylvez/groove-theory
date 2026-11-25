@@ -5,7 +5,9 @@ import { usePopover } from '../../hooks/usePopover';
 import { spokenNote } from '../../utils/noteHelpers';
 import { stepNotes, stepLength } from '../../utils/melodicNotes';
 import { PianoRoll } from './PianoRoll';
-import type { MelodicTrack as MelodicTrackType, NoteWithOctave, MelodicSynthParams, SynthType } from '../../types';
+import type { MelodicTrack as MelodicTrackType, NoteWithOctave, MelodicSynthParams, SynthType, StepFx } from '../../types';
+import { describeFx, melodicFx } from '../../utils/stepFx';
+import { StepFxControls, FxMarks } from './StepFxControls';
 import { useSequencerStore } from '../../store/useSequencerStore';
 import { useTheoryStore } from '../../store/useTheoryStore';
 import { useTransportStore } from '../../store/useTransportStore';
@@ -53,8 +55,10 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
   const applySynthPreset = useSequencerStore(s => s.applySynthPreset);
   const setTrackVolume = useSequencerStore(s => s.setTrackVolume);
   const setTrackSends = useSequencerStore(s => s.setTrackSends);
+  const setTrackPan = useSequencerStore(s => s.setTrackPan);
   const setMelodicOctave = useSequencerStore(s => s.setMelodicOctave);
   const fillMelodicTrack = useSequencerStore(s => s.fillMelodicTrack);
+  const setMelodicStepFx = useSequencerStore(s => s.setMelodicStepFx);
   const rootNote = useTheoryStore(s => s.rootNote);
   const selectedScale = useTheoryStore(s => s.selectedScale);
   const currentStep = useTransportStore(s => s.currentStep);
@@ -187,7 +191,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
     // Audition the note
     const engine = AudioEngine.getInstance();
     engine.init().then(() => {
-      engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
+      engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0, track.pan ?? 0);
       engine.synthEngine.playNote(track.id, note, '8n', undefined, track.steps[stepIndex].velocity);
     });
     if (!track.steps[stepIndex].active) setActivePopup(null);
@@ -196,6 +200,11 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
   const handleVolumeChange = (db: number) => {
     setTrackVolume(track.id, 'melodic', db);
     AudioEngine.getInstance().setMelodicVolume(track.id, db);
+  };
+
+  const handlePanChange = (pan: number) => {
+    setTrackPan(track.id, 'melodic', pan);
+    AudioEngine.getInstance().setMelodicPan(track.id, pan);
   };
 
   const handleSendsChange = (reverb: number, delay: number) => {
@@ -227,7 +236,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
   const handleAudition = async () => {
     const engine = AudioEngine.getInstance();
     await engine.init();
-    engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
+    engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0, track.pan ?? 0);
     engine.synthEngine.playNote(track.id, `${rootNote}${track.octave}`, '4n', undefined, 0.8);
   };
 
@@ -237,7 +246,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
     } else {
       const engine = AudioEngine.getInstance();
       await engine.init();
-      engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
+      engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0, track.pan ?? 0);
       setArmedTrack(track.id);
     }
   };
@@ -275,6 +284,8 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
           octave={track.octave}
           reverbSend={track.reverbSend ?? 0}
           delaySend={track.delaySend ?? 0}
+          pan={track.pan ?? 0}
+          onPanChange={handlePanChange}
           onParamChange={handleParamChange}
           onVolumeChange={handleVolumeChange}
           onSendsChange={handleSendsChange}
@@ -305,11 +316,13 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
           const chord = stepNotes(step);
           const hasTail = step.active && len > 1 && i + 1 < track.steps.length && !track.steps[i + 1].active;
           const position = stepPosition(i, stepsPerMeasure, stepsPerBeat);
-          const label = chord.length > 1
+          const fx = melodicFx(step);
+          const feel = describeFx(fx);
+          const label = (chord.length > 1
             ? `${track.name} ${position}: chord ${chord.map(n => spokenNote(n.note)).join(', ')}`
             : step.active && step.note
             ? `${track.name} ${position}: ${spokenNote(step.note)}, ${len} step${len > 1 ? 's' : ''} long, ${velocityName(step.velocity)}`
-            : tail ? `${track.name} ${position}: held note` : `${track.name} ${position}: empty`;
+            : tail ? `${track.name} ${position}: held note` : `${track.name} ${position}: empty`) + (feel ? `, ${feel}` : '');
           const textColor = step.active ? readableTextOn(trackColor, velocityOpacity(step.velocity)) : undefined;
 
           return (
@@ -327,12 +340,15 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
                 onMouseUp={() => handlePointerUp(i)}
                 onMouseEnter={() => handlePointerEnter(i)}
                 onClick={(e) => { if (e.detail === 0) handleActivate(i, e.shiftKey); }}
-                onContextMenu={(e) => e.preventDefault()}
+                // Alt+Enter opens the editor too (as on drum steps)
+                onKeyDown={(e) => { if (e.key === 'Enter' && e.altKey) { e.preventDefault(); openPopupFor(i); } }}
+                // The context-menu key and Shift+F10 open the editor too
+                onContextMenu={(e) => { e.preventDefault(); openPopupFor(i); }}
                 title={
                   chord.length > 1
-                    ? `Chord: ${chord.map(n => n.note).join(' ')}\nEdit chords in the piano roll (click the track name) · click to clear`
+                    ? `Chord: ${chord.map(n => n.note).join(' ')}${feel ? ` · ${feel}` : ''}\nEdit chords in the piano roll (click the track name) · right-click for chance, repeats and timing · click to clear`
                     : step.active
-                    ? `${step.note} · ${len} step${len > 1 ? 's' : ''} · vel ${Math.round(step.velocity * 100)}%\nClick to clear · right-click to edit · shift+click for velocity`
+                    ? `${step.note} · ${len} step${len > 1 ? 's' : ''} · vel ${Math.round(step.velocity * 100)}%${feel ? ` · ${feel}` : ''}\nClick to clear · right-click to edit note, chance, repeats and timing · shift+click for velocity`
                     : tail ? 'Held note — right-click the note to change its length' : 'Click to pick a note · drag to paint · right-click to edit'
                 }
                 className={`${cellW} ${cellH} border text-[11px] font-medium transition-all duration-75 cursor-pointer select-none relative ${
@@ -362,6 +378,7 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
                     <span className="text-[11px] font-normal">{chord.length > 1 ? `+${chord.length - 1}` : octaveDigit}</span>
                   </span>
                 ) : ''}
+                {step.active && <FxMarks fx={fx} />}
               </button>
 
               {/* Note editor popup: octave, note, length */}
@@ -377,6 +394,8 @@ export function MelodicTrack({ track, onRemove, stepsPerMeasure = 16, compact = 
                   length={len}
                   onSelect={(note) => handleNoteSelect(i, note)}
                   onLength={(L) => setMelodicStepLength(track.id, i, L)}
+                  fx={fx}
+                  onFx={(f) => setMelodicStepFx(track.id, i, f)}
                   onClear={() => { setMelodicStep(track.id, i, null); setActivePopup(null); }}
                   onClose={() => setActivePopup(null)}
                 />
@@ -411,13 +430,15 @@ interface NoteEditorProps {
   length: number;
   onSelect: (note: NoteWithOctave) => void;
   onLength: (length: number) => void;
+  fx: StepFx | undefined;
+  onFx: (fx: StepFx) => void;
   onClear: () => void;
   onClose: () => void;
 }
 
 /** Floating editor for one synth step: octave, scale note, length. */
 function NoteEditor({
-  title, scaleNotes, octave, onOctave, currentNote, chordNotes, active, length, onSelect, onLength, onClear, onClose,
+  title, scaleNotes, octave, onOctave, currentNote, chordNotes, active, length, onSelect, onLength, fx, onFx, onClear, onClose,
 }: NoteEditorProps) {
   const ref = usePopover<HTMLDivElement>(onClose);
   const headingId = useId();
@@ -502,6 +523,9 @@ function NoteEditor({
                 {L}
               </button>
             ))}
+          </div>
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <StepFxControls fx={fx} onChange={onFx} />
           </div>
           <button
             onClick={onClear}

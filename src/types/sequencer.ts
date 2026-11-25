@@ -10,6 +10,19 @@ export type StepValue = number;
 export const VELOCITY_LEVELS = [1, 0.6, 0.3] as const;
 export const DEFAULT_VELOCITY = 1;
 
+/**
+ * Per-step feel. Every field is optional and absent means the default, so an
+ * ordinary step carries nothing. Read and write through utils/stepFx.
+ */
+export interface StepFx {
+  /** Chance the step plays each time round, 0–1 (default 1) */
+  chance?: number;
+  /** Evenly spaced hits within the step, 1–4 (default 1) */
+  repeats?: number;
+  /** Timing shift as a fraction of a step, −0.5 (early) to 0.5 (late) (default 0) */
+  nudge?: number;
+}
+
 // --- Drum synth parameter types (discriminated union) ---
 
 export interface MembraneSynthParams {
@@ -79,6 +92,10 @@ export interface DrumTrack {
   reverbSend?: number;
   /** Delay send level 0–1 (optional, default 0) */
   delaySend?: number;
+  /** Stereo position −1 (left) to 1 (right) (optional, default 0) */
+  pan?: number;
+  /** Per-step feel, index-aligned with `steps` (optional, may be shorter or sparse) */
+  fx?: (StepFx | null)[];
 }
 
 /** One note that starts on a step */
@@ -103,6 +120,8 @@ export interface MelodicStep {
   length?: number;
   /** Further notes on this step, above `note` (optional; absent for single notes) */
   more?: NoteEvent[];
+  /** Chance, repeats and timing for the whole step (optional) */
+  fx?: StepFx;
 }
 
 export interface MelodicTrack {
@@ -119,6 +138,8 @@ export interface MelodicTrack {
   reverbSend?: number;
   /** Delay send level 0–1 (optional, default 0) */
   delaySend?: number;
+  /** Stereo position −1 (left) to 1 (right) (optional, default 0) */
+  pan?: number;
 }
 
 export interface Pattern {

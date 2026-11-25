@@ -53,7 +53,7 @@ export function useLiveKeys() {
       if (heldMap.has(key)) return;
 
       engine.init().then(() => {
-        engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0);
+        engine.prepareMelodicVoice(track.id, track.synthType, track.synthParams, track.volume, track.reverbSend ?? 0, track.delaySend ?? 0, track.pan ?? 0);
         engine.synthEngine.noteOn(track.id, note, 0.85);
       });
 

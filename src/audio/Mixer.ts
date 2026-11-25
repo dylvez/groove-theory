@@ -3,7 +3,8 @@ import type { MixerSettings } from '../store/useMixerStore';
 import { DEFAULT_MIXER } from '../store/useMixerStore';
 
 /**
- * A per-track strip: volume → master, plus reverb and delay sends.
+ * A per-track strip: volume → pan → master, plus reverb and delay sends
+ * (taken after the pan, so effects follow the track's position).
  * Every voice in the app (drum, synth, preview) plays through one of these.
  */
 export interface Channel {
@@ -12,6 +13,8 @@ export interface Channel {
   reverbSend: Tone.Gain;
   delaySend: Tone.Gain;
   setVolume(db: number): void;
+  /** −1 (left) to 1 (right); `immediate` skips the ramp */
+  setPan(pan: number, immediate?: boolean): void;
   /** `immediate` sets the value without a ramp (safe inside audio callbacks) */
   setSends(reverb: number, delay: number, immediate?: boolean): void;
   dispose(): void;
@@ -21,9 +24,9 @@ export interface Channel {
  * Master bus + effect return buses.
  *
  * Signal flow:
- *   channel.input ─┬─► master ─► compressor ─► limiter ─► destination
- *                  ├─► reverbSend ─► hpf ─► reverb ─► reverbReturn ─► master
- *                  └─► delaySend ─► delay ─► delayReturn ─► master
+ *   channel.input ─► panner ─┬─► master ─► compressor ─► limiter ─► destination
+ *                            ├─► reverbSend ─► hpf ─► reverb ─► reverbReturn ─► master
+ *                            └─► delaySend ─► delay ─► delayReturn ─► master
  *
  * Nodes are created against whatever Tone context is current, so a Mixer can
  * be built inside `Tone.Offline` for exports and produce identical sound.
@@ -72,13 +75,15 @@ export class Mixer {
     return this.reverb.ready;
   }
 
-  createChannel(volumeDb: number = -6, reverbSend: number = 0, delaySend: number = 0): Channel {
+  createChannel(volumeDb: number = -6, reverbSend: number = 0, delaySend: number = 0, pan: number = 0): Channel {
     const input = new Tone.Volume(volumeDb);
+    const panner = new Tone.Panner(pan);
     const rSend = new Tone.Gain(reverbSend);
     const dSend = new Tone.Gain(delaySend);
-    input.connect(this.master);
-    input.connect(rSend);
-    input.connect(dSend);
+    input.connect(panner);
+    panner.connect(this.master);
+    panner.connect(rSend);
+    panner.connect(dSend);
     rSend.connect(this.reverbHpf);
     dSend.connect(this.delay);
 
@@ -87,6 +92,10 @@ export class Mixer {
       reverbSend: rSend,
       delaySend: dSend,
       setVolume: (db) => { input.volume.value = db; },
+      setPan: (p, immediate = false) => {
+        if (immediate) panner.pan.value = p;
+        else panner.pan.rampTo(p, 0.02);
+      },
       setSends: (r, d, immediate = false) => {
         if (immediate) {
           rSend.gain.value = r;
@@ -98,6 +107,7 @@ export class Mixer {
       },
       dispose: () => {
         input.dispose();
+        panner.dispose();
         rSend.dispose();
         dSend.dispose();
         this.channels.delete(channel);

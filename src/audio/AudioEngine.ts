@@ -2,9 +2,11 @@ import * as Tone from 'tone';
 import { DrumEngine } from './DrumEngine';
 import { SynthEngine } from './SynthEngine';
 import { Mixer } from './Mixer';
-import type { NoteEvent, DrumSynthParams, MelodicSynthParams, SynthType, StepResolution } from '../types';
+import type { NoteEvent, DrumSynthParams, MelodicSynthParams, SynthType, StepResolution, Pattern, StepFx } from '../types';
 import type { MixerSettings } from '../store/useMixerStore';
 import { useMixerStore } from '../store/useMixerStore';
+import { stepNotes } from '../utils/melodicNotes';
+import { drumFx, melodicFx, stepHits, hitLength, isEarly } from '../utils/stepFx';
 
 export interface DrumStepData {
   sampleKey: string;
@@ -15,6 +17,8 @@ export interface DrumStepData {
   volume: number;
   reverbSend: number;
   delaySend: number;
+  pan: number;
+  fx?: StepFx;
 }
 
 export interface MelodicStepData {
@@ -27,6 +31,47 @@ export interface MelodicStepData {
   volume: number;
   reverbSend: number;
   delaySend: number;
+  pan: number;
+  fx?: StepFx;
+}
+
+/** Every drum track's steps, ready for the player (solo and mute applied) */
+export function drumStepData(pattern: Pattern): DrumStepData[][] {
+  const hasSolo = pattern.drumTracks.some(t => t.solo);
+  return pattern.drumTracks.map(track => {
+    const muted = track.muted || (hasSolo && !track.solo);
+    return track.steps.map((velocity, i) => ({
+      sampleKey: track.sampleKey,
+      velocity,
+      muted,
+      synthParams: track.synthParams,
+      volume: track.volume,
+      reverbSend: track.reverbSend ?? 0,
+      delaySend: track.delaySend ?? 0,
+      pan: track.pan ?? 0,
+      fx: drumFx(track, i),
+    }));
+  });
+}
+
+/** Every synth track's steps, ready for the player (solo and mute applied) */
+export function melodicStepData(pattern: Pattern): MelodicStepData[][] {
+  const hasSolo = pattern.melodicTracks.some(t => t.solo);
+  return pattern.melodicTracks.map(track => {
+    const muted = track.muted || (hasSolo && !track.solo);
+    return track.steps.map(step => ({
+      trackId: track.id,
+      notes: stepNotes(step),
+      muted,
+      synthType: track.synthType,
+      synthParams: track.synthParams,
+      volume: track.volume,
+      reverbSend: track.reverbSend ?? 0,
+      delaySend: track.delaySend ?? 0,
+      pan: track.pan ?? 0,
+      fx: melodicFx(step),
+    }));
+  });
 }
 
 /** Seconds per step for a given BPM and resolution. */
@@ -105,23 +150,46 @@ export class AudioEngine {
 
       const step = currentStep % numSteps;
 
-      // Calculate swing offset for odd-numbered steps (off-beats)
+      // Swing delays odd-numbered steps (off-beats)
       const swing = getSwing();
       const stepDuration = stepSeconds(Tone.getTransport().bpm.value, resolution);
-      const swingOffset = (step % 2 === 1) ? swing * stepDuration * 0.5 : 0;
-      const triggerTime = time + swingOffset;
+      const gridTime = (s: number, t: number) => t + (s % 2 === 1 ? swing * stepDuration * 0.5 : 0);
+      // Never in the past, in case an early hit can't be honoured in full
+      const at = (t: number) => Math.max(t, Tone.now());
+
+      // A step shifted early has to sound before its own callback, so it is
+      // played from the step before. Not across the loop point, though: the
+      // next pass might be a different pattern (song mode), so a pattern's
+      // first step plays from its own callback, as early as the look-ahead allows.
+      const next = step + 1 < numSteps ? step + 1 : -1;
+      const playsNow = (fx: StepFx | undefined) => !isEarly(fx) || step === 0;
+
+      const playDrum = (d: DrumStepData | undefined, grid: number) => {
+        if (!d || d.velocity <= 0 || d.muted) return;
+        for (const h of stepHits(d.fx)) this.drumEngine.trigger(d.sampleKey, at(grid + h * stepDuration), d.velocity);
+      };
+      const playMelodic = (m: MelodicStepData | undefined, grid: number) => {
+        if (!m || m.muted || m.notes.length === 0) return;
+        const hits = stepHits(m.fx);
+        hits.forEach((h, k) => {
+          const t = at(grid + h * stepDuration);
+          for (const n of m.notes) {
+            // Slight gap so identical consecutive notes re-articulate cleanly
+            const duration = Math.max(0.03, hitLength(Math.max(1, n.length), k, hits.length) * stepDuration - 0.01);
+            this.synthEngine.playNote(m.trackId, n.note, duration, t, n.velocity);
+          }
+        });
+      };
 
       // Trigger drum sounds
       const drumData = getDrumSteps();
       for (const track of drumData) {
         if (track.length > 0) {
           const t0 = track[0];
-          this.drumEngine.ensureSynth(t0.sampleKey, t0.synthParams, t0.volume, t0.reverbSend, t0.delaySend);
+          this.drumEngine.ensureSynth(t0.sampleKey, t0.synthParams, t0.volume, t0.reverbSend, t0.delaySend, t0.pan);
         }
-        const stepData = track[step];
-        if (stepData && stepData.velocity > 0 && !stepData.muted) {
-          this.drumEngine.trigger(stepData.sampleKey, triggerTime, stepData.velocity);
-        }
+        if (playsNow(track[step]?.fx)) playDrum(track[step], gridTime(step, time));
+        if (next >= 0 && isEarly(track[next]?.fx)) playDrum(track[next], gridTime(next, time + stepDuration));
       }
 
       // Trigger melodic sounds
@@ -129,16 +197,10 @@ export class AudioEngine {
       for (const track of melodicData) {
         if (track.length > 0) {
           const t0 = track[0];
-          this.synthEngine.ensureSynth(t0.trackId, t0.synthType, t0.synthParams, t0.volume, t0.reverbSend, t0.delaySend);
+          this.synthEngine.ensureSynth(t0.trackId, t0.synthType, t0.synthParams, t0.volume, t0.reverbSend, t0.delaySend, t0.pan);
         }
-        const stepData = track[step];
-        if (stepData && !stepData.muted) {
-          for (const n of stepData.notes) {
-            // Slight gap so identical consecutive notes re-articulate cleanly
-            const duration = Math.max(0.03, Math.max(1, n.length) * stepDuration - 0.01);
-            this.synthEngine.playNote(stepData.trackId, n.note, duration, triggerTime, n.velocity);
-          }
-        }
+        if (playsNow(track[step]?.fx)) playMelodic(track[step], gridTime(step, time));
+        if (next >= 0 && isEarly(track[next]?.fx)) playMelodic(track[next], gridTime(next, time + stepDuration));
       }
 
       // UI callback stays on grid (no swing offset) for visual clarity
@@ -180,15 +242,23 @@ export class AudioEngine {
     this.synthEngine.setSends(trackId, reverb, delay);
   }
 
+  setDrumPan(sampleKey: string, pan: number) {
+    this.drumEngine.setPan(sampleKey, pan);
+  }
+
+  setMelodicPan(trackId: string, pan: number) {
+    this.synthEngine.setPan(trackId, pan);
+  }
+
   /** Audition a drum immediately (used by track headers and pads). */
-  auditionDrum(sampleKey: string, params: DrumSynthParams, volume: number, reverbSend = 0, delaySend = 0, velocity = 1) {
-    this.drumEngine.ensureSynth(sampleKey, params, volume, reverbSend, delaySend);
-    this.drumEngine.trigger(sampleKey, Tone.now(), velocity);
+  auditionDrum(sampleKey: string, params: DrumSynthParams, volume: number, reverbSend = 0, delaySend = 0, velocity = 1, pan = 0) {
+    this.drumEngine.ensureSynth(sampleKey, params, volume, reverbSend, delaySend, pan);
+    this.drumEngine.trigger(sampleKey, Tone.now(), velocity, false);
   }
 
   /** Make sure a melodic track's voice exists so it can be played live. */
-  prepareMelodicVoice(trackId: string, synthType: SynthType, params: MelodicSynthParams, volume: number, reverbSend = 0, delaySend = 0) {
-    this.synthEngine.ensureSynth(trackId, synthType, params, volume, reverbSend, delaySend);
+  prepareMelodicVoice(trackId: string, synthType: SynthType, params: MelodicSynthParams, volume: number, reverbSend = 0, delaySend = 0, pan = 0) {
+    this.synthEngine.ensureSynth(trackId, synthType, params, volume, reverbSend, delaySend, pan);
   }
 
   clearSchedule() {

@@ -82,6 +82,9 @@ interface DrumVoice {
   volume: number;
   reverbSend: number;
   delaySend: number;
+  pan: number;
+  /** Latest scheduled hit, so hits reach the (monophonic) synth in time order */
+  lastStart: number;
 }
 
 export interface DrumVoiceSettings {
@@ -105,13 +108,13 @@ export class DrumEngine {
     this.mixer = mixer;
   }
 
-  ensureSynth(sampleKey: string, params: DrumSynthParams, volume: number = -6, reverbSend: number = 0, delaySend: number = 0) {
+  ensureSynth(sampleKey: string, params: DrumSynthParams, volume: number = -6, reverbSend: number = 0, delaySend: number = 0, pan: number = 0) {
     const existing = this.voices.get(sampleKey);
     if (!existing) {
-      const channel = this.mixer.createChannel(volume, reverbSend, delaySend);
+      const channel = this.mixer.createChannel(volume, reverbSend, delaySend, pan);
       const synth = createDrumSynth(params);
       synth.connect(channel.input);
-      this.voices.set(sampleKey, { synth, channel, params, volume, reverbSend, delaySend });
+      this.voices.set(sampleKey, { synth, channel, params, volume, reverbSend, delaySend, pan, lastStart: 0 });
       return;
     }
     if (existing.params !== params) this.updateParams(sampleKey, params);
@@ -119,6 +122,7 @@ export class DrumEngine {
     if (existing.reverbSend !== reverbSend || existing.delaySend !== delaySend) {
       this.setSends(sampleKey, reverbSend, delaySend, true);
     }
+    if (existing.pan !== pan) this.setPan(sampleKey, pan, true);
   }
 
   updateParams(sampleKey: string, params: DrumSynthParams) {
@@ -134,9 +138,19 @@ export class DrumEngine {
     voice.params = params;
   }
 
-  trigger(sampleKey: string, time: number, velocity: number = 1) {
+  /**
+   * Play a hit. Scheduled hits (`ordered`) are kept in time order per voice:
+   * these synths are monophonic, and Tone cancels a later start if an earlier
+   * one is scheduled after it (a late repeat followed by an early step can do
+   * that). Auditions pass `ordered: false` so they're never held back.
+   */
+  trigger(sampleKey: string, time: number, velocity: number = 1, ordered = true) {
     const voice = this.voices.get(sampleKey);
     if (!voice) return;
+    if (ordered) {
+      if (time <= voice.lastStart) time = voice.lastStart + 0.002;
+      voice.lastStart = time;
+    }
     const { synth, params } = voice;
     const vel = Math.max(0.05, Math.min(1, velocity));
 
@@ -158,6 +172,13 @@ export class DrumEngine {
     if (!voice) return;
     voice.volume = db;
     voice.channel.setVolume(db);
+  }
+
+  setPan(sampleKey: string, pan: number, immediate = false) {
+    const voice = this.voices.get(sampleKey);
+    if (!voice) return;
+    voice.pan = pan;
+    voice.channel.setPan(pan, immediate);
   }
 
   setSends(sampleKey: string, reverb: number, delay: number, immediate = false) {
