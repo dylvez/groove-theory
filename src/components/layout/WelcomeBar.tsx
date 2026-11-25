@@ -84,7 +84,7 @@ export function WelcomeBar({ onDismiss }: { onDismiss: () => void }) {
           {playing ? 'Stop the demo' : 'Play the demo'}
         </button>
 
-        <div role="group" aria-labelledby="welcome-other" className="flex items-center gap-1">
+        <div role="group" aria-labelledby="welcome-other" className="flex flex-wrap items-center gap-1">
           <span id="welcome-other" className="text-xs text-text-muted mr-1">Other demos</span>
           {demos.filter(d => d.id !== demo.id).map(d => (
             <button
