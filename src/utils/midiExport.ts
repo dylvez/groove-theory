@@ -44,6 +44,16 @@ function newTrack(name: string, bpm: number, timeSignature: string): MidiTrack {
 }
 
 /**
+ * midi-writer-js reads the start as `startTick || tick || null`, so a note at
+ * tick 0 counts as "no explicit time" and gets queued after the previous note.
+ * That pushed every chord note but one (and every drum hit but one) off the
+ * downbeat. A Number object is truthy but still does arithmetic as 0.
+ */
+function atTick(tick: number): number {
+  return tick === 0 ? (new Number(0) as unknown as number) : tick;
+}
+
+/**
  * Add one pattern pass to the given tracks starting at `startTick`.
  * Events use absolute `startTick`s so overlapping / long notes are preserved.
  * Returns the number of ticks the pattern occupies.
@@ -72,7 +82,7 @@ function addPatternEvents(
         duration: `T${tps}`,
         velocity: midiVelocity(vel),
         channel: 10,
-        startTick: startTick + step * tps,
+        startTick: atTick(startTick + step * tps),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any));
       counters.drum++;
@@ -92,7 +102,7 @@ function addPatternEvents(
           pitch: [n.note],
           duration: `T${Math.max(1, n.length) * tps}`,
           velocity: midiVelocity(n.velocity),
-          startTick: startTick + step * tps,
+          startTick: atTick(startTick + step * tps),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any));
         counters.melodic++;
