@@ -402,7 +402,7 @@ export function PianoRoll({ track, color, stepsPerMeasure, compact, onClose }: P
           <Popover
             label={`Chance, repeats and timing: ${spokenNote(fxEdit.note)} ${stepPosition(fxEdit.start, stepsPerMeasure, stepsPerBeat)}`}
             onClose={() => setFxEdit(null)}
-            className="absolute z-30 w-64 p-3 flex flex-col gap-2.5 bg-bg-secondary border border-border-soft rounded-xl shadow-2xl"
+            className="absolute z-50 w-64 p-3 flex flex-col gap-2.5 bg-bg-secondary border border-border-soft rounded-xl shadow-2xl"
             style={{ left: Math.max(0, fxEdit.x - 8), top: fxEdit.y }}
           >
             <div className="flex items-center justify-between gap-2">

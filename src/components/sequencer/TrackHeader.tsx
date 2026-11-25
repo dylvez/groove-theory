@@ -125,10 +125,11 @@ export function TrackHeader({
     // covers half the gap above and below, so nothing shows round its edges;
     // a soft shadow on the right lets cells fade as they slide under. Every
     // pinned header is its own layer, so while this one's sound panel is open
-    // it sits above the headers below, or they would cover the panel.
+    // it's raised to the top (z-50, with the app header), or the headers below,
+    // or the app header when the panel moves up to fit, would cover the panel.
     <div
       data-sticky-header=""
-      className={`sticky left-0 ${panel ? 'z-40' : 'z-20'} self-stretch flex items-center gap-1.5 shrink-0 px-1 -mx-1 transition-colors cramped:flex-wrap cramped:content-center cramped:gap-y-1 cramped:py-1 ${armed ? 'bg-[#251418]' : 'bg-bg-primary'}`}
+      className={`sticky left-0 ${panel ? 'z-50' : 'z-20'} self-stretch flex items-center gap-1.5 shrink-0 px-1 -mx-1 transition-colors cramped:flex-wrap cramped:content-center cramped:gap-y-1 cramped:py-1 ${armed ? 'bg-[#251418]' : 'bg-bg-primary'}`}
       style={{
         width: trackHeaderWidth + 8,
         boxShadow: `0 -4px 0 ${armed ? '#251418' : 'var(--color-bg-primary)'}, 0 4px 0 ${armed ? '#251418' : 'var(--color-bg-primary)'}, 10px 0 10px -8px rgb(0 0 0 / 0.85)`,

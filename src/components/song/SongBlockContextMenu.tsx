@@ -37,11 +37,11 @@ export function SongBlockContextMenu({ x, y, block, index, count, onClose }: Con
 
   const ref = usePopover<HTMLDivElement>(onClose);
 
-  // Keep menu on screen
+  // usePopover moves it to fit inside the window
   const menuStyle: React.CSSProperties = {
     position: 'fixed',
-    top: Math.min(y, window.innerHeight - 400),
-    left: Math.min(x, window.innerWidth - 200),
+    top: y,
+    left: x,
     zIndex: 50,
   };
 

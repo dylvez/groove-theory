@@ -25,7 +25,9 @@ export function PatternBar() {
   const measures = Math.round(pattern.numSteps / getStepsPerMeasure(ts, res));
 
   return (
-    <div className="sticky left-0 flex flex-wrap items-center gap-x-3 gap-y-2 px-6 pt-3 pb-1">
+    // Sticky makes this its own stacking layer, so while the menu is open the
+    // bar is raised to the top, or the menu would sit under the grid rows
+    <div className={`sticky left-0 ${menuOpen ? 'z-50' : ''} flex flex-wrap items-center gap-x-3 gap-y-2 px-6 pt-3 pb-1`}>
       <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 10px ${color}` }} />
       <p className="font-display text-base font-bold tracking-tight text-text-primary">Pattern {pattern.name}</p>
 

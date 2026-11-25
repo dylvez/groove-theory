@@ -77,6 +77,20 @@ html, body, #root {
   color-scheme: dark;
 }
 
+/* Popovers that usePopover lifts into the top layer get the browser's own
+   popover styles (centred in the window, a border, light colours). Undo them,
+   so the component's classes and usePopover's placement decide everything. */
+@layer base {
+  [popover] {
+    inset: auto;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    color: inherit;
+    background-color: transparent;
+  }
+}
+
 /* ---- Night Glow building blocks ------------------------------------------
    .seg / .seg-item  one-of-several choices in a dark track; the chosen one
                      is a solid light pill (aria-pressed, -selected or -checked)

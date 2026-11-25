@@ -268,8 +268,10 @@ export function SequencerGrid() {
                 />
               ))}
 
-              {/* Add drum button */}
-              <div className="sticky left-0 w-fit flex items-center gap-2">
+              {/* Add drum button. Sticky makes this its own stacking layer, so
+                  while the picker is open the row is raised, or the picker
+                  would sit under the synth tracks that follow. */}
+              <div className={`sticky left-0 ${showDrumPicker ? 'z-50' : ''} w-fit flex items-center gap-2`}>
                 <button
                   onClick={() => { setShowDrumPicker(!showDrumPicker); setShowSynthPicker(false); }}
                   aria-expanded={showDrumPicker}
@@ -345,8 +347,8 @@ export function SequencerGrid() {
                 />
               ))}
 
-              {/* Add synth button */}
-              <div className="sticky left-0 w-fit flex items-center gap-2">
+              {/* Add synth button. Raised while its picker is open, like Add Drum. */}
+              <div className={`sticky left-0 ${showSynthPicker ? 'z-50' : ''} w-fit flex items-center gap-2`}>
                 <button
                   onClick={() => { setShowSynthPicker(!showSynthPicker); setShowDrumPicker(false); }}
                   aria-expanded={showSynthPicker}

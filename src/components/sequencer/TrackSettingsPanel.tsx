@@ -76,7 +76,8 @@ function SelectControl({ label, value, onChange, options, accent }: SelectProps)
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className={`flex-1 bg-bg-cell border rounded px-1.5 py-1 text-xs cursor-pointer ${
+        // min-w-0: long options (preset descriptions) would otherwise widen it past the panel
+        className={`flex-1 min-w-0 bg-bg-cell border rounded px-1.5 py-1 text-xs cursor-pointer ${
           accent ? 'border-accent-purple text-accent-purple-fg font-medium' : 'border-border-control text-text-primary'
         }`}
       >
