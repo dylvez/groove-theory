@@ -15,6 +15,10 @@ export interface MidiNote {
   duration: number;
   pitch: number;
   velocity: number; // 1–127
+  /** Channel volume × expression in force when the note starts, 0–1 */
+  level: number;
+  /** Channel pan in force when the note starts, −1 (left) to 1 (right) */
+  pan: number;
 }
 
 /** One importable part: the notes of one channel within one MIDI track */
@@ -40,9 +44,28 @@ export interface MidiFileData {
 
 export class MidiImportError extends Error {}
 
+/** General MIDI's power-on channel volume (controller 7 = 100), as a 0–1 level */
+const DEFAULT_LEVEL = 100 / 127;
+
+interface ControllerEvent { tick: number; value: number }
+interface ChannelControllers { volume: ControllerEvent[]; expression: ControllerEvent[]; pan: ControllerEvent[] }
+
+/** The controller value in force at `tick`: the last one sent at or before it */
+function valueAt(events: ControllerEvent[], tick: number, fallback: number): number {
+  let lo = 0;
+  let hi = events.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (events[mid].tick <= tick) lo = mid + 1; else hi = mid;
+  }
+  return lo ? events[lo - 1].value : fallback;
+}
+
 /**
  * Parse a Standard MIDI File (format 0 or 1). Notes are paired on/off per
  * channel and pitch; anything still held at the end of a track ends there.
+ * Each note also records the channel's volume, expression and pan at its
+ * start. Those belong to the channel, so they apply across MIDI tracks.
  */
 export function parseMidi(buffer: ArrayBuffer): MidiFileData {
   const bytes = new Uint8Array(buffer);
@@ -74,6 +97,12 @@ export function parseMidi(buffer: ArrayBuffer): MidiFileData {
   const tempos: { tick: number; bpm: number }[] = [];
   let timeSignature: [number, number] | null = null;
   let lengthTicks = 0;
+  const controllers = new Map<number, ChannelControllers>();
+  const controllersFor = (ch: number) => {
+    let c = controllers.get(ch);
+    if (!c) controllers.set(ch, c = { volume: [], expression: [], pan: [] });
+    return c;
+  };
 
   for (let t = 0; t < trackCount && p + 8 <= bytes.length; t++) {
     const chunk = tag();
@@ -92,7 +121,7 @@ export function parseMidi(buffer: ArrayBuffer): MidiFileData {
       const start = held.get(key)?.shift();
       if (!start) return;
       const list = byChannel.get(ch) ?? [];
-      list.push({ tick: start.tick, duration: Math.max(1, tick - start.tick), pitch, velocity: start.velocity });
+      list.push({ tick: start.tick, duration: Math.max(1, tick - start.tick), pitch, velocity: start.velocity, level: DEFAULT_LEVEL, pan: 0 });
       byChannel.set(ch, list);
     };
 
@@ -127,6 +156,12 @@ export function parseMidi(buffer: ArrayBuffer): MidiFileData {
           noteOff(ch, d1);
         } else if (kind === 0xc0) {
           programs.set(ch, d1);
+        } else if (kind === 0xb0) {
+          if (d1 === 7) controllersFor(ch).volume.push({ tick, value: d2 });
+          else if (d1 === 11) controllersFor(ch).expression.push({ tick, value: d2 });
+          else if (d1 === 10) controllersFor(ch).pan.push({ tick, value: d2 });
+          // "Reset all controllers" puts expression back to full; volume and pan stay
+          else if (d1 === 121) controllersFor(ch).expression.push({ tick, value: 127 });
         }
       }
     }
@@ -157,6 +192,21 @@ export function parseMidi(buffer: ArrayBuffer): MidiFileData {
   }
 
   if (!parts.length) throw new MidiImportError('No notes were found in this file.');
+
+  // Give every note the channel mix in force when it starts
+  for (const c of controllers.values()) {
+    c.volume.sort((a, b) => a.tick - b.tick);
+    c.expression.sort((a, b) => a.tick - b.tick);
+    c.pan.sort((a, b) => a.tick - b.tick);
+  }
+  for (const part of parts) {
+    const c = controllers.get(part.channel);
+    if (!c) continue;
+    for (const n of part.notes) {
+      n.level = (valueAt(c.volume, n.tick, 100) / 127) * (valueAt(c.expression, n.tick, 127) / 127);
+      n.pan = Math.max(-1, Math.min(1, (valueAt(c.pan, n.tick, 64) - 64) / 63));
+    }
+  }
   tempos.sort((a, b) => a.tick - b.tick);
   const bpm = tempos[0]?.bpm ?? 120;
   return {
@@ -252,6 +302,42 @@ function mapTimeSignature([num, den]: [number, number]): { ts: TimeSignature; be
   return { ts: '4/4', beatsPerBar: 4, note: `The file is in ${num}/${den}, which isn’t supported; notes keep their timing but bars are counted in 4/4.` };
 }
 
+/** Track volume range in dB (the mixer's slider) and where new tracks start */
+const MIN_VOLUME_DB = -36;
+const MAX_VOLUME_DB = 6;
+const DEFAULT_VOLUME_DB = -6;
+
+/**
+ * A channel level as track volume in dB. General MIDI's curve is
+ * 40·log10(level); it is shifted so the MIDI default lands on our default.
+ */
+function levelToDb(level: number): number {
+  if (level <= 0) return MIN_VOLUME_DB;
+  const db = DEFAULT_VOLUME_DB + 40 * Math.log10(level / DEFAULT_LEVEL);
+  return Math.max(MIN_VOLUME_DB, Math.min(MAX_VOLUME_DB, Math.round(db)));
+}
+
+/** The mix a part's notes ask for, gathered per track we create */
+interface TrackMix { levels: number[]; pans: number[] }
+
+const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+
+/** One volume and pan for a track: the typical value across its notes */
+function settleMix(mix: TrackMix): { volume: number; pan: number; volumeChanges: boolean; panChanges: boolean } {
+  if (!mix.levels.length) return { volume: DEFAULT_VOLUME_DB, pan: 0, volumeChanges: false, panChanges: false };
+  const dbs = mix.levels.map(levelToDb);
+  return {
+    volume: median(dbs),
+    // Steps of 0.05, like the pan slider; `|| 0` avoids −0
+    pan: Math.round(median(mix.pans) * 20) / 20 || 0,
+    volumeChanges: Math.max(...dbs) - Math.min(...dbs) >= 3,
+    panChanges: Math.max(...mix.pans) - Math.min(...mix.pans) >= 0.1,
+  };
+}
+
+const listOf = (names: string[]) =>
+  names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+
 let uidCounter = 0;
 const uid = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(uidCounter++).toString(36)}`;
 
@@ -284,7 +370,8 @@ export function buildImport(data: MidiFileData, opts: ImportOptions): ImportResu
   const totalSteps = totalBars * stepsPerBar;
   let unmappedDrumNotes = 0;
   const drumLanes = new Map<string, number[]>(); // drum key → velocities 0–1
-  const melodicLanes: { name: string; preset: string; notes: NoteEvent[][]; octave: number }[] = [];
+  const drumMixes = new Map<string, TrackMix>();
+  const melodicLanes: { name: string; preset: string; notes: NoteEvent[][]; octave: number; mix: TrackMix }[] = [];
 
   for (const part of parts) {
     if (part.isDrums) {
@@ -293,16 +380,25 @@ export function buildImport(data: MidiFileData, opts: ImportOptions): ImportResu
         if (!key) { unmappedDrumNotes++; continue; }
         const lane = drumLanes.get(key) ?? new Array(totalSteps).fill(0);
         const s = quant(n.tick) - offset;
-        if (s >= 0 && s < totalSteps) lane[s] = Math.max(lane[s], Math.round((n.velocity / 127) * 100) / 100);
+        if (s >= 0 && s < totalSteps) {
+          lane[s] = Math.max(lane[s], Math.round((n.velocity / 127) * 100) / 100);
+          const mix = drumMixes.get(key) ?? { levels: [], pans: [] };
+          mix.levels.push(n.level);
+          mix.pans.push(n.pan);
+          drumMixes.set(key, mix);
+        }
         drumLanes.set(key, lane);
       }
       continue;
     }
     const { preset } = soundFor(part);
     const steps: NoteEvent[][] = Array.from({ length: totalSteps }, () => []);
+    const mix: TrackMix = { levels: [], pans: [] };
     for (const n of part.notes) {
       const s = quant(n.tick) - offset;
       if (s < 0 || s >= totalSteps) continue;
+      mix.levels.push(n.level);
+      mix.pans.push(n.pan);
       const pitch = midiToNote(n.pitch);
       const length = Math.max(1, Math.round(n.duration / ticksPerStep));
       // Same pitch twice on one step after rounding: keep the longer note
@@ -311,8 +407,8 @@ export function buildImport(data: MidiFileData, opts: ImportOptions): ImportResu
       steps[s].push({ note: pitch, velocity: Math.max(0.1, Math.round((n.velocity / 127) * 100) / 100), length });
     }
     const pitches = part.notes.map(n => n.pitch).sort((a, b) => a - b);
-    const median = pitches[Math.floor(pitches.length / 2)] ?? 60;
-    melodicLanes.push({ name: part.name, preset, notes: steps, octave: Math.max(1, Math.min(6, Math.floor(median / 12) - 1)) });
+    const medianPitch = pitches[Math.floor(pitches.length / 2)] ?? 60;
+    melodicLanes.push({ name: part.name, preset, notes: steps, octave: Math.max(1, Math.min(6, Math.floor(medianPitch / 12) - 1)), mix });
   }
   if (unmappedDrumNotes) warnings.push(`${unmappedDrumNotes} drum hit${unmappedDrumNotes > 1 ? 's use sounds' : ' uses a sound'} the app doesn’t have and ${unmappedDrumNotes > 1 ? 'were' : 'was'} skipped.`);
 
@@ -320,6 +416,21 @@ export function buildImport(data: MidiFileData, opts: ImportOptions): ImportResu
   const drumKeys = DRUM_KIT.map(k => k.key).filter(k => drumLanes.has(k));
   const drumIds = new Map(drumKeys.map(k => [k, uid('drum')]));
   const melodicIds = melodicLanes.map(() => uid('synth'));
+
+  // One volume and pan per track, from the file's channel volume, expression and pan
+  const drumSettled = new Map(drumKeys.map(k => [k, settleMix(drumMixes.get(k) ?? { levels: [], pans: [] })]));
+  const melodicSettled = melodicLanes.map(l => settleMix(l.mix));
+  const drumsSettled = [...drumSettled.values()];
+  const volumeChanged = [
+    ...melodicLanes.filter((_, i) => melodicSettled[i].volumeChanges).map(l => `“${l.name}”`),
+    ...(drumsSettled.some(m => m.volumeChanges) ? ['the drums'] : []),
+  ];
+  const panChanged = [
+    ...melodicLanes.filter((_, i) => melodicSettled[i].panChanges).map(l => `“${l.name}”`),
+    ...(drumsSettled.some(m => m.panChanges) ? ['the drums'] : []),
+  ];
+  if (volumeChanged.length) warnings.push(`The file changes the volume of ${listOf(volumeChanged)} as it plays. Each imported track keeps one volume, the typical one.`);
+  if (panChanged.length) warnings.push(`The file moves ${listOf(panChanged)} between left and right as it plays. Each imported track keeps one position, the typical one.`);
 
   // --- Cut into pattern-sized chunks and share identical ones --------------
   const patternSteps = opts.barsPerPattern * stepsPerBar;
@@ -346,7 +457,8 @@ export function buildImport(data: MidiFileData, opts: ImportOptions): ImportResu
 
       const drumTracks: DrumTrack[] = drumKeys.map((k, i) => {
         const kit = DRUM_KIT.find(d => d.key === k)!;
-        return { ...createEmptyDrumTrack(k, kit.name, kit.color, patternSteps), id: drumIds.get(k)!, steps: drumSlices[i] as StepValue[] };
+        const { volume, pan } = drumSettled.get(k)!;
+        return { ...createEmptyDrumTrack(k, kit.name, kit.color, patternSteps), id: drumIds.get(k)!, volume, pan, steps: drumSlices[i] as StepValue[] };
       });
       const melodicTracks: MelodicTrack[] = melodicLanes.map((lane, i) => {
         const preset = getSynthPreset(lane.preset);
@@ -355,6 +467,8 @@ export function buildImport(data: MidiFileData, opts: ImportOptions): ImportResu
           ...base,
           id: melodicIds[i],
           octave: lane.octave,
+          volume: melodicSettled[i].volume,
+          pan: melodicSettled[i].pan,
           ...(preset ? { synthParams: { ...preset.params }, reverbSend: preset.reverbSend ?? 0, delaySend: preset.delaySend ?? 0 } : {}),
           steps: melodicSlices[i].map((evs, s) => stepFromNotes(base.steps[s], evs)),
         };

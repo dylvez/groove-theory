@@ -388,6 +388,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
               <li><Kbd>Open</Kbd> → <strong>Import MIDI file</strong> reads a <code className="text-accent-cyan-fg">.mid</code> file. Choose which parts to bring in, the pattern length, and whether notes snap to 1/16 or 1/32.</li>
               <li>The music is cut into patterns; sections that repeat exactly share a pattern, and the song arrangement plays them in order. Up to 8 different patterns fit — with 8-bar patterns that’s 64 bars of different music, plus any repeats.</li>
               <li>Drums on MIDI channel 10 become drum tracks; other parts become synth tracks with a sound picked from their instrument (or their name). Chords and note lengths come through.</li>
+              <li>Each track’s volume and left–right position come from the file. If the file changes them as it plays, the track keeps the typical setting.</li>
               <li>Limits: only 4/4 and 3/4 (6/8 is laid out as 3/4), one tempo for the whole song, and timing snaps to the grid. The dialog says what was changed or left out before you import.</li>
               <li>Importing replaces all patterns and the song; Undo brings them back.</li>
             </ul>
