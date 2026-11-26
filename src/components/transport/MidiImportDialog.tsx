@@ -89,7 +89,9 @@ export function MidiImportDialog({ file }: { file: MidiFileData & { fileName: st
           <button onClick={close} aria-label="Cancel import" className="w-7 h-7 flex items-center justify-center rounded text-text-muted hover:text-text-primary cursor-pointer">×</button>
         </div>
 
-        <div className="overflow-y-auto px-5 py-4 flex flex-col gap-4 text-xs text-text-secondary">
+        {/* Focusable so the keyboard can scroll to the summary and warnings when zoomed in.
+            The focus ring sits inside the edge, where the dialog doesn't clip it. */}
+        <div tabIndex={0} role="group" aria-label="Import options" style={{ outlineOffset: -3 }} className="overflow-y-auto px-5 py-4 flex flex-col gap-4 text-xs text-text-secondary">
           <p id={descId}>
             {file.bpm} BPM · {file.timeSignature[0]}/{file.timeSignature[1]} · {file.parts.length} part{file.parts.length > 1 ? 's' : ''}.
             This replaces all patterns and the song arrangement; Undo brings them back.
