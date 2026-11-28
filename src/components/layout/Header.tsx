@@ -138,8 +138,21 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 sm:px-6 py-2 min-h-[53px] bg-bg-tertiary border-b border-border shrink-0 cramped:static">
-      {/* Logo + title, as wide as the track names so the buttons line up with the grid */}
+      {/* The Fulmerica seal, then this app's own mark and title. The block is as wide
+          as the track names so the buttons line up with the grid. The seal opens in a
+          new tab so unsaved work in this one is never lost. */}
       <div className="flex items-center gap-3 shrink-0 pr-3" style={{ minWidth: trackHeaderWidth + 4 }}>
+        <a
+          href="https://fulmerica.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Fulmerica home (opens in a new tab)"
+          title="Fulmerica"
+          className="block shrink-0 rounded-full transition-transform motion-safe:hover:-rotate-[8deg]"
+        >
+          <img src={`${import.meta.env.BASE_URL}images/fulmerica-seal.svg`} alt="" width={30} height={30} className="block" />
+        </a>
+        <div aria-hidden="true" className="w-px h-6 bg-border-soft shrink-0" />
         <RingMark size={30} />
         <h1 className="font-display text-lg font-bold text-text-primary tracking-tight whitespace-nowrap">
           Groove Theory
@@ -207,7 +220,7 @@ export function Header() {
         </div>
         <LayoutControls />
         <div aria-hidden="true" className="w-px h-5 bg-border mx-1" />
-        <span className="text-[11px] text-text-muted mr-1">&copy; 2026 Groove Theory</span>
+        <span className="text-[11px] text-text-muted mr-1">&copy; 2026 Fulmerica</span>
         <a
           href="mailto:groovetheoryapp@gmail.com"
           className="w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary transition-colors"

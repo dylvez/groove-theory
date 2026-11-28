@@ -563,7 +563,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
             </ul>
           </Sub>
           <Sub title="Copyright">
-            <p>&copy; 2026 Groove Theory. All rights reserved under the terms of the MIT License.</p>
+            <p>&copy; 2026 Fulmerica. All rights reserved under the terms of the MIT License.</p>
           </Sub>
         </>
       ),
